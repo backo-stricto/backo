@@ -22,6 +22,10 @@ TYPE_AS_STRING = [t.__name__ for t in ALL_TYPES]
 TYPE_AS_STRING.sort()
 
 
+class Message(String):
+    pass
+
+
 def writable_path(path):
     """check if the path is valid
 
@@ -62,7 +66,12 @@ def readable_path(path):
 
 # Setup argument parser
 parser = argparse.ArgumentParser(description="Backo: initialisation tool.")
-parser.add_argument("--expert", dest="expert", action="store_true", help="Will ask for actions and selections")  # on/off flag
+parser.add_argument(
+    "--expert",
+    dest="expert",
+    action="store_true",
+    help="Will ask for actions and selections",
+)  # on/off flag
 parser.add_argument(
     "-t",
     "--template_dir",
@@ -148,6 +157,13 @@ class Init:
             return
         if can_read == False:
             return
+
+        if "Message" in types:
+            questionary.print(f'{"\u2500"*40}', style="bold fg:darkred")
+            questionary.print(value, style="italic fg:darkred")
+            questionary.print(f'{"\u2500"*40}', style="bold fg:darkred")
+            return
+
         if can_modify == False:
             questionary.print(f"[RO] {desc} = {value}", style="italic")
             return
@@ -216,7 +232,7 @@ class Init:
         obj.set(v)
 
 
-def backo_init() -> None: # pylint: disable=too-many-locals, too-many-statements
+def backo_init() -> None:  # pylint: disable=too-many-locals, too-many-statements
     """Main run define in pyproject.toml"""
 
     # Avoid warning with questionary
@@ -227,6 +243,14 @@ def backo_init() -> None: # pylint: disable=too-many-locals, too-many-statements
 
     field_model = Dict(
         {
+            "welcome1": Message(
+                default="\
+This is a field (like an attribute).\r\n\
+It must have a name, a type (String, Int, ...)\r\n\
+and if it is required.",
+                can_modify=False,
+                views=["!conf"],
+            ),
             "name": String(
                 require=True, description="Name of the field", regexp=r"[A-z_-]+"
             ),
@@ -273,12 +297,46 @@ def backo_init() -> None: # pylint: disable=too-many-locals, too-many-statements
             "name": String(
                 require=True, description="Name of the collection", regexp=r"[A-z_-]+"
             ),
+            "welcome1": Message(
+                default='\
+Ok. A collection must have some fields.\r\n\
+A field is like an attribute.\r\n\
+(for example a "book" must have a "title", a "price"...)\r\n\
+Now you can add some differents kinds of fields (Int, String, ...).\r\n\
+Don\'t add a lot of them. It is just for initialisation,\r\n\
+you will complete themlater directly into the code.',
+                can_modify=False,
+                views=["!conf"],
+            ),
             "fields": List(field_model, default=[], description="fields list"),
+            "welcome2": Message(
+                default='\
+Whow, in expert mode !\r\n\
+Now you can add a selection.\r\n\
+Please refer to the documentation to understand what is\r\n\
+a "selection".\r\n\
+Don\'t worry, you can change or add them later directly into the code.\r\n\
+It is just for initialisation',
+                can_modify=False,
+                can_read=args.expert,
+                views=["!conf"],
+            ),
             "selections": List(
                 selection_model,
                 default=[],
                 description="selections",
                 can_read=args.expert,
+            ),
+            "welcome3": Message(
+                default='\
+Now you can add an "action".\r\n\
+Please refer to the documentation to understand what is\r\n\
+a "action".\r\n\
+Don\'t worry, you can change or add them later directly into the code.\r\n\
+It is just for initialisation',
+                can_modify=False,
+                can_read=args.expert,
+                views=["!conf"],
             ),
             "actions": List(
                 action_model, default=[], description="actions", can_read=args.expert
@@ -289,8 +347,24 @@ def backo_init() -> None: # pylint: disable=too-many-locals, too-many-statements
 
     db_model = Dict(
         {
+            "welcome1": Message(
+                default="\
+Welcome to backo  \r\n\
+First you must chose a name for your application.\r\n\
+Lets go.",
+                can_modify=False,
+                views=["!conf"],
+            ),
             "name": String(
                 require=True, description="Name of the application", regexp=r"[A-z_-]+"
+            ),
+            "welcome2": Message(
+                default='\
+Now you can create some "collections".\r\n\
+(A collection is like a sql table)\r\n\
+It is better to have at least on collection :).',
+                can_modify=False,
+                views=["!conf"],
             ),
             "collections": List(
                 collection_model, default=[], description="the collections list"
@@ -301,9 +375,9 @@ def backo_init() -> None: # pylint: disable=too-many-locals, too-many-statements
     my_db_struct = db_model.copy()
 
     initiator = Init("Backo")
-    initiator.display_path( my_db_struct.path_name() )
-    initiator.ask_field( my_db_struct, db_model.get_schema() )
-    db_json_struct = my_db_struct.get_encoded()
+    initiator.display_path(my_db_struct.path_name())
+    initiator.ask_field(my_db_struct, db_model.get_schema())
+    db_json_struct = my_db_struct.get_view("conf").get_encoded()
 
     # Initialiser l'environnement avec un dossier de templates
     template_dir = (
@@ -369,31 +443,45 @@ def backo_init() -> None: # pylint: disable=too-many-locals, too-many-statements
 
     destination_collection_directory = os.path.join(repo_dir, "collections_set")
     if not os.path.exists(destination_collection_directory):
+        questionary.print(
+            f"> mkdir {destination_collection_directory}", style="italic fg:yellow"
+        )
         os.makedirs(destination_collection_directory)
     if not os.path.isdir(destination_collection_directory):
         raise FileExistsError(f"{destination_collection_directory} is not a directory")
     if not os.access(destination_collection_directory, os.W_OK):
-        raise FileExistsError(f"{destination_collection_directory} is not a writable directory")
+        raise FileExistsError(
+            f"{destination_collection_directory} is not a writable directory"
+        )
 
     template = env.get_template("collection.pytemplate")
     for collection in db_json_struct["collections"]:
         collection["app_name"] = db_json_struct["name"]
         rendered = template.render(collection)
-        filename = os.path.join(destination_collection_directory, f'{collection["name"]}.py')
+        filename = os.path.join(
+            destination_collection_directory, f'{collection["name"]}.py'
+        )
         with open(filename, mode="w", encoding="utf-8") as outfile:
+            questionary.print(f"> creating file {filename}", style="italic fg:yellow")
             outfile.write(rendered)
 
     template = env.get_template("__init__.pytemplate")
     rendered = template.render(db_json_struct)
     filename = os.path.join(destination_collection_directory, "__init__.py")
     with open(filename, mode="w", encoding="utf-8") as outfile:
+        questionary.print(f"> creating file {filename}", style="italic fg:yellow")
         outfile.write(rendered)
 
     template = env.get_template("backoffice.pytemplate")
     rendered = template.render(db_json_struct)
-    filename = os.path.join(repo_dir, "backoffice.py")
-    with open(filename, mode="w", encoding="utf-8") as outfile:
+    backo_filename = os.path.join(repo_dir, "backoffice.py")
+    with open(backo_filename, mode="w", encoding="utf-8") as outfile:
+        questionary.print(f"> creating file {backo_filename}", style="italic fg:yellow")
         outfile.write(rendered)
+
+    questionary.print(f'{"\u2500"*40}', style="bold fg:yellow")
+    questionary.print("Now you can start the backoffice :", style="fg:darkred")
+    questionary.print(f"python {backo_filename}")
 
 
 if __name__ == "__main__":
