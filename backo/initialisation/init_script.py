@@ -23,7 +23,10 @@ TYPE_AS_STRING.sort()
 
 
 class Message(String):
-    pass
+    """this class is just for displaying informations.
+    It is used by ask_field() 
+
+    """
 
 
 def writable_path(path):
@@ -128,7 +131,7 @@ class Init:
             desc = schema.get("path")
         return desc
 
-    def ask_field(  # pylint: disable=too-many-locals, too-many-branches
+    def ask_field(  # pylint: disable=too-many-locals, too-many-branches, too-many-statements
         self, obj: GenericType, schema: dict
     ) -> None:
         """Main loop.
