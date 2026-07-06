@@ -8,6 +8,7 @@ from backo import (
     Bool,
     Dict,
     String,
+    Float,
     Collection,
     Item,
     current_user,
@@ -27,7 +28,7 @@ log = log_system.get_or_create_logger("{{ name }}", LogLevel.INFO)
 # ------------------------------------------------
 
 # --------------------
-# Description of "what is a {{ name }}"
+# Description of "what is an element of {{ name }}"
 # --------------------
 {{ name }}_item = Item({
         {% for field in fields %}"{{ field.name }}": {{ field.type }}({% if field.required is true %} required=True {% endif %}),

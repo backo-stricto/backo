@@ -29,8 +29,19 @@ pip install backo
 ### very fast
 
 ```bash
-# launch backo_init
+# launch backo_init and answer to questions !
 backo_init
+
+Backo>
+────────────────────────────────────────
+Welcome to backo  
+First you must chose a name for your application.
+Lets go.
+────────────────────────────────────────
+? Name of the application 
+
+...
+
 ```
 ### some code
 

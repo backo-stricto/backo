@@ -16,9 +16,9 @@ from jinja2 import Environment, FileSystemLoader
 # used for developpement
 sys.path.insert(1, "../../../stricto")
 
-from stricto import Dict, GenericType, List, Bool, String, ALL_TYPES
+from stricto import Dict, GenericType, Int, List, Float, Bool, String, Datetime
 
-TYPE_AS_STRING = [t.__name__ for t in ALL_TYPES]
+TYPE_AS_STRING = [t.__name__ for t in [ Int, List, Float, Bool, String, Datetime ]]
 TYPE_AS_STRING.sort()
 
 
@@ -307,7 +307,7 @@ A field is like an attribute.\r\n\
 (for example a "book" must have a "title", a "price"...)\r\n\
 Now you can add some differents kinds of fields (Int, String, ...).\r\n\
 Don\'t add a lot of them. It is just for initialisation,\r\n\
-you will complete themlater directly into the code.',
+you will complete them later directly into the code.',
                 can_modify=False,
                 views=["!conf"],
             ),
@@ -365,7 +365,7 @@ Lets go.",
                 default='\
 Now you can create some "collections".\r\n\
 (A collection is like a sql table)\r\n\
-It is better to have at least on collection :).',
+It is better to have at least one collection :).',
                 can_modify=False,
                 views=["!conf"],
             ),
