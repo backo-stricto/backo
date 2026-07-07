@@ -26,6 +26,25 @@ pip install backo
 
 ## Quickstart
 
+### very fast
+
+```bash
+# launch backo_init and answer to questions !
+backo_init
+
+Backo>
+────────────────────────────────────────
+Welcome to backo  
+First you must chose a name for your application.
+Lets go.
+────────────────────────────────────────
+? Name of the application 
+
+...
+
+```
+### some code
+
 Here is a sample with a DB (storage full in yaml file) with users to adresses reference
 
 Imagine this Entity Relationship (users ar living in exactly one address, but zero onr more user can live at the same address)

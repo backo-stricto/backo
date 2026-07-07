@@ -1,0 +1,491 @@
+"""
+initialisation script
+"""
+
+import warnings
+import json
+import re
+import sys
+import os
+import argparse
+import questionary
+
+from jinja2 import Environment, FileSystemLoader
+
+
+# used for developpement
+sys.path.insert(1, "../../../stricto")
+
+from stricto import Dict, GenericType, Int, List, Float, Bool, String, Datetime
+
+TYPE_AS_STRING = [t.__name__ for t in [ Int, List, Float, Bool, String, Datetime ]]
+TYPE_AS_STRING.sort()
+
+
+class Message(String):
+    """this class is just for displaying informations.
+    It is used by ask_field() 
+
+    """
+
+
+def writable_path(path):
+    """check if the path is valid
+
+    Args:
+        path (_type_): _description_
+
+    Raises:
+        argparse.ArgumentTypeError: _description_
+
+    Returns:
+        _type_: _description_
+    """
+    if not os.path.isdir(path):
+        raise argparse.ArgumentTypeError(f"{path} is not a valid path")
+    if not os.access(path, os.W_OK):
+        raise argparse.ArgumentTypeError(f"{path} is not a writable path")
+    return path
+
+
+def readable_path(path):
+    """check if the path is valid
+
+    Args:
+        path (_type_): _description_
+
+    Raises:
+        argparse.ArgumentTypeError: _description_
+
+    Returns:
+        _type_: _description_
+    """
+    if not os.path.isdir(path):
+        raise argparse.ArgumentTypeError(f"{path} is not a valid path")
+    if not os.access(path, os.R_OK):
+        raise argparse.ArgumentTypeError(f"{path} is not readable")
+    return path
+
+
+# Setup argument parser
+parser = argparse.ArgumentParser(description="Backo: initialisation tool.")
+parser.add_argument(
+    "--expert",
+    dest="expert",
+    action="store_true",
+    help="Will ask for actions and selections",
+)  # on/off flag
+parser.add_argument(
+    "-t",
+    "--template_dir",
+    dest="template_dir",
+    type=writable_path,
+    help="The source of template",
+)  # on/off flag
+parser.add_argument(
+    "repo", metavar="directory", type=readable_path, nargs="?", help="directory"
+)
+
+
+class Init:
+    """Create first backo organisation"""
+
+    def __init__(self, prefix):
+        """
+        Constructor
+        """
+        self._prefix = prefix
+        self._current_object = None
+
+    def validate(self, v):
+        """Validation of the user entry.
+        It use obj.check(v) for that
+
+        Args:
+            v (Any): the value to check
+
+        Returns:
+            Bool|str: True if ok or the error message
+        """
+        try:
+            self._current_object.check(v)
+            return True
+        except Exception as e:  # pylint: disable= broad-exception-caught
+            return str(e)
+
+    def display_path(self, path: str):
+        """display a breadcrump from the path ($.blabla)
+        at the top of the terminal
+        Args:
+            path (str): a path
+        """
+        p = re.sub(r"^\$", self._prefix, path)
+        p = re.sub(r"\.", ">", p)
+        print("\033c\033[3J")
+        questionary.print(f"{ p }>", style="bold fg:ansiyellow")
+
+    def _get_description(self, schema: dict) -> str:
+        """return the description if exists or just the path"""
+        desc = schema.get("description", schema.get("path"))
+        if desc is None:
+            desc = schema.get("path")
+        return desc
+
+    def ask_field(  # pylint: disable=too-many-locals, too-many-branches, too-many-statements
+        self, obj: GenericType, schema: dict
+    ) -> None:
+        """Main loop.
+
+        Ask for a value. If a Dict or a List, go further.
+
+        Args:
+            obj (GenericType): The object to fill
+            schema (dict): the schema of the object
+        """
+        self._current_object = obj
+
+        desc = self._get_description(schema)
+
+        default = schema.get("default")
+        types = schema.get("types", False)
+        exists = schema.get("exists", True)
+        union = schema.get("union", True)
+        rights = schema.get("rights", {"read": True, "modify": True})
+        can_read = rights["read"]
+        can_modify = rights["modify"]
+
+        value = obj.get_value()
+
+        if exists == False:
+            return
+        if can_read == False:
+            return
+
+        if "Message" in types:
+            questionary.print(f'{"\u2500"*40}', style="bold fg:darkred")
+            questionary.print(value, style="italic fg:darkred")
+            questionary.print(f'{"\u2500"*40}', style="bold fg:darkred")
+            return
+
+        if can_modify == False:
+            questionary.print(f"[RO] {desc} = {value}", style="italic")
+            return
+
+        # A dict, go down...
+        if "Dict" in types:
+            self.display_path(obj.path_name())
+            for sub, sub_scheme in schema.get("sub_scheme", {}).items():
+                self.ask_field(getattr(obj, sub), sub_scheme)
+            return
+
+        if "List" in types:
+            # sub_type
+            sub_type = schema.get("sub_type")
+            sub_desc = self._get_description(sub_type)
+
+            result = True
+            while result is True:
+                result = questionary.confirm(
+                    message=f"Do you want to add a new {sub_desc} in {desc}",
+                    default=True,
+                ).ask()
+                if result is True:
+                    self.display_path(obj.path_name())
+                    new_element = obj._type.copy()
+                    new_element._parent = obj
+                    new_element._attribute_name = f"[{len(obj)}]"
+                    self.ask_field(new_element, sub_type)
+                    obj.append(new_element)
+
+            return
+
+        my_default = value if value is not None else default
+        question = None
+        v = None
+        if "Bool" in types:
+            question = questionary.confirm(
+                message=desc,
+                default=my_default,
+            )
+            v = question.ask()
+        elif "Int" in types:
+            question = questionary.text(
+                message=desc, default=my_default, validate=self.validate
+            )
+            v = int(question.ask())
+        elif "Float" in types:
+            question = questionary.text(
+                message=desc, default=my_default, validate=self.validate
+            )
+            v = float(question.ask())
+        else:
+            if union is None:
+                defa = "" if my_default is None else my_default
+                question = questionary.text(
+                    message=desc, default=defa, validate=self.validate
+                )
+            else:
+                question = questionary.select(
+                    message=desc,
+                    default=my_default,
+                    choices=union,
+                )
+            v = question.ask()
+
+        obj.set(v)
+
+
+def backo_init() -> None:  # pylint: disable=too-many-locals, too-many-statements
+    """Main run define in pyproject.toml"""
+
+    # Avoid warning with questionary
+    warnings.filterwarnings("ignore")
+
+    # Parse command line arguments
+    args = parser.parse_args()
+
+    field_model = Dict(
+        {
+            "welcome1": Message(
+                default="\
+This is a field (like an attribute).\r\n\
+It must have a name, a type (String, Int, ...)\r\n\
+and if it is required.",
+                can_modify=False,
+                views=["!conf"],
+            ),
+            "name": String(
+                require=True, description="Name of the field", regexp=r"[A-z_-]+"
+            ),
+            "type": String(
+                require=True,
+                union=TYPE_AS_STRING,
+                default="String",
+                description="type of the field",
+            ),
+            "required": Bool(default=False, description="is the field required"),
+            "default": String(description="a default value", can_read=args.expert),
+        },
+        description="field",
+    )
+
+    selection_model = Dict(
+        {
+            "name": String(
+                require=True, description="Name of the selection", regexp=r"[A-z_-]+"
+            ),
+            "paths": List(
+                String(required=True, description="path", regexp=r"^\$\..+"),
+                description="paths list",
+            ),
+        },
+        description="selection",
+    )
+
+    action_model = Dict(
+        {
+            "name": String(
+                require=True, description="Name of the action", regexp=r"[A-z_-]+"
+            ),
+            "fields": List(field_model, default=[], description="action fields list"),
+            "function_name": String(
+                required=True, description="name of the function", regexp=r"[A-z_-]+"
+            ),
+        },
+        description="selection",
+    )
+
+    collection_model = Dict(
+        {
+            "name": String(
+                require=True, description="Name of the collection", regexp=r"[A-z_-]+"
+            ),
+            "welcome1": Message(
+                default='\
+Ok. A collection must have some fields.\r\n\
+A field is like an attribute.\r\n\
+(for example a "book" must have a "title", a "price"...)\r\n\
+Now you can add some differents kinds of fields (Int, String, ...).\r\n\
+Don\'t add a lot of them. It is just for initialisation,\r\n\
+you will complete them later directly into the code.',
+                can_modify=False,
+                views=["!conf"],
+            ),
+            "fields": List(field_model, default=[], description="fields list"),
+            "welcome2": Message(
+                default='\
+Whow, in expert mode !\r\n\
+Now you can add a selection.\r\n\
+Please refer to the documentation to understand what is\r\n\
+a "selection".\r\n\
+Don\'t worry, you can change or add them later directly into the code.\r\n\
+It is just for initialisation',
+                can_modify=False,
+                can_read=args.expert,
+                views=["!conf"],
+            ),
+            "selections": List(
+                selection_model,
+                default=[],
+                description="selections",
+                can_read=args.expert,
+            ),
+            "welcome3": Message(
+                default='\
+Now you can add an "action".\r\n\
+Please refer to the documentation to understand what is\r\n\
+a "action".\r\n\
+Don\'t worry, you can change or add them later directly into the code.\r\n\
+It is just for initialisation',
+                can_modify=False,
+                can_read=args.expert,
+                views=["!conf"],
+            ),
+            "actions": List(
+                action_model, default=[], description="actions", can_read=args.expert
+            ),
+        },
+        description="collection",
+    )
+
+    db_model = Dict(
+        {
+            "welcome1": Message(
+                default="\
+Welcome to backo  \r\n\
+First you must chose a name for your application.\r\n\
+Lets go.",
+                can_modify=False,
+                views=["!conf"],
+            ),
+            "name": String(
+                require=True, description="Name of the application", regexp=r"[A-z_-]+"
+            ),
+            "welcome2": Message(
+                default='\
+Now you can create some "collections".\r\n\
+(A collection is like a sql table)\r\n\
+It is better to have at least one collection :).',
+                can_modify=False,
+                views=["!conf"],
+            ),
+            "collections": List(
+                collection_model, default=[], description="the collections list"
+            ),
+        }
+    )
+
+    my_db_struct = db_model.copy()
+
+    initiator = Init("Backo")
+    initiator.display_path(my_db_struct.path_name())
+    initiator.ask_field(my_db_struct, db_model.get_schema())
+    db_json_struct = my_db_struct.get_view("conf").get_encoded()
+
+    # Initialiser l'environnement avec un dossier de templates
+    template_dir = (
+        args.template_dir
+        if args.template_dir is not None
+        else os.path.join(os.path.dirname(__file__), "templates")
+    )
+
+    ## Building collections
+
+    ## Building collection_set directory
+    repo_dir = args.repo if args.repo is not None else "."
+
+    questionary.print(f'{"\u2500"*40}', style="bold fg:yellow")
+    questionary.print("Your configuration", style="bold fg:yellow")
+
+    questionary.print(f'{"\u2500"*40}', style="bold fg:yellow")
+    questionary.print(json.dumps(db_json_struct, indent=2), style="fg:darkred")
+    questionary.print(f'{"\u2500"*40}', style="bold fg:yellow")
+    print(f"template source = {template_dir}")
+    print(f"destination = {repo_dir}")
+    questionary.print(f'{"\u2500"*40}', style="bold fg:yellow")
+    env = Environment(loader=FileSystemLoader(template_dir))
+
+    resp = questionary.confirm(
+        message="Is this configuration ok ?",
+        default=True,
+    ).ask()
+    if resp is False:
+        questionary.print("Ok. bye.", style="bold fg:yellow")
+        sys.exit()
+
+    # just for test
+    # -------------
+    # db_json_struct = {
+    #     "name": "myApp",
+    #     "collections": [
+    #         {
+    #             "name": "bd",
+    #             "fields": [
+    #                 {"name": "title", "type": "String", "required": True},
+    #                 {"name": "pages", "type": "Int", "required": False},
+    #             ],
+    #             "selections": [
+    #                 {"name": "suv", "paths": ["$.name", "$.title"]},
+    #             ],
+    #             "actions": [
+    #                 {
+    #                     "name": "toto",
+    #                     "fields": [
+    #                         {"name": "login", "type": "String", "required": True}
+    #                     ],
+    #                     "function_name": "test",
+    #                 },
+    #             ],
+    #         },
+    #         {
+    #             "name": "readers",
+    #             "fields": [{"name": "login", "type": "String", "required": True}],
+    #         },
+    #     ],
+    # }
+
+    destination_collection_directory = os.path.join(repo_dir, "collections_set")
+    if not os.path.exists(destination_collection_directory):
+        questionary.print(
+            f"> mkdir {destination_collection_directory}", style="italic fg:yellow"
+        )
+        os.makedirs(destination_collection_directory)
+    if not os.path.isdir(destination_collection_directory):
+        raise FileExistsError(f"{destination_collection_directory} is not a directory")
+    if not os.access(destination_collection_directory, os.W_OK):
+        raise FileExistsError(
+            f"{destination_collection_directory} is not a writable directory"
+        )
+
+    template = env.get_template("collection.pytemplate")
+    for collection in db_json_struct["collections"]:
+        collection["app_name"] = db_json_struct["name"]
+        rendered = template.render(collection)
+        filename = os.path.join(
+            destination_collection_directory, f'{collection["name"]}.py'
+        )
+        with open(filename, mode="w", encoding="utf-8") as outfile:
+            questionary.print(f"> creating file {filename}", style="italic fg:yellow")
+            outfile.write(rendered)
+
+    template = env.get_template("__init__.pytemplate")
+    rendered = template.render(db_json_struct)
+    filename = os.path.join(destination_collection_directory, "__init__.py")
+    with open(filename, mode="w", encoding="utf-8") as outfile:
+        questionary.print(f"> creating file {filename}", style="italic fg:yellow")
+        outfile.write(rendered)
+
+    template = env.get_template("backoffice.pytemplate")
+    rendered = template.render(db_json_struct)
+    backo_filename = os.path.join(repo_dir, "backoffice.py")
+    with open(backo_filename, mode="w", encoding="utf-8") as outfile:
+        questionary.print(f"> creating file {backo_filename}", style="italic fg:yellow")
+        outfile.write(rendered)
+
+    questionary.print(f'{"\u2500"*40}', style="bold fg:yellow")
+    questionary.print("Now you can start the backoffice :", style="fg:darkred")
+    questionary.print(f"python {backo_filename}")
+
+
+if __name__ == "__main__":
+    backo_init()
