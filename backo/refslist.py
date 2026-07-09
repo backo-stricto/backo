@@ -185,7 +185,7 @@ class RefsList(List):
                 )
                 return
 
-    def get_other_with_a_select(self, root_id: str) -> list:
+    def _get_others_with_a_select(self, root_id: str) -> list:
         """Get reverse Items with a select
         (when FillStrategy.NO_FILL)
 
@@ -257,7 +257,7 @@ class RefsList(List):
             # FillStrategy.NOT_FILL, mus do a select to find
             # if ther is some ref to me.
             # set the _coll_ref (in case of)
-            other_list = me.get_other_with_a_select(root._id.get_value())
+            other_list = me._get_others_with_a_select(root._id.get_value())
             if len(other_list) != 0:
                 raise BackoError(
                     'Collection (not filled) "{0}" not empty', self._collection
@@ -316,7 +316,7 @@ class RefsList(List):
                 other.delete(**kwargs)
         else:
             # with FillStrategy.NO_FILL select all for deletion
-            other_list = me.get_other_with_a_select(root._id.get_value())
+            other_list = me._get_others_with_a_select(root._id.get_value())
             for other in other_list:
                 other.delete(**kwargs)
 
@@ -359,7 +359,7 @@ class RefsList(List):
 
         ## self._fill_strategy == FillStrategy.NO_FILL
         # with FillStrategy.NO_FILL select all for clean
-        other_list = me.get_other_with_a_select(root._id.get_value())
+        other_list = me._get_others_with_a_select(root._id.get_value())
 
         return self._change_others_ref_to(root, me, other_list, None, **kwargs)
 

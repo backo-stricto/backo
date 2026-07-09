@@ -688,6 +688,68 @@ class TestReferences(unittest.TestCase):
         self.assertEqual(len(si_mars.users), 1)
         self.assertEqual(si_mars.users[0], u._id)
 
+    def test_references_one_no_fill(self):
+        """
+        creating an backoffice with ref one to many
+        and delete with ref no_fill
+        """
+
+        backoffice = Backoffice("myApp")
+
+        backoffice.register_collection(
+            Collection(
+                "users",
+                Item(
+                    {
+                        "name": String(),
+                        "surname": String(),
+                        "site": Ref(coll="sites", field="$.users", ofs=FillStrategy.NOT_FILL),
+                        "male": Bool(default=True),
+                    }
+                ),
+                self.yml_users,
+            )
+        )
+
+        # --- DB for sites
+        backoffice.register_collection(
+            Collection(
+                "sites",
+                Item(
+                    {
+                        "name": String(),
+                        "address": String(),
+                        "users": RefsList(
+                            coll="users",
+                            field="$.site",
+                            ods=DeleteStrategy.DELETE_REFERENCED_ITEMS,
+                        ),
+                    }
+                ),
+                self.yml_sites,
+            )
+        )
+
+        # Hard clean before tests
+        self.yml_sites.drop()
+        self.yml_users.drop()
+
+        current_user.standalone = True
+        si_mars = backoffice.sites.create({"name": "mars", "address": "very far"})
+
+        si_moon = backoffice.sites.create({"name": "moon", "address": "far"})
+
+        u = backoffice.users.new()
+        u.create({"name": "bebert", "surname": "bebert", "site": si_moon._id})
+
+        # -- Check if reverse is filled
+        si_moon.reload()
+        self.assertEqual(len(si_moon.users), 1)
+        self.assertEqual(si_moon.users[0], u._id)
+        u.reload()
+        self.assertEqual(u.site, si_moon._id)
+
+
     def test_references_many_to_one_modification(self):
         """
         creating an backoffice with ref one to many

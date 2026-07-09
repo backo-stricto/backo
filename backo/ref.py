@@ -10,10 +10,10 @@ import copy
 # used for developpement
 sys.path.insert(1, "../../stricto")
 
-from stricto import String, Selector, SSyntaxError, STypeError, Kparse
+from stricto import String, Selector, SSyntaxError, STypeError, Kparse, SFilter, Operator
 
 from .loop_path import LoopPath
-from .error import PathNotFoundError
+from .error import PathNotFoundError, BackoError
 from .log import log_system, LogLevel
 
 
@@ -191,6 +191,35 @@ class Ref(String):  # pylint: disable=too-many-instance-attributes
                 )
                 return
 
+
+
+    def _get_others_with_a_select(self, root_id: str) -> list:
+        """Get reverse Items with a select
+        (when FillStrategy.NO_FILL)
+
+        :return: list of Items
+        :rtype: list
+        """
+        # No reverse => nothing to do.
+        if not self._reverse:
+            return []
+
+        self.set_collection_reference()
+        reverse_field = self._coll_ref.model.select(self._reverse)
+        if not isinstance(reverse_field, (Ref, refslist.RefsList)):
+            raise STypeError(
+                "{0}.{1} is not a Ref or a RefsList", self._collection, self._reverse
+            )
+
+        match_filter = None
+        if isinstance(reverse_field, Ref):
+            match_filter = SFilter(self._reverse, Operator.EQ, root_id)
+        else:
+            match_filter = SFilter(
+                self._reverse, Operator.CONTAINS, SFilter("@", Operator.EQ, root_id)
+            )
+        return self._coll_ref.select(match_filter)
+
     def on_loaded(
         self, event_name, root, me, **kwargs
     ):  # pylint: disable=unused-argument
@@ -215,11 +244,16 @@ class Ref(String):  # pylint: disable=too-many-instance-attributes
         if not me._reverse:
             return
 
-        self.set_collection_reference()
-
         log.debug(
             f"{root._collection.name}//{me.path_name()} for id={root._id} loaded. Search _id from the reverse"
         )
+        other_list = me._get_others_with_a_select(root._id.get_value())
+        if len( other_list ) > 1:
+             raise BackoError(
+                "{0}.{1} has more reverse in {2} {3}", root._collection.name, me.path_name(), self._collection, self._reverse
+            )
+        me.set(other_list[0])
+
 
     def on_before_save(
         self, event_name, root, me, **kwargs
@@ -278,6 +312,7 @@ class Ref(String):  # pylint: disable=too-many-instance-attributes
             self.on_delete(event_name, root, old_me, **kwargs)
         if me.get_value() is not None:
             self.on_created(event_name, root, me, **kwargs)
+
 
     def on_created(
         self, event_name, root, me, **kwargs
@@ -355,6 +390,7 @@ class Ref(String):  # pylint: disable=too-many-instance-attributes
                 reverse_field.append(root._id)
                 log.debug(f"update reverse refList {me._reverse} => {other}")
                 other.save(**kwargs)
+
 
     def on_delete(
         self, event_name, root, me, **kwargs

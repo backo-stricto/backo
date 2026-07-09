@@ -197,7 +197,7 @@ class Selection(CollectionAddon):
             raise SSyntaxError(
                 'select "{0}" filter "{1}" is not type SFilter', self.name, f
             )
-        filter_object: SFilter = match_filter.AND(self._filter)
+        filter_object: SFilter = match_filter.merge_and(self._filter)
 
         print(f"sel fi={filter_object}")
 
