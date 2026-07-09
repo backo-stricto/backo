@@ -8,6 +8,29 @@ import json
 from typing import Any
 from flask import Request
 from werkzeug.datastructures import ImmutableMultiDict
+from stricto import SFilter, Operator, SSyntaxError
+
+
+
+def get_operator( s: str )-> Operator:
+    a = {
+        "$eq" : Operator.EQ,
+        "$ne" : Operator.NE,
+        "$gt" : Operator.GT,
+        "$gte" : Operator.GTE,
+        "$lt" : Operator.LT,
+        "$lte" : Operator.LTE,
+        "$reg" : Operator.REG,
+        "$all" : Operator.ALL,
+        "$contains" : Operator.CONTAINS,
+        "$size" : Operator.SIZE,
+        "$and" : Operator.AND,
+        "$or" : Operator.OR,
+        "$not" : Operator.NOT,
+    }
+
+    return a.get(s)
+    
 
 
 def append_path_to_filter(filter_as_dict: dict, key, value: list | tuple):
@@ -92,6 +115,144 @@ def multidict_to_filter(md: ImmutableMultiDict):
         append_path_to_filter(filter_as_dict, key, value)
 
     return filter_as_dict
+
+
+
+def str_to_typed_value(s: str)-> int|float|str:
+
+            v = s
+            try:
+                v = int(s)
+            except ValueError:
+                try:
+                    v = float(s)
+                except ValueError:
+                    v = s
+            return v
+
+
+
+def multidict_to_sfilter(md: ImmutableMultiDict) -> SFilter:
+    """
+    Transform a multi dict to filter (query string are immutable dict)
+
+    see match in stricto for definition of a filter
+    see https://tedboy.github.io/flask/generated/generated/werkzeug.ImmutableMultiDict.html
+
+
+    [ ('toto', 'miam'), ('titi.tutu', '23.2') ('tata.$gt', 11)] ->
+    {
+        'toto' : "miam",
+        'titi' : {
+            'tutu' : 23.2
+        },
+        'tata' : ( '$gt', 11 )
+    }
+    """
+
+    list_of_filters = []
+    for key in md.keys():
+
+
+        # ignoring keys starting with _
+        if re.match(r"^_", key):
+            continue
+
+        my_key = key 
+        value_as_list = md.getlist(key)
+
+        operator = Operator.EQ
+        match = re.search(r"(.*)\.(\$.*)$", key)
+        if match:
+            my_key =  match[1]
+            operator = get_operator(match[2])
+
+        if operator is None:
+            raise SSyntaxError(f'Filter unknown operator "{match[2]}"')
+
+        # if the key doesn’t start as a path, add "$." at the beginning
+        if not re.match(r"^[\$\@]\.", my_key):
+            my_key=f'$.{my_key}'
+
+        # print(f'{my_key}={value_as_list}')
+
+        if len(value_as_list) == 1:
+            list_of_filters.append( SFilter( my_key, operator, str_to_typed_value(value_as_list[0]) ) )
+        else:
+            l = []
+            for v in value_as_list:
+                l.append( SFilter( my_key, operator, str_to_typed_value(v) ) )
+            list_of_filters.append( SFilter( None, Operator.AND, l ) )
+
+    if len( list_of_filters ) == 1:
+        return list_of_filters[0]
+    return SFilter( None, Operator.AND, list_of_filters )
+
+
+
+def dict_to_sfilter( d: dict )-> SFilter:
+    """Transform a dict into a SFilter
+
+    
+    { "$.a" : 12 } -> SFilter( "$.a", Operator.EQ, 12)
+    { "$.a.$gt" : 12 } -> SFilter( "$.a", Operator.GT, 12)
+
+    { "$.a" : 12 , "$.b" : 22 } -> SFilter( None, Operator.AND, [ SFilter( "$.a", Operator.EQ, 12), SFilter( "$.b", Operator.EQ, 22) ])
+    { "$not" : { "$.a" : 12 } } -> SFilter( None, Operator.NOT, SFilter( "$.a", Operator.EQ, 12))
+    { "$or" : [{ "$.a" : 12 }, { "$.b" : 22 } ] } -> SFilter( None, Operator.OR, [ SFilter( "$.a", Operator.EQ, 12), SFilter( "$.b", Operator.EQ, 22) )
+
+    Args:
+        d (dict): _description_
+
+    Returns:
+        SFilter: _description_
+    """
+    list_of_sfilter=[]
+    for key, value in d.items():
+
+        # $not operator
+        if key == "$not":
+            if not isinstance( value, dict):
+                raise SSyntaxError(f'"$not" operator must be followed by a dict')
+            return SFilter( None, Operator.NOT, dict_to_sfilter( value ))
+
+        # $and and $or    
+        if key == "$or" or key == "$and":
+            if not isinstance( value, list):
+                raise SSyntaxError(f'"$or" and "$and" operator must be followed by a list of dict')
+            operator=get_operator( key )
+            l=[]
+            for v in value:
+                if not isinstance( v, dict):
+                    raise SSyntaxError(f'"$or" and "$and" operator must be followed by a list of dict')
+                l.append( dict_to_sfilter( v ))
+            return SFilter( None, operator, l)
+        
+        # An operator at the end
+        my_key = key
+
+        operator = Operator.EQ
+        match = re.search(r"(.*)\.(\$.*)$", key)
+        if match:
+            my_key =  match[1]
+            operator = get_operator(match[2])
+
+        if operator is None:
+            raise SSyntaxError(f'Filter unknown operator "{match[2]}"')
+
+        # if the key doesn’t start as a path, add "$." at the beginning
+        if not re.match(r"^[\$\@]\.", my_key):
+            my_key=f'$.{my_key}'
+
+        list_of_sfilter.append( SFilter( my_key, operator, value ) )
+    
+    # return the filter
+    if len(list_of_sfilter) == 0:
+        return None
+    elif len(list_of_sfilter) == 1:
+        return list_of_sfilter[0]
+    else:
+        return SFilter( None, Operator.AND, list_of_sfilter)
 
 
 def request_to_object(request: Request) -> Any:
