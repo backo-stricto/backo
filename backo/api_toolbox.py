@@ -11,36 +11,44 @@ from werkzeug.datastructures import ImmutableMultiDict
 from stricto import SFilter, Operator, SSyntaxError
 
 
+def _get_operator(s: str) -> Operator:
+    """
+    find the operator from a string
 
-def get_operator( s: str )-> Operator:
+    :example: "$gt" -> Operator.GT
+
+    :param s: the string
+    :type s: str
+    :return: the operator found
+    :rtype: Operator
+    """
     a = {
-        "$eq" : Operator.EQ,
-        "$ne" : Operator.NE,
-        "$gt" : Operator.GT,
-        "$gte" : Operator.GTE,
-        "$lt" : Operator.LT,
-        "$lte" : Operator.LTE,
-        "$reg" : Operator.REG,
-        "$all" : Operator.ALL,
-        "$contains" : Operator.CONTAINS,
-        "$size" : Operator.SIZE,
-        "$and" : Operator.AND,
-        "$or" : Operator.OR,
-        "$not" : Operator.NOT,
+        "$eq": Operator.EQ,
+        "$ne": Operator.NE,
+        "$gt": Operator.GT,
+        "$gte": Operator.GTE,
+        "$lt": Operator.LT,
+        "$lte": Operator.LTE,
+        "$reg": Operator.REG,
+        "$all": Operator.ALL,
+        "$contains": Operator.CONTAINS,
+        "$size": Operator.SIZE,
+        "$and": Operator.AND,
+        "$or": Operator.OR,
+        "$not": Operator.NOT,
     }
 
     return a.get(s)
-    
 
 
-def append_path_to_filter(filter_as_dict: dict, key, value: list | tuple):
+def append_path_to_dict(the_dict: dict, key: str, value: list | tuple):
     """transform a
 
-    :param filter_as_dict: _description_
-    :type filter_as_dict: dict
-    :param key: _description_
-    :type key: _type_
-    :param value: _description_
+    :param the_dict: the dict to modify
+    :type the_dict: dict
+    :param key: the path
+    :type key: str
+    :param value: the value to insert
     :type value: list | tuple
     """
     changed_value = value
@@ -70,66 +78,36 @@ def append_path_to_filter(filter_as_dict: dict, key, value: list | tuple):
 
     match = re.search(r"^([^\.]+)\.(.*)", key)
     if not match:
-        filter_as_dict[key] = changed_value
+        the_dict[key] = changed_value
         return
 
-    # a toto.$gt (with an operator)
-    if re.findall(r"^\$", match.group(2)):
-        filter_as_dict[match.group(1)] = (match.group(2), changed_value)
-        return
-
-    sub = filter_as_dict.get(match.group(1), {})
+    sub = the_dict.get(match.group(1), {})
     if not isinstance(sub, dict):
         sub = {}
 
-    append_path_to_filter(sub, match.group(2), value)
-    filter_as_dict[match.group(1)] = sub
+    append_path_to_dict(sub, match.group(2), value)
+    the_dict[match.group(1)] = sub
 
 
-def multidict_to_filter(md: ImmutableMultiDict):
+def _str_to_typed_value(s: str) -> int | float | str:
     """
-    Transform a multi dict to filter (query string are immutable dict)
+    change a str to int or float
 
-    see match in stricto for definition of a filter
-    see https://tedboy.github.io/flask/generated/generated/werkzeug.ImmutableMultiDict.html
-
-
-    [ ('toto', 'miam'), ('titi.tutu', '23.2') ('tata.$gt', 11)] ->
-    {
-        'toto' : "miam",
-        'titi' : {
-            'tutu' : 23.2
-        },
-        'tata' : ( '$gt', 11 )
-    }
+    :param s: the string to change
+    :type s: str
+    :return: the new typed value
+    :rtype: int | float | str
     """
 
-    filter_as_dict = {}
-    for key in md.keys():
-
-        # ignoring keys starting with _
-        if re.match(r"^_", key):
-            continue
-
-        value = md.getlist(key)
-        append_path_to_filter(filter_as_dict, key, value)
-
-    return filter_as_dict
-
-
-
-def str_to_typed_value(s: str)-> int|float|str:
-
+    v = s
+    try:
+        v = int(s)
+    except ValueError:
+        try:
+            v = float(s)
+        except ValueError:
             v = s
-            try:
-                v = int(s)
-            except ValueError:
-                try:
-                    v = float(s)
-                except ValueError:
-                    v = s
-            return v
-
+    return v
 
 
 def multidict_to_sfilter(md: ImmutableMultiDict) -> SFilter:
@@ -153,47 +131,50 @@ def multidict_to_sfilter(md: ImmutableMultiDict) -> SFilter:
     list_of_filters = []
     for key in md.keys():
 
-
         # ignoring keys starting with _
         if re.match(r"^_", key):
             continue
 
-        my_key = key 
+        my_key = key
         value_as_list = md.getlist(key)
 
         operator = Operator.EQ
         match = re.search(r"(.*)\.(\$.*)$", key)
         if match:
-            my_key =  match[1]
-            operator = get_operator(match[2])
+            my_key = match[1]
+            operator = _get_operator(match[2])
 
         if operator is None:
             raise SSyntaxError(f'Filter unknown operator "{match[2]}"')
 
         # if the key doesn’t start as a path, add "$." at the beginning
         if not re.match(r"^[\$\@]\.", my_key):
-            my_key=f'$.{my_key}'
+            my_key = f"$.{my_key}"
 
         # print(f'{my_key}={value_as_list}')
 
         if len(value_as_list) == 1:
-            list_of_filters.append( SFilter( my_key, operator, str_to_typed_value(value_as_list[0]) ) )
+            list_of_filters.append(
+                SFilter(my_key, operator, _str_to_typed_value(value_as_list[0]))
+            )
         else:
             l = []
             for v in value_as_list:
-                l.append( SFilter( my_key, operator, str_to_typed_value(v) ) )
-            list_of_filters.append( SFilter( None, Operator.AND, l ) )
+                l.append(SFilter(my_key, operator, _str_to_typed_value(v)))
+            list_of_filters.append(SFilter(None, Operator.AND, l))
 
-    if len( list_of_filters ) == 1:
+    if len(list_of_filters) == 0:
+        return SFilter(None, Operator.TRUE, None)
+    if len(list_of_filters) == 1:
         return list_of_filters[0]
-    return SFilter( None, Operator.AND, list_of_filters )
+
+    return SFilter(None, Operator.AND, list_of_filters)
 
 
-
-def dict_to_sfilter( d: dict )-> SFilter:
+def dict_to_sfilter(d: dict) -> SFilter:  # pylint: disable=too-many-branches
     """Transform a dict into a SFilter
 
-    
+
     { "$.a" : 12 } -> SFilter( "$.a", Operator.EQ, 12)
     { "$.a.$gt" : 12 } -> SFilter( "$.a", Operator.GT, 12)
 
@@ -207,52 +188,60 @@ def dict_to_sfilter( d: dict )-> SFilter:
     Returns:
         SFilter: _description_
     """
-    list_of_sfilter=[]
+
+    if d is None:
+        return SFilter(None, Operator.TRUE, None)
+
+    list_of_sfilter = []
     for key, value in d.items():
 
         # $not operator
         if key == "$not":
-            if not isinstance( value, dict):
-                raise SSyntaxError(f'"$not" operator must be followed by a dict')
-            return SFilter( None, Operator.NOT, dict_to_sfilter( value ))
+            if not isinstance(value, dict):
+                raise SSyntaxError('"$not" operator must be followed by a dict')
+            return SFilter(None, Operator.NOT, dict_to_sfilter(value))
 
-        # $and and $or    
-        if key == "$or" or key == "$and":
-            if not isinstance( value, list):
-                raise SSyntaxError(f'"$or" and "$and" operator must be followed by a list of dict')
-            operator=get_operator( key )
-            l=[]
+        # $and and $or
+        if key in ("$or", " $and"):
+            if not isinstance(value, list):
+                raise SSyntaxError(
+                    '"$or" and "$and" operator must be followed by a list of dict'
+                )
+            operator = _get_operator(key)
+            l = []
             for v in value:
-                if not isinstance( v, dict):
-                    raise SSyntaxError(f'"$or" and "$and" operator must be followed by a list of dict')
-                l.append( dict_to_sfilter( v ))
-            return SFilter( None, operator, l)
-        
+                if not isinstance(v, dict):
+                    raise SSyntaxError(
+                        '"$or" and "$and" operator must be followed by a list of dict'
+                    )
+                l.append(dict_to_sfilter(v))
+            return SFilter(None, operator, l)
+
         # An operator at the end
         my_key = key
 
         operator = Operator.EQ
         match = re.search(r"(.*)\.(\$.*)$", key)
         if match:
-            my_key =  match[1]
-            operator = get_operator(match[2])
+            my_key = match[1]
+            operator = _get_operator(match[2])
 
         if operator is None:
             raise SSyntaxError(f'Filter unknown operator "{match[2]}"')
 
         # if the key doesn’t start as a path, add "$." at the beginning
         if not re.match(r"^[\$\@]\.", my_key):
-            my_key=f'$.{my_key}'
+            my_key = f"$.{my_key}"
 
-        list_of_sfilter.append( SFilter( my_key, operator, value ) )
-    
+        list_of_sfilter.append(SFilter(my_key, operator, value))
+
     # return the filter
     if len(list_of_sfilter) == 0:
-        return None
-    elif len(list_of_sfilter) == 1:
+        return SFilter(None, Operator.TRUE, None)
+    if len(list_of_sfilter) == 1:
         return list_of_sfilter[0]
-    else:
-        return SFilter( None, Operator.AND, list_of_sfilter)
+
+    return SFilter(None, Operator.AND, list_of_sfilter)
 
 
 def request_to_object(request: Request) -> Any:
@@ -278,12 +267,12 @@ def request_to_object(request: Request) -> Any:
             if re.match(r"^_", key):
                 continue
 
-            append_path_to_filter(obj, key, value)
+            append_path_to_dict(obj, key, value)
 
         # Append files to the json struct
         for vpath in request.files:
             file = request.files[vpath]
-            append_path_to_filter(obj, vpath, file)
+            append_path_to_dict(obj, vpath, file)
 
         return obj
 

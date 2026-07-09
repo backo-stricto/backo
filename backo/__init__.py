@@ -47,5 +47,9 @@ from .request_decorators import (
     return_http_error,
     error_to_http_handler,
 )
-from .api_toolbox import multidict_to_filter, append_path_to_filter, multidict_to_sfilter, dict_to_sfilter
+
+from .api_toolbox import (
+    multidict_to_sfilter,
+    dict_to_sfilter,
+)
 from .initialisation.init_script import backo_init

@@ -12,7 +12,7 @@ from backo import Item, Collection
 from backo import DBMongoConnector
 from backo import Backoffice, NotFoundError, DBError, current_user
 
-from backo import String, Bool  # , Error as StrictoError
+from backo import String, Bool, SFilter, Operator  # , Error as StrictoError
 
 
 class TestMongo(unittest.TestCase):
@@ -203,7 +203,9 @@ class TestMongo(unittest.TestCase):
         backoffice.users.create({"name": "bebert6", "surname": "Al"})
         backoffice.users.create({"name": "bebert7", "surname": "Al"})
 
-        result = backoffice.users._selections["_all"].select({"surname": "Al"})
+        result = backoffice.users._selections["_all"].select(
+            SFilter("$.surname", Operator.EQ, "Al")
+        )
         self.assertEqual(result["total"], 2)
         self.assertEqual(len(result["result"]), 2)
         for o in result["result"]:
@@ -211,7 +213,9 @@ class TestMongo(unittest.TestCase):
             self.assertEqual(o.surname, "Al")
 
         # check pagination
-        result = backoffice.users._selections["_all"].select({"surname": "Al"}, 1, 0)
+        result = backoffice.users._selections["_all"].select(
+            SFilter("$.surname", Operator.EQ, "Al"), 1, 0
+        )
         self.assertEqual(result["total"], 2)
         self.assertEqual(len(result["result"]), 1)
         for o in result["result"]:
@@ -220,12 +224,12 @@ class TestMongo(unittest.TestCase):
 
         # check not found
         result = backoffice.users._selections["_all"].select(
-            {"surname_not_found": "Al"}
+            SFilter("$.surname_not_found", Operator.EQ, "Al")
         )
         self.assertEqual(result["total"], 0)
         self.assertEqual(len(result["result"]), 0)
         result = backoffice.users._selections["_all"].select(
-            {"surname": "Al_not_found"}
+            SFilter("$.surname", Operator.EQ, "Al_not_found")
         )
         self.assertEqual(result["total"], 0)
         self.assertEqual(len(result["result"]), 0)

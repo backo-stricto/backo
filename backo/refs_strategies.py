@@ -4,6 +4,7 @@ Ref and RefsLink strategies
 
 from enum import Enum, auto
 
+
 class DeleteStrategy(Enum):
     """
     Specifics strategy for deletion for :py:class:`RefsList`

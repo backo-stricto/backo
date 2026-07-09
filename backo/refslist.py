@@ -6,19 +6,26 @@ Ref and RefsLink class definition
 
 import sys
 import copy
-import re
-from enum import Enum, auto
 from typing import Self
 
 # used for developpement
 sys.path.insert(1, "../../stricto")
 
-from stricto import String, List, Selector, Dict, SSyntaxError, STypeError, Kparse, SFilter
+from stricto import (
+    String,
+    List,
+    Selector,
+    Dict,
+    SSyntaxError,
+    STypeError,
+    Kparse,
+    SFilter,
+    Operator,
+)
 
 from .loop_path import LoopPath
 from .error import PathNotFoundError, BackoError
 from .log import log_system, LogLevel
-from .api_toolbox import append_path_to_filter
 
 from .refs_strategies import DeleteStrategy, FillStrategy
 
@@ -28,7 +35,6 @@ from . import ref
 log = log_system.get_or_create_logger("ref", LogLevel.DEBUG)
 
 DEFAULT_ID = "NULL_ID"
-
 
 
 REFSLIST_KPARSE_MODEL = {
@@ -197,18 +203,12 @@ class RefsList(List):
                 "{0}.{1} is not a Ref or a RefsList", self._collection, self._reverse
             )
 
-        match_filter = {}
+        match_filter = None
         if isinstance(reverse_field, ref.Ref):
-            append_path_to_filter(
-                match_filter,
-                re.sub(r"^\$\.", "", self._reverse),
-                [root_id],
-            )
+            match_filter = SFilter(self._reverse, Operator.EQ, root_id)
         if isinstance(reverse_field, RefsList):
-            append_path_to_filter(
-                match_filter,
-                re.sub(r"^\$\.", "", self._reverse),
-                ("$contains", root_id),
+            match_filter = SFilter(
+                self._reverse, Operator.CONTAINS, SFilter("@", Operator.EQ, root_id)
             )
         return self._coll_ref.select(match_filter)
 

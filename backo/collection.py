@@ -31,11 +31,16 @@ from stricto import (
     StrictoEncoder,
     String,
     STypeError,
+    SFilter,
     validation_parameters,
 )
 
 from .action import Action
-from .api_toolbox import append_path_to_filter, multidict_to_filter, request_to_object
+from .api_toolbox import (
+    request_to_object,
+    dict_to_sfilter,
+    multidict_to_sfilter,
+)
 from .db_connector import DBConnector
 from .error import PathNotFoundError
 from .file.file import File
@@ -454,7 +459,7 @@ class Collection:
         obj.enable_permissions()
         return obj
 
-    def select(self, filter_for_selection: dict) -> list[Item]:
+    def select(self, filter_for_selection: SFilter) -> list[Item]:
         """Do a selection directly with a filter
 
         :param filter_for_selection: a filter
@@ -465,7 +470,7 @@ class Collection:
         result = self._selections["_all"].select(filter_for_selection, 0, 0)
         return result["result"]
 
-    def select_one(self, filter_for_selection: dict) -> Item:
+    def select_one(self, filter_for_selection: SFilter) -> Item:
         """select one item (if only one)
 
         :param filter_for_selection: a filter
@@ -824,7 +829,7 @@ class Collection:
         _page = int(query.get("_page", 10))
         _skip = int(query.get("_skip", 0))
 
-        match_filter = multidict_to_filter(query)
+        match_filter: SFilter = multidict_to_sfilter(query)
 
         log.debug(f"filtering {self.name}/_all with filter={match_filter}")
 
@@ -856,7 +861,8 @@ class Collection:
         _page = int(query.get("_page", 10))
         _skip = int(query.get("_skip", 0))
 
-        match_filter = multidict_to_filter(query)
+        match_filter: SFilter = multidict_to_sfilter(query)
+
         result = self._selections[_selection_name].select(match_filter, _page, _skip)
 
         log.debug(
@@ -889,9 +895,7 @@ class Collection:
         _page = int(query.get("_page", 10))
         _skip = int(query.get("_skip", 0))
 
-        match_filter = {}
-        for key, v in request_content.items():
-            append_path_to_filter(match_filter, key, v)
+        match_filter: SFilter = dict_to_sfilter(request_content)
         result = self._selections[_selection_name].select(match_filter, _page, _skip)
 
         log.debug(

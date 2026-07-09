@@ -17,7 +17,7 @@ from .error import PathNotFoundError
 from .log import log_system, LogLevel
 
 
-from .refs_strategies import DeleteStrategy, FillStrategy
+from .refs_strategies import FillStrategy
 
 # WARNING: Specific import for cycling import beetween Ref and RefsLists
 from . import refslist
@@ -182,19 +182,22 @@ class Ref(String):  # pylint: disable=too-many-instance-attributes
                 )
                 return
 
-            if self._fill_strategy == FillStrategy.NOT_FILL and reverse_field._fill_strategy == FillStrategy.NOT_FILL:
+            if (
+                self._fill_strategy == FillStrategy.NOT_FILL
+                and reverse_field._fill_strategy == FillStrategy.NOT_FILL
+            ):
                 log.error(
                     f'{root._collection.name}/{me.path_name()} and Collection "{me._collection}", "{me._reverse}" are with no_fill strategies !'
                 )
                 return
 
-
-    def on_loaded( self, event_name, root, me, **kwargs
+    def on_loaded(
+        self, event_name, root, me, **kwargs
     ):  # pylint: disable=unused-argument
         """Trigged when the Item is loaded from the DB.
 
         if the fill_strategy is "NO_FILL", do the select from the reverse to fill it
-        
+
         Args:
             event_name (_type_): _description_
             root (_type_): _description_
@@ -203,7 +206,7 @@ class Ref(String):  # pylint: disable=too-many-instance-attributes
 
         if self._fill_strategy == FillStrategy.FILL:
             return
-        
+
         # The destination _id is already filled by the DBConnector
         if me.get_value() != None:
             return
@@ -214,9 +217,9 @@ class Ref(String):  # pylint: disable=too-many-instance-attributes
 
         self.set_collection_reference()
 
-        log.debug(f'{root._collection.name}//{me.path_name()} for id={root._id} loaded. Search _id from the reverse')
-
-
+        log.debug(
+            f"{root._collection.name}//{me.path_name()} for id={root._id} loaded. Search _id from the reverse"
+        )
 
     def on_before_save(
         self, event_name, root, me, **kwargs
@@ -329,13 +332,11 @@ class Ref(String):  # pylint: disable=too-many-instance-attributes
                 self._collection,
             )
 
-
         # The reverse is not a ref ?!!!
         if not isinstance(reverse_field, (refslist.RefsList, Ref)):
             raise STypeError(
                 "{0}.{1} is not a Ref or a RefsList", self._collection, me._reverse
             )
-
 
         looper.append(root._collection.name, root._id.get_value(), me.path_name())
 
@@ -354,7 +355,6 @@ class Ref(String):  # pylint: disable=too-many-instance-attributes
                 reverse_field.append(root._id)
                 log.debug(f"update reverse refList {me._reverse} => {other}")
                 other.save(**kwargs)
-
 
     def on_delete(
         self, event_name, root, me, **kwargs
@@ -411,13 +411,11 @@ class Ref(String):  # pylint: disable=too-many-instance-attributes
                 self._collection,
             )
 
-
         # The reverse is not a ref ?!!!
         if not isinstance(reverse_field, (refslist.RefsList, Ref)):
             raise STypeError(
                 "{0}.{1} is not a Ref or a RefsList", self._collection, me._reverse
             )
-
 
         looper.append(root._collection.name, root._id.get_value(), me.path_name())
 
@@ -431,7 +429,7 @@ class Ref(String):  # pylint: disable=too-many-instance-attributes
                 reverse_field.set(None)
                 other.save(**kwargs)
         else:
-        # List of references
+            # List of references
             log.debug(
                 "Ref on_delete clean refList %r %r %r",
                 me._collection,

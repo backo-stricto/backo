@@ -15,6 +15,8 @@ from stricto import (
     SRightError,
     SSyntaxError,
     Kparse,
+    SFilter,
+    Operator,
     validation_parameters,
     get_content,
 )
@@ -29,7 +31,10 @@ log = log_system.get_or_create_logger("select", LogLevel.INFO)
 
 KPARSE_MODEL = {
     "can_read|read": {"type": bool | Callable, "default": True},
-    "filter": Callable | dict | tuple,
+    "filter": {
+        "type": Callable | SFilter,
+        "default": SFilter(None, Operator.TRUE, None),
+    },
     "db_filter": Callable,
 }
 
@@ -92,7 +97,9 @@ class Selection(CollectionAddon):
         if self._selectors is not None and "$._id" not in self._selectors:
             self._selectors.insert(0, "$._id")
 
+        # Get the filter in SFilter format
         self._filter = options.get("filter")
+
         self._db_filter = options.get("db_filter")
 
         CollectionAddon.__init__(self)
@@ -150,7 +157,7 @@ class Selection(CollectionAddon):
 
     def select(
         self,
-        match_filter=None,
+        match_filter: SFilter = SFilter(None, Operator.TRUE, None),
         page_size=0,
         num_of_element_to_skip=0,
         db_sort_object={"_id": 1},
@@ -183,9 +190,16 @@ class Selection(CollectionAddon):
             "_page": page_size,
         }
 
-        # build the filter with filter given and self_filter
+        # build the filter with filter given and self._filter
         # --------------------------------------------------
-        filter_object = self._merge_and_filter(self._filter, match_filter)
+        f = self._filter() if callable(self._filter) else self._filter
+        if not isinstance(f, SFilter):
+            raise SSyntaxError(
+                'select "{0}" filter "{1}" is not type SFilter', self.name, f
+            )
+        filter_object: SFilter = match_filter.AND(self._filter)
+
+        print(f"sel fi={filter_object}")
 
         # Do the selection on the object
         index = 0
@@ -203,7 +217,7 @@ class Selection(CollectionAddon):
             if self.collection._permissions.is_allowed_to("read", o) is not True:
                 continue
 
-            if o.match(filter_object) is True:
+            if filter_object.check(o):
                 if index >= num_of_element_to_skip:
                     if page_size == 0 or (
                         page_size > 0 and index < (num_of_element_to_skip + page_size)

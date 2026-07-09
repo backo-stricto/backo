@@ -18,13 +18,13 @@ sys.path.insert(1, "../../../stricto")
 
 from stricto import Dict, GenericType, Int, List, Float, Bool, String, Datetime
 
-TYPE_AS_STRING = [t.__name__ for t in [ Int, List, Float, Bool, String, Datetime ]]
+TYPE_AS_STRING = [t.__name__ for t in [Int, List, Float, Bool, String, Datetime]]
 TYPE_AS_STRING.sort()
 
 
 class Message(String):
     """this class is just for displaying informations.
-    It is used by ask_field() 
+    It is used by ask_field()
 
     """
 
