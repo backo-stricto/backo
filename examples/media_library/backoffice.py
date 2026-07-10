@@ -17,7 +17,7 @@ sys.path.insert(1, "../../../backo")
 
 
 from collections_set import books, users
-from backo import Backoffice, current_user, log_system, LogLevel
+from backo import Backoffice, current_user, log_system, LogLevel, SFilter, Operator
 
 log_system.add_handler(log_system.set_streamhandler())
 log_system.setLevel(LogLevel.ERROR)
@@ -39,7 +39,7 @@ def log_in():
     current_user.standalone = True
 
     # find the user by login in the db
-    user = users.select_one({"login": login})
+    user = users.select_one(SFilter("$.login", Operator.EQ, login))
 
     # Fake auth
     if login != password:
@@ -136,14 +136,16 @@ current_user.roles.append("ADMIN")
 users.drop()
 books.drop()
 
-admin_user = users.select_one({"login": "admin"})
+admin_user = users.select_one(SFilter("$.login", Operator.EQ, "admin"))
 if admin_user is None:
     users.create({"login": "admin", "roles": ["ADMIN", "USER"]})
-emp1_user = users.select_one({"login": "emp1"})
+emp1_user = users.select_one(SFilter("$.login", Operator.EQ, "emp1"))
 if emp1_user is None:
     users.create({"login": "emp1", "roles": ["EMPLOYEE", "USER"]})
 
-first_book = books.select_one({"title": "martine mange des yaourth"})
+first_book = books.select_one(
+    SFilter("$.title", Operator.EQ, "martine mange des yaourth")
+)
 if first_book is None:
     books.create({"title": "martine mange des yaourth", "pages": 12})
 

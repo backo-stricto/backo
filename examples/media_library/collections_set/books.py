@@ -18,6 +18,8 @@ from backo import (
     Ref,
     Action,
     Selection,
+    SFilter,
+    Operator,
 )
 
 log = log_system.get_or_create_logger("books", LogLevel.INFO)
@@ -214,6 +216,6 @@ books.register_action("borrow", borrow_action)
 # SELECTIONS
 # ------------------------------------------------
 borrowed_book_select = Selection(
-    ["$.title", "$.borrow.user.login"], filter={"borrowed": True}
+    ["$.title", "$.borrow.user.login"], filter=SFilter("$.borrowed", Operator.EQ, True)
 )
 books.register_selection("borrowed", borrowed_book_select)

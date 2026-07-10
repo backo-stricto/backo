@@ -48,6 +48,8 @@ class MyDBRestfullConnector(
         :param o: the object
         :type o: dict
         """
+
+        print(f"o={o}")
         n = {}
         n["_id"] = self.generate_id(o)
         n["name"] = o["name"]
@@ -73,7 +75,7 @@ class MyDBRestfullConnector(
         return super().get_by_id(
             _id,
             endpoint="alpha",
-            query_options={"fields": "name,flags,cca2,cca3"},
+            query_options={"fields": "name,flags,alpha2Code,alpha3Code"},
         )
 
     def select(

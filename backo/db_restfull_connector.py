@@ -140,6 +140,8 @@ class DBRestfullConnector(DBConnector):
         if self._auth_token is not None:
             headers["Authorization"] = f"Bearer {self._auth_token}"
 
+        log.debug(f"{method.upper()} {uri}?{query_options}")
+
         try:
             response = self._session.request(
                 method=method.upper(),
