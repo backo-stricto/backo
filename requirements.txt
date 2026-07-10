@@ -7,4 +7,4 @@ pyjwt
 deepdiff
 python-magic
 questionary
-stricto>=0.2.3
+stricto>=0.2.4

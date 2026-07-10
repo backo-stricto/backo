@@ -703,7 +703,9 @@ class TestReferences(unittest.TestCase):
                     {
                         "name": String(),
                         "surname": String(),
-                        "site": Ref(coll="sites", field="$.users", ofs=FillStrategy.NOT_FILL),
+                        "site": Ref(
+                            coll="sites", field="$.users", ofs=FillStrategy.NOT_FILL
+                        ),
                         "male": Bool(default=True),
                     }
                 ),
@@ -735,7 +737,6 @@ class TestReferences(unittest.TestCase):
         self.yml_users.drop()
 
         current_user.standalone = True
-        si_mars = backoffice.sites.create({"name": "mars", "address": "very far"})
 
         si_moon = backoffice.sites.create({"name": "moon", "address": "far"})
 
@@ -748,7 +749,6 @@ class TestReferences(unittest.TestCase):
         self.assertEqual(si_moon.users[0], u._id)
         u.reload()
         self.assertEqual(u.site, si_moon._id)
-
 
     def test_references_many_to_one_modification(self):
         """

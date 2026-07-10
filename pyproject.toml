@@ -22,7 +22,7 @@ dependencies = [
   "questionary",
   "python-magic",
   "pymongo",
-  "stricto>=0.2.3"
+  "stricto>=0.2.4"
 ]
 
 [dependency-groups]
