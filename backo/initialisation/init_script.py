@@ -12,7 +12,6 @@ import questionary
 
 from jinja2 import Environment, FileSystemLoader
 
-
 # used for developpement
 sys.path.insert(1, "../../../stricto")
 
