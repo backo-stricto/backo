@@ -48,7 +48,7 @@ class DBYmlDirConnector(DBHandler):
         if not os.path.isdir(self._dir):
             raise DBError('Yaml path "{0}" is not a directory', self._dir)
 
-        super().__init__(dir, item_handler, **kwargs)
+        super().__init__(directory, item_handler, **kwargs)
 
     def drop(self) -> None:
         """See :func:`DBConnector.drop`"""
