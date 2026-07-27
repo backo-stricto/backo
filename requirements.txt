@@ -6,6 +6,6 @@ requests
 pyjwt
 deepdiff
 python-magic
-"python-jsonpath",
+python-jsonpath,
 questionary
 stricto>=0.2.4
