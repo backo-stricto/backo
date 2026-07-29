@@ -41,6 +41,7 @@ from .api_toolbox import (
     dict_to_sfilter,
     multidict_to_sfilter,
 )
+from .db import DBHandler
 from .db_connector import DBConnector
 from .error import PathNotFoundError
 from .file.file import File
@@ -134,7 +135,9 @@ class Collection:
     """The database connector"""
 
     @validation_parameters
-    def __init__(self, name: str, model: Item, db_handler: DBConnector, **kwargs):
+    def __init__(
+        self, name: str, model: Item, db_handler: DBConnector | DBHandler, **kwargs
+    ):
         """Constructor"""
         self.db_handler = db_handler
         self.name: str = name

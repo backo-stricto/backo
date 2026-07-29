@@ -7,7 +7,21 @@ test for DBConnectors
 import unittest
 
 
-from backo import NotFoundError
+from backo import (
+    NotFoundError,
+    Backoffice,
+    Collection,
+    Item,
+    String,
+    FillStrategy,
+    Ref,
+    Dict,
+    Int,
+    List,
+    Bool,
+    RefsList,
+    DeleteStrategy,
+)
 from backo import SFilter, Operator
 from backo.db import DBHandler, RenameTransformer
 from backo.db import (
@@ -15,9 +29,13 @@ from backo.db import (
     DBYmlDirConnector,
     DBMongoConnector,
     MongoRenameMapper,
+    Sqlite3AttributeMapper,
+    DBSqlite3Connector,
+    SqlDBChecker,
 )
 
 YML_DIR = "/tmp/backo_tests_connector"
+SQLITE3_DB = "/tmp/backo_tests_connector_sqlite3.db"
 
 
 class TestDBConnector(unittest.TestCase):
@@ -150,3 +168,55 @@ class TestDBConnector(unittest.TestCase):
         self.assertEqual(len(res), 0)
 
         con.close()
+
+    def test_sqlite3_checker(self):
+
+        con_users = DBSqlite3Connector(SQLITE3_DB, "users")
+        con_sites = DBSqlite3Connector(SQLITE3_DB, "sites")
+
+        backoffice = Backoffice("myApp")
+        coll_users = Collection(
+            "users",
+            Item(
+                {
+                    "name": String(),
+                    "surname": String(),
+                    "nicknames": List(String()),
+                    "site": Ref(
+                        coll="sites", field="$.users", ofs=FillStrategy.NOT_FILL
+                    ),
+                    "male": Bool(default=True),
+                }
+            ),
+            con_users,
+        )
+
+        backoffice.register_collection(coll_users)
+
+        # --- DB for sites
+
+        coll_sites = Collection(
+            "sites",
+            Item(
+                {
+                    "name": String(),
+                    "address": String(),
+                    "users": RefsList(
+                        coll="users",
+                        field="$.site",
+                        ods=DeleteStrategy.DELETE_REFERENCED_ITEMS,
+                    ),
+                }
+            ),
+            con_sites,
+        )
+
+        backoffice.register_collection(coll_sites)
+
+        checker = SqlDBChecker()
+        checker.set_db_handler(coll_users.db_handler)
+        checker.check_compliance("users", coll_users.get_meta())
+        checker.check_compliance("sites", coll_sites.get_meta())
+
+        # coll_users.db_handler.check_compliance(coll_users.get_meta())
+        # coll_sites.db_handler.check_compliance(coll_sites.get_meta())

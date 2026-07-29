@@ -1,6 +1,7 @@
 """
 module for transformers
 """
+
 from abc import ABC, abstractmethod
 from typing import Any
 import re
@@ -12,6 +13,7 @@ class AttributeTransformer(ABC):
     Manage a transformarton
     """
 
+    item_mapper = None
 
     @abstractmethod
     def pre_write(self, path: str, _data: dict) -> dict:
@@ -41,6 +43,7 @@ class RenameTransformer(AttributeTransformer):
     Transformation to rename an attribute
 
     """
+
     def __init__(self, db_path: str):
         """
         :param db_path: The name of the attribute on the DB side
@@ -102,10 +105,11 @@ class ModifyTransformer(AttributeTransformer):
     withe the compute function
 
     """
+
     def __init__(self, db_path: str):
         """
 
-        :param db_path: the 
+        :param db_path: the
         :type db_path: str
         """
         self._db_path = db_path

@@ -29,6 +29,8 @@ class ItemMapper:
     :type RequestResponse: _type_
     """
 
+    db_handler = None
+
     def __init__(self, **kwargs):
 
         options = Kparse(kwargs, KPARSE_MODEL)
@@ -42,10 +44,25 @@ class ItemMapper:
         self.default_attribute_mapper: AttributeMapper = options.get(
             "default_attribute_mapper"
         )
+        if self.default_attribute_mapper:
+            self.default_attribute_mapper.item_mapper = self
+
         self.default_attribute_transformer: AttributeTransformer = options.get(
             "default_attribute_transformer"
         )
+
+        if self.default_attribute_transformer:
+            self.default_attribute_transformer.item_mapper = self
         super().__init__()
+
+
+    def set_model( shema: dict )-> None:
+        """
+        Set the model and attribute mappers
+
+        (must be overwritten)
+        """
+        
 
     def add_attribute_mappers(
         self, attribute_name: str, mapper: AttributeMapper
@@ -58,6 +75,7 @@ class ItemMapper:
         :param mapper: _description_
         :type mapper: AttributHandler
         """
+        mapper.item_mapper = self
         self._attribute_mappers[attribute_name] = mapper
 
     def add_type_mappers(self, attribute_type: str, mapper: AttributeMapper) -> None:
@@ -69,6 +87,7 @@ class ItemMapper:
         :param mapper: _description_
         :type mapper: AttributHandler
         """
+        mapper.item_mapper = self
         self._type_mappers[attribute_type] = mapper
 
     def add_attribute_transformer(
@@ -82,6 +101,7 @@ class ItemMapper:
         :param mapper: _description_
         :type mapper: AttributHandler
         """
+        transformer.item_mapper = self
         self._attribute_transformers[attribute_name] = transformer
 
     def add_type_transformer(
@@ -95,9 +115,10 @@ class ItemMapper:
         :param mapper: _description_
         :type mapper: AttributHandler
         """
+        transformer.item_mapper = self
         self._type_transformers[attribute_type] = transformer
 
-    def get_mapper(self, path: str, attr_type: str = None) -> AttributeMapper:
+    def get_mapper(self, path: str, attr_types: list[str] = None) -> AttributeMapper:
         """
         find the mapper, first by path, then by type, or the default
 
@@ -112,8 +133,12 @@ class ItemMapper:
             mapper = self._attribute_mappers.get(path)
             if mapper:
                 return mapper
-        if attr_type:
-            return self._type_mappers.get(attr_type)
+        if attr_types:
+            for attr_type in attr_types:
+                mapper = self._type_mappers.get(attr_type)
+                if mapper:
+                    return mapper
+
         return self.default_attribute_mapper
 
     def get_transformer(self, path: str, attr_type: str = None) -> AttributeTransformer:

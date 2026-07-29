@@ -42,6 +42,7 @@ class DBHandler(ABC):  # pylint: disable=too-many-instance-attributes
 
         self._name = db_name
         self.item_mapper = item_mapper
+        self.item_mapper.db_handler = self
 
         options = Kparse(kwargs, KPARSE_MODEL)
 

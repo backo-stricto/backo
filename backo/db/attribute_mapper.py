@@ -2,6 +2,7 @@
 """
 Abstract class for Attribut Mapper
 """
+
 from abc import ABC, abstractmethod
 import sys
 
@@ -15,6 +16,8 @@ class AttributeMapper(ABC):
 
     """
 
+    item_mapper = None
+
     @abstractmethod
     def get_for_projection(self, path: str) -> str:
         """
@@ -24,6 +27,13 @@ class AttributeMapper(ABC):
 
     @abstractmethod
     def get_for_filter(self, path: str) -> str:
+        """
+        return the attribut name when asked for the filter
+        """
+        return None
+
+    # @abstractmethod
+    def get_field_description(self, collection_name: str, path: str, shema: dict):
         """
         return the attribut name when asked for the filter
         """
