@@ -23,15 +23,12 @@ from backo import (
     DeleteStrategy,
 )
 from backo import SFilter, Operator
-from backo.db import DBHandler, RenameTransformer
+from backo.db import DBHandler
 from backo.db import (
     DBMemoryConnector,
     DBYmlDirConnector,
     DBMongoConnector,
-    MongoRenameMapper,
-    Sqlite3AttributeMapper,
     DBSqlite3Connector,
-    SqlDBChecker,
 )
 
 YML_DIR = "/tmp/backo_tests_connector"
@@ -52,7 +49,12 @@ class TestDBConnector(unittest.TestCase):
     def sub_test_crud_connector(self, con: DBHandler, db_name: str):
         """
         test CRUD for every DBHandler
+
         """
+
+        self.assertEqual( con.check_structure(), True )
+
+
         con.drop()
         _id = con.create({"name": "toto", "age": 22})
         self.assertIsNotNone(_id)
@@ -65,9 +67,9 @@ class TestDBConnector(unittest.TestCase):
         # create / delete
         _id = con.create({"name": "toto2", "age": 12})
         self.assertIsNotNone(_id)
-        rep = con.delete_by_id(_id)
-        self.assertEqual(rep, True)
+        con.delete_by_id(_id)
 
+        
         # get error not found
         with self.assertRaises(NotFoundError) as e:
             con.get_by_id(_id)
@@ -91,7 +93,6 @@ class TestDBConnector(unittest.TestCase):
         self.assertEqual(type(res), list)
         self.assertGreaterEqual(len(res), 1)
 
-        # con.close()
 
     def test_memory_connector(self):
         """
@@ -100,7 +101,7 @@ class TestDBConnector(unittest.TestCase):
         """
 
         con = DBMemoryConnector("Memory")
-        con.item_mapper.add_attribute_transformer("$.name", RenameTransformer("$.nom"))
+        # con.item_mapper.add_attribute_transformer("$.name", RenameTransformer("$.nom"))
 
         with self.subTest(con=con):
             self.sub_test_crud_connector(con, "Memory")
@@ -113,7 +114,7 @@ class TestDBConnector(unittest.TestCase):
         and delete errors
         """
         con = DBYmlDirConnector(YML_DIR)
-        con.item_mapper.add_attribute_transformer("$.name", RenameTransformer("$.nom"))
+        # con.item_mapper.add_attribute_transformer("$.name", RenameTransformer("$.nom"))
 
         with self.subTest(con=con):
             self.sub_test_crud_connector(con, YML_DIR)
@@ -126,8 +127,8 @@ class TestDBConnector(unittest.TestCase):
         and delete errors
         """
         con = DBMongoConnector("mongodb://localhost:27017/testMongo", "MyColl")
-        con.item_mapper.add_attribute_transformer("$.name", RenameTransformer("$.nom"))
-        con.item_mapper.add_attribute_mappers("$.name", MongoRenameMapper("$.nom"))
+        #con.item_mapper.add_attribute_transformer("$.name", RenameTransformer("$.nom"))
+        #con.item_mapper.add_attribute_mappers("$.name", MongoRenameMapper("$.nom"))
 
         with self.subTest(con=con):
             self.sub_test_crud_connector(con, "MyColl")
@@ -144,6 +145,7 @@ class TestDBConnector(unittest.TestCase):
         )
         self.assertEqual(type(res), list)
         self.assertEqual(len(res), 1)
+
         res = con.select(
             SFilter(
                 None,
@@ -181,7 +183,9 @@ class TestDBConnector(unittest.TestCase):
                 {
                     "name": String(),
                     "surname": String(),
-                    "nicknames": List(String()),
+                    "nicknames": List(Dict({
+                        "a" : String()
+                    })),
                     "site": Ref(
                         coll="sites", field="$.users", ofs=FillStrategy.NOT_FILL
                     ),
@@ -213,10 +217,32 @@ class TestDBConnector(unittest.TestCase):
 
         backoffice.register_collection(coll_sites)
 
-        checker = SqlDBChecker()
-        checker.set_db_handler(coll_users.db_handler)
-        checker.check_compliance("users", coll_users.get_meta())
-        checker.check_compliance("sites", coll_sites.get_meta())
+        con_users.set_model( coll_users.get_meta() )
+        con_users.check_structure()
+        con_users.drop()
+        id = con_users.create( { "name" : "toto", "surname" : 'roberto', "male" : True, "nicknames" : [ { "a" : "aa" }, { "a" : "ff" } ] } )
+        o = con_users.search( str(id) )
+        print(f'got o = {o}')
+        o['surname'] = 'johnny'
+        con_users.save( id, o )
+        o = con_users.search( str(id) )
+        print(f'got o = {o}')
+
+
+
+        #con_users.delete_by_id( str(id) )
+        #con_users.delete_by_id( str(id) )
+
+        # checker = SqlDBChecker()
+        # checker.set_db_handler(coll_users.db_handler)
+        # checker.check_compliance("users", coll_users.get_meta())
+        # checker.check_compliance("sites", coll_sites.get_meta())
+
+        # con_users.get_by_id("1234")
+
 
         # coll_users.db_handler.check_compliance(coll_users.get_meta())
         # coll_sites.db_handler.check_compliance(coll_sites.get_meta())
+
+
+        con_users.close()

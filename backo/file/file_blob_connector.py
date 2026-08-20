@@ -13,7 +13,7 @@ from stricto import validation_parameters, Bytes
 from .file_connector import FileConnector
 from ..log import log_system, LogLevel
 
-log = log_system.get_or_create_logger("file", LogLevel.DEBUG)
+log = log_system.get_or_create_logger("file")
 
 
 class FileBlobConnector(FileConnector):  # pylint: disable=too-many-instance-attributes

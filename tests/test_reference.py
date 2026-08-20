@@ -27,7 +27,6 @@ from backo import String, Bool, SConstraintError
 ### --- For development ---
 log_system.add_handler(log_system.set_streamhandler())
 log = log_system.get_or_create_logger("testing")
-log_system.setLevel(LogLevel.DEBUG)
 
 
 YML_DIR = "/tmp/backo_tests_references"

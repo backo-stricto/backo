@@ -21,7 +21,7 @@ from .file_connector import FileConnector
 from ..error import FileError
 from ..log import log_system, LogLevel
 
-log = log_system.get_or_create_logger("file", LogLevel.DEBUG)
+log = log_system.get_or_create_logger("file")
 
 MIME = magic.Magic(mime=True)
 
@@ -127,8 +127,6 @@ class File(Dict):
         :type mime_types=: list [ str ]
 
         """
-
-        log.setLevel(LogLevel.DEBUG)
 
         options = Kparse(kwargs, KPARSE_MODEL)
 

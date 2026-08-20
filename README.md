@@ -1398,7 +1398,7 @@ You can select a specific ```logger``` and modify it by adding/removing handlers
 
 ```python
 log = log_system.get_or_create_logger("custom")
-log.setLevel(loggind.DEBUG)
+log.setLevel(logging.DEBUG)
 log.addHandler ( my_own_handler )
 # ...
 ```
@@ -1409,7 +1409,7 @@ If you need, you can had the ```stack()``` into your message, to get a nice stac
 
 ```python
 log = log_system.get_or_create_logger("custom")
-log.setLevel(loggind.DEBUG)
+log.setLevel(logging.DEBUG)
 
 # somewhere in you code
 log.debug(f'this is a debug message with stack {stack()}')
@@ -1496,7 +1496,7 @@ from media_library import mybackoffice
 from backo import log_system, LogLevel
 
 # Set migration level to debug
-log_migration = log_system.get_or_create_logger("migration", LogLevel.DEBUG)
+log_migration = log_system.get_or_create_logger("migration")
 
 # ---------------------------------------------
 # Check if a data match the model

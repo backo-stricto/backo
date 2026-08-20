@@ -412,8 +412,6 @@ class Collection:
 
             # Check if the object match the model despite the fact there is no change
             o = self.new_item()
-            print(f">> {o}")
-            print(f"<< {new_obj}")
             o.set(new_obj)
 
             return None
@@ -1095,7 +1093,6 @@ class Collection:
             # apply patches
             for p in patch_list:
                 patch = Patch()
-                print(f"patch {p}")
                 patch.set(p)
                 obj.patch(patch.op, patch.path, patch.value)
 

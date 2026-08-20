@@ -157,7 +157,7 @@ class Selection(CollectionAddon):
 
     def select(
         self,
-        match_filter: SFilter = SFilter(None, Operator.TRUE, None),
+        match_filter: SFilter = SFilter("", Operator.TRUE, None),
         page_size=0,
         num_of_element_to_skip=0,
         db_sort_object={"_id": 1},
@@ -198,8 +198,6 @@ class Selection(CollectionAddon):
                 'select "{0}" filter "{1}" is not type SFilter', self.name, f
             )
         filter_object: SFilter = match_filter.merge_and(self._filter)
-
-        print(f"sel fi={filter_object}")
 
         # Do the selection on the object
         index = 0

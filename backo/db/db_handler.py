@@ -4,7 +4,7 @@ Module providing the Generic() Class for connection on DB
 
 import uuid
 import sys
-from typing import Callable, Any
+from typing import Callable
 from abc import ABC, abstractmethod
 
 # used for developpement
@@ -12,15 +12,7 @@ sys.path.insert(1, "../../../stricto")
 
 from stricto import Kparse, SFilter
 
-from .request import (
-    Response,
-    SearchRequest,
-    SelectRequest,
-    UpdateRequest,
-    DeleteRequest,
-    CreateRequest,
-)
-from .item_mapper import ItemMapper
+from .transformer import Transformer
 
 KPARSE_MODEL = {"restriction": Callable}
 
@@ -37,19 +29,74 @@ class DBHandler(ABC):  # pylint: disable=too-many-instance-attributes
 
     """
 
-    def __init__(self, db_name: str, item_mapper: ItemMapper = None, **kwargs):
+    def __init__(self, db_name: str,  **kwargs):
         """Constructor"""
 
         self._name = db_name
-        self.item_mapper = item_mapper
-        self.item_mapper.db_handler = self
+        self._table_name = None
+        self.model= None
+        self.transformers = {}
 
         options = Kparse(kwargs, KPARSE_MODEL)
 
         self.restriction_filter = options.get("restriction")
 
+
+    def set_model( self, scheme: dict )->None:
+        self.model = scheme['item']
+
+
+    def register_transformer( self, transformer:Transformer, table_name:str = None )-> None:
+        t_name = self._table_name if table_name is None else table_name
+
+        if t_name not in self.transformers:
+            self.transformers[t_name] = {}
+        self.transformers[t_name][ '_'.join(transformer.key_path) ] = transformer
+
+
+    def register_type_transformer( self, transformer:Transformer )-> None:
+        self.type_transformers[transformer.backo_type] = transformer
+
+
+
+    def get_transformer( self, key_path: list [ str ],  table_name:str = None, backo_types: list [ str ] = None )-> Transformer:
+        """
+        Get a transformer for this key_path and the table
+
+        :param key_path: _description_
+        :type key_path: list[ str ]
+        :param table_name: _description_, defaults to None
+        :type table_name: str, optional
+        :return: _description_
+        :rtype: Transformer
+        """
+
+        if backo_types:
+            for backo_type in backo_types:
+                if backo_type in self.type_transformers:
+                    return self.type_transformers[backo_type]
+
+        t_name = self._table_name if table_name is None else table_name
+        if t_name not in self.transformers:
+            return None
+        t_path = self.transformers[t_name]
+
+        key =  '_'.join(key_path)
+        if key not in t_path:
+            return None
+        return t_path[key]
+
+    def check_structure(self)-> bool:
+        """
+        Check if the internal structure is compliant to the model
+
+        :return: True if compliant, or False
+        :rtype: bool
+        """
+        return True
+    
     @abstractmethod
-    def drop(self):  # pylint: disable=unused-argument
+    def drop(self) -> None:  # pylint: disable=unused-argument
         """Drop the collection
 
         Mainly used in test
@@ -59,75 +106,6 @@ class DBHandler(ABC):  # pylint: disable=too-many-instance-attributes
         """
 
     @abstractmethod
-    def db_search(self, db_request: SearchRequest) -> Response:
-        """get one"""
-        return None
-
-    @abstractmethod
-    def db_delete(self, db_request: DeleteRequest) -> Response:
-        """delete"""
-        return None
-
-    @abstractmethod
-    def db_update(self, db_request: UpdateRequest) -> Response:
-        """update one"""
-        return None
-
-    @abstractmethod
-    def db_select(self, db_request: SelectRequest) -> Response:
-        """select"""
-        return None
-
-    @abstractmethod
-    def db_create(self, db_request: CreateRequest) -> Response:
-        """select"""
-        return None
-
-    @abstractmethod
-    def db_build_select_request(self, request: SelectRequest) -> Any:
-        """
-        build the request
-
-        :return: _description_
-        :rtype: Any
-        """
-
-    @abstractmethod
-    def db_build_search_request(self, request: SearchRequest) -> Any:
-        """
-        build the request
-
-        :return: _description_
-        :rtype: Any
-        """
-
-    @abstractmethod
-    def db_build_update_request(self, request: UpdateRequest) -> Any:
-        """
-        build the request
-
-        :return: _description_
-        :rtype: Any
-        """
-
-    @abstractmethod
-    def db_build_create_request(self, request: CreateRequest) -> Any:
-        """
-        build the request
-
-        :return: _description_
-        :rtype: Any
-        """
-
-    @abstractmethod
-    def db_build_delete_request(self, request: DeleteRequest) -> Any:
-        """
-        build the request
-
-        :return: _description_
-        :rtype: Any
-        """
-
     def connect(self):
         """Try to make a connection to the mongodb
 
@@ -135,6 +113,7 @@ class DBHandler(ABC):  # pylint: disable=too-many-instance-attributes
 
         """
 
+    @abstractmethod
     def close(self):
         """Close the mongodb connection
 
@@ -157,6 +136,7 @@ class DBHandler(ABC):  # pylint: disable=too-many-instance-attributes
         """
         return str(uuid.uuid4().int >> 64)
 
+    @abstractmethod
     def get_by_id(self, _id: str) -> dict:  # pylint: disable=unused-argument
         """
         get an object by _id in the DB and return it
@@ -168,65 +148,46 @@ class DBHandler(ABC):  # pylint: disable=too-many-instance-attributes
         :raise Error: Raise an error DBError or any db error
 
         """
-        req = SearchRequest(_id)
-        data = self.db_search(self.db_build_search_request(req))
-        resp = Response()
-        if self.item_mapper:
-            self.item_mapper.do_post_read(data)
-        resp.data = data
-        return resp.data
 
-    def create(self, o: Any) -> str:  # pylint: disable=unused-argument
+    @abstractmethod
+    def create(self, o: dict) -> str:  # pylint: disable=unused-argument
         """Create the object into the DB and return the _id
 
         :param o: The object given (json format)
         :type o: dict
+        :return: The _id of the object.
+        :rtype: str
+
+        
         :raise Error: Raise an error DBError or any db error
 
         """
 
-        if self.item_mapper:
-            self.item_mapper.do_pre_write(o)
 
-        req = CreateRequest(o)
-        data = self.db_create(self.db_build_create_request(req))
-        resp = Response()
-        resp.data = data
-        return resp.data
-
-    def save(self, _id: str, o: dict):  # pylint: disable=unused-argument
+    @abstractmethod
+    def save(self, _id: str, o: dict) -> None:  # pylint: disable=unused-argument
         """Save the objet
 
         :param _id: the _id of this object
         :type _id: str
+
         :param o: The object given (json format)
         :type o: dict
+
         :raise Error: Raise an error DBError or any db error
 
         """
 
-        if self.item_mapper:
-            self.item_mapper.do_pre_write(o)
-
-        req = UpdateRequest(_id, o)
-        data = self.db_update(self.db_build_update_request(req))
-        resp = Response()
-        resp.data = data
-        return resp.data
-
-    def delete_by_id(self, _id: str):  # pylint: disable=unused-argument
+    @abstractmethod
+    def delete_by_id(self, _id: str)-> None: 
         """The _id to delete on the db
 
         :param _id: the _id
         :type _id: str
         :raise Error: Raise an error DBError or any db error
         """
-        req = DeleteRequest(_id)
-        data = self.db_delete(self.db_build_delete_request(req))
-        resp = Response()
-        resp.data = data
-        return resp.data
 
+    @abstractmethod
     def select(  # pylint: disable=unused-argument
         self,
         select_filter: SFilter,
@@ -234,7 +195,7 @@ class DBHandler(ABC):  # pylint: disable=too-many-instance-attributes
         page_size: int = 0,
         num_of_element_to_skip: int = 0,
         sort_object: dict = {},
-    ) -> Response:
+    ) -> list [ dict ]:
         """
         Select from filter in the DB and return a list of dicts, with pagination
 
@@ -250,13 +211,3 @@ class DBHandler(ABC):  # pylint: disable=too-many-instance-attributes
         :raise Error: Raise an error DBError or any db error
 
         """
-        req = SelectRequest(select_filter, projection)
-        data = self.db_select(self.db_build_select_request(req))
-        resp = Response()
-        if self.item_mapper:
-            if isinstance(data, list):
-                for d in data:
-                    self.item_mapper.do_post_read(d)
-
-        resp.data = data
-        return resp.data

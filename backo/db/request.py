@@ -5,7 +5,7 @@ request and response definitions
 # pylint: disable=too-few-public-methods
 import sys
 from abc import ABC
-from typing import Any
+from typing import Any, Self
 
 # used for developpement
 sys.path.insert(1, "../../../stricto")
@@ -73,7 +73,7 @@ class UpdateRequest(Request):
 
     """
 
-    def __init__(self, _id: str, data: Any):
+    def __init__(self, _id: str, data: dict):
         """
 
         :param _id: The id of the object
@@ -92,7 +92,7 @@ class CreateRequest(Request):
 
     """
 
-    def __init__(self, data: Any):
+    def __init__(self, data: dict):
         self._data = data
         super().__init__()
 
@@ -103,10 +103,13 @@ class SelectRequest(Request):
 
     """
 
-    def __init__(self, sfilter: SFilter = None, projection: list[str] = []):
+    def __init__(self, sfilter: SFilter = None, projection: list[str] = [], page_size: int = 0, num_of_element_to_skip: int = 0, sort=None):
 
         self._filter = sfilter
         self._projection = projection
+        self._page_size = page_size
+        self._num_of_element_to_skip = num_of_element_to_skip
+        self._sort= sort
 
         super().__init__()
 
@@ -119,5 +122,84 @@ class Response(RequestResponse):
     def __init__(self):
         self.data = None
         self.filter_completed = False
-
+        self.stats = None
         super().__init__()
+
+
+
+
+class New_Request():
+
+    childs_requests : list [ Self ]
+
+    def __init__(self):
+       self.childs_requests = []
+    
+
+    def get(self)-> Any:
+        """ return the request as something understandable """
+
+
+
+class Create_Request(New_Request):
+
+    def __init__(self, table_name: str):
+     """
+    :param _id: The _id to search
+     :type _id: str
+     """
+     self.table_name = table_name
+     print(f'create table request {table_name}')
+     super().__init__()
+
+    def append( self, key:str, value:Any )-> None:
+        """ Add values to the query """
+        return
+
+
+class Update_Request(New_Request):
+
+    def __init__(self, table_name: str):
+     """
+    :param _id: The _id to search
+     :type _id: str
+     """
+     self.table_name = table_name
+     super().__init__()
+
+    def append( self, key:str, value:Any )-> None:
+        """ Add values to the query """
+        return
+
+class Search_Request(New_Request):
+
+    def __init__(self, table_name: str, _id: str):
+     """
+    :param _id: The _id to search
+     :type _id: str
+     """
+     self.table_name = table_name
+     self._id = _id
+     super().__init__()
+
+class Delete_Request(New_Request):
+
+    def __init__(self, table_name: str, _id: str):
+     """
+    :param _id: The _id to search
+     :type _id: str
+     """
+     self.table_name = table_name
+     self._id = _id
+     super().__init__()
+
+class Select_Request(New_Request):
+
+    def __init__(self, table_name: str, filter: Any):
+     """
+    :param _id: The _id to search
+     :type _id: str
+     """
+     self.table_name = table_name
+     self.filter = filter
+     super().__init__()

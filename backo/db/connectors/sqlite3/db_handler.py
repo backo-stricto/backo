@@ -3,24 +3,19 @@
 Attribut mapper for mongo db connector
 """
 
-from typing import Any, Self
-import re
+from typing import Any
 
 import sqlite3
 
-from stricto import SFilter, Operator
+from stricto import SFilter
 
 from ...db_handler import DBHandler
-from .attribute_mapper import Sqlite3AttributeMapper, Sqlite3RefAttributeMapper, Sqlite3_idAttributeMapper, Sqlite3DictAttributeMapper, Sqlite3ListAttributeMapper, Sqlite3RefsListAttributeMapper
-from .item_mapper import Sqlite3ItemMapper
 from ....error import NotFoundError, DBError
-from .request import (
-    Sqlite3DeleteRequest,
-    Sqlite3UpdateRequest,
-    Sqlite3CreateRequest,
-    Sqlite3SearchRequest,
-    Sqlite3SelectRequest,
-)
+
+from .transformers import IdTransformer, BooleanTransformer
+from ...transformer import Transformer
+
+from .pragma import TablePragma, SqlFieldDescription
 
 from ...request import Response
 
@@ -34,9 +29,6 @@ class DBSqlite3Connector(DBHandler):
         self,
         db_file: str,
         table_name: str,
-        item_mapper: Sqlite3ItemMapper = Sqlite3ItemMapper(
-            default_attribute_mapper=Sqlite3AttributeMapper()
-        ),
         **kwargs,
     ):
         """
@@ -51,17 +43,27 @@ class DBSqlite3Connector(DBHandler):
         self._db_file = db_file
         self._table_name = table_name
 
+        self.pragmas: dict [ str, TablePragma ]= {}
+
+        # Transformers
+        self.transformers: dict [ str, dict [ str, Transformer ]] = {}
+        self.type_transformers: dict [ str, Transformer ] = {}
+
+
         self._db = sqlite3.connect(self._db_file, **kwargs)
 
-        super().__init__(f"{db_file}({table_name})", item_mapper, **kwargs)
+        super().__init__(f"{db_file}({table_name})", **kwargs)
 
-        self.item_mapper.add_type_mappers("Ref", Sqlite3RefAttributeMapper())
-        self.item_mapper.add_type_mappers("RefsList", Sqlite3RefsListAttributeMapper())
-        self.item_mapper.add_type_mappers("List", Sqlite3ListAttributeMapper())
-        self.item_mapper.add_type_mappers("Dict", Sqlite3DictAttributeMapper())
-        self.item_mapper.add_attribute_mappers("$._id", Sqlite3_idAttributeMapper())
+        self._db_file = db_file
+        self._table_name = table_name
+
+        self.register_transformer(IdTransformer())
+        self.register_type_transformer(BooleanTransformer())
 
         self.connect()
+
+
+
 
     def connect(self):
         """Try to make a connection to the mongodb
@@ -85,17 +87,37 @@ class DBSqlite3Connector(DBHandler):
         except Exception as e:
             raise DBError('Sqlite3 close error at "{0}"', self._db_file) from e
 
+    def drop_table(self, table_name: str, key_path:list [ str ] , model : dict )-> None:
+
+        if 'sub_scheme' in model:
+            for k, v in model['sub_scheme'].items():
+                new_key_path = key_path.copy()
+                new_key_path.append(k)
+                self.drop_table( table_name, key_path + [ k ] , v  )
+            return
+
+        db_key = '_'.join(key_path)
+
+        # A list
+        if 'sub_type' in model:
+            sub_model = model['sub_type']
+            sub_table_name=f'{table_name}_{db_key}'
+            self.drop_table( sub_table_name, [] , sub_model  )
+            return
+
+        self._cursor.execute( f'DELETE FROM {table_name}').fetchall()
+
+        return
+
+
     def drop(self) -> None:
         """
         Drop the entire collection
 
         """
-        try:
-            pass
-        except Exception as e:
-            raise DBError(
-                'Sqlite3 connection error while "{0}.drop()"', self._db_file
-            ) from e
+        self.drop_table( self._table_name, [], self.model )
+        self._db.commit()
+
 
     def generate_id(self, o: dict) -> str:  # pylint: disable=unused-argument
         """
@@ -104,87 +126,282 @@ class DBSqlite3Connector(DBHandler):
         """
         raise DBError("Cannot use generate_id() in  DBSqlite3Connector")
 
-    def db_build_search_request(self, request: Sqlite3SearchRequest) -> Any:
+
+    def _set_table_info(self, table_name ):
+
+        if table_name in self.pragmas:
+            tp = self.pragmas[table_name]
+        else:
+            tp = TablePragma(table_name)
+            self.pragmas[table_name] = tp
+
+            res = self._cursor.execute(
+                f'SELECT name FROM sqlite_master WHERE name=="{table_name}"'
+            ).fetchone()
+            if res is not None:
+                tables = list(res)
+                if len(tables) == 1:
+
+                    current_pragmas = self._cursor.execute(
+                        f"PRAGMA table_info({table_name});"
+                    ).fetchall()
+
+                    for current_pragma in current_pragmas:
+                        cp = SqlFieldDescription(current_pragma)
+                        tp.add_db_field(cp)
+
+                    current_foreigns = self._cursor.execute(
+                        f"PRAGMA foreign_key_list({table_name});"
+                    ).fetchall()
+
+                    for current_foreign in current_foreigns:
+                        cp = SqlFieldDescription(None, current_foreign)
+                        tp.add_db_field(cp)
+
+            f = SqlFieldDescription()
+            f.create("id", {"types": ["Int"], "required": False})
+            f._pk = True
+            tp.add_backo_field(f)
+
+
+        return tp
+
+
+    def reccursive_check_structure( self, table_name:str, key_path:list [ str ] , scheme : dict )-> None:
+
+        tp=self._set_table_info( table_name )
+
+        # A Dict
+        if 'sub_scheme' in scheme:
+
+            for k, v in scheme['sub_scheme'].items():
+                new_key_path = key_path.copy()
+                new_key_path.append(k)
+                self.reccursive_check_structure( table_name, new_key_path, v )
+            return
+
+        # A List
+        if 'sub_type' in scheme:
+            sub_table_name=f'{table_name}_{'_'.join(key_path)}'      
+            self.reccursive_check_structure( sub_table_name, [], scheme["sub_type"] )
+
+            tp_sub = self._set_table_info( sub_table_name )
+            f1 = SqlFieldDescription()
+            f1.create(f"{table_name}_id", {"types": ["Int"], "required": False})
+            f1._ref_table = table_name
+            f1._ref_field = "id"
+            tp_sub.add_backo_field(f1)
+
+            return
+
+        transformer = self.get_transformer( key_path, table_name )
+        store_in_db = True if transformer is None else transformer.must_be_store_in_db()
+        if store_in_db:
+            f = SqlFieldDescription()
+            f.create('_'.join(key_path), scheme)
+            tp.add_backo_field(f)
+
+
+    def check_structure(self)-> bool:
+        self.reccursive_check_structure( self._table_name, [], self.model )
+
+        some_changements = False
+
+        for t_name, tp in self.pragmas.items():
+            s = tp.get_pragma()
+            if s is not None:
+                some_changements = True
+                print(f'# --- table "{t_name}" ----')
+                print(s)
+
+        if some_changements is False :
+            print("No changements")
+        return some_changements
+
+
+    def search_in_db( self, table_name:str, id_name: str, id:int )-> dict:
+        list_of_results = self._cursor.execute( f'SELECT * FROM {table_name} WHERE {id_name} == ?', ( id, ) ).fetchall()
+
+        # None or empty
+        if not list_of_results:
+            raise NotFoundError('{0} == {1} not found in table {2}', id_name, id, table_name )
+
+        l = []
+        for res in list_of_results:
+            obj = {}
+            for idx, attribute in enumerate(self._cursor.description):
+                key_path = attribute[0]
+                value = res[idx]
+                obj[key_path] = value
+            l.append(obj)
+        return l
+
+
+    def load( self, table_name:str, key_path:list[str], model:dict , loaded_object: dict)-> Any:
         """
-        Build the Search request
-
-        :param request: the request
-        :type request: SearchRequest
-        :return: a mongo query for this request
-        :rtype: Any
+        Do the load 
         """
-        return f'id == "{request._id}"', request._id
+        transformer = self.get_transformer( key_path, table_name, model['types'] )
+        if transformer:
+            transformer.on_load( loaded_object, key_path )
 
-    def db_search(self, search_request: tuple) -> Any:
-        """get one"""
-        where_condition, _id = search_request
 
-        try:
-            pass
-        except Exception as e:
-            raise DBError(
-                'Sqlite3 connection error while "{0}.find_one()"', self._db_file
-            ) from e
+        db_key = '_'.join(key_path)
 
-        # if o is None:
-        #     raise NotFoundError('_id "{0}" not found in "{1}"', _id, self._name)
-        # o["_id"] = _id
-        # return o
-        return None
+        # A dict
+        if 'sub_scheme' in model:
+            o={}
+            for k, v in model['sub_scheme'].items():
+                new_key_path = key_path.copy()
+                new_key_path.append(k)
+                o[k] = self.load( table_name, key_path + [ k ] , v , loaded_object )
+            return o
 
-    def db_build_delete_request(self, request: Sqlite3DeleteRequest) -> Any:
+        # A list
+        if 'sub_type' in model:
+            sub_model = model['sub_type']
+            sub_table_name=f'{table_name}_{db_key}'
+            sub_objects = self.search_in_db( sub_table_name, f"{table_name}_id", loaded_object["id"] )
+            values = []
+            for sub_object in sub_objects:
+                sub = self.load( table_name, [] , sub_model, sub_object )
+                values.append(sub)
+            return values
+
+
+        # A normal value
+        if db_key not in loaded_object:
+            return
+        
+        return loaded_object[db_key]
+
+
+    def search(self, _id: str) -> dict:  # pylint: disable=unused-argument
         """
-        Build the Delete request
+        Do a search
 
-        :param request: the request
-        :type request: DeleteRequest
-        :return: a mongo query for this request
-        :rtype: Any
         """
-        return f'id == "{request._id}"', request._id
+        list_of_items = self.search_in_db( self._table_name, "id", int(_id))
+        o = self.load( self._table_name, [], self.model, list_of_items[0] )
+        return o
 
-    def db_delete(self, delete_request: tuple) -> Any:
-        """delete"""
-        where_condition, _id = delete_request
+    def get_by_id( self, _id:str)-> dict:
+        return self.search( _id )
 
-        try:
-            pass
-        except Exception as e:
-            raise DBError(
-                'Sqlite3 connection error while "{0}.delete_one()"', self._db_file
-            ) from e
+    def delete_in_db( self, table_name:str, id_name: str, id:int )-> dict:
+        print( f'DELETE FROM {table_name} WHERE {id_name} == {id} RETURNING id')
+        list_of_results = self._cursor.execute( f'DELETE FROM {table_name} WHERE {id_name} == ? RETURNING id', ( id, )).fetchall()
 
-        # if result.deleted_count == 1:
-        #     return True
-        #
-        # raise NotFoundError('_id "{0}" not found in "{1}"', _id, self._name)
-        return False
+        # None or empty results
+        if not list_of_results:
+            raise NotFoundError('{0} == {1} not found in table {2}', id_name, id, table_name )
+        deleted_ids= [res[0] for res in list_of_results]
+        return deleted_ids
 
-    def db_build_update_request(self, request: Sqlite3UpdateRequest) -> Any:
+    def reccursive_delete( self, table_name:str,key_path:list[str], deleted_ids: list[ int ], model:dict)-> None:
+
+        if 'sub_scheme' in model:
+            for k, v in model['sub_scheme'].items():
+                new_key_path = key_path.copy()
+                new_key_path.append(k)
+                self.reccursive_delete( table_name, key_path + [ k ] , deleted_ids, v  )
+            return
+
+        db_key = '_'.join(key_path)
+
+        # A list
+        if 'sub_type' in model:
+            sub_model = model['sub_type']
+            sub_table_name=f'{table_name}_{db_key}'
+            for deleted_id in deleted_ids:
+                sub_deleted_ids = self.delete_in_db( sub_table_name, f"{table_name}_id", deleted_id )
+                self.reccursive_delete( sub_table_name, [] , sub_deleted_ids, sub_model  )
+            return
+
+        return
+    
+
+    def delete_by_id(self, _id):
+        ids = self.delete_in_db( self._table_name, "id", int(_id) )
+        self.reccursive_delete( self._table_name, [], ids, self.model )
+        self._db.commit()
+
+
+
+
+
+
+
+
+
+
+
+
+    def create_in_db( self, table_name:str, keys_values: list[ tuple[ str, Any ]]) -> int:
+        r = tuple(map(tuple, zip(*keys_values)))
+        t = ("?",) * len(r[0])
+        print( f'INSERT INTO {table_name} {r[0]} {r[0]} VALUES ({', '.join(t) })', r[1] )
+        self._cursor.execute( f'INSERT INTO {table_name} {r[0]} VALUES ({', '.join(t) })', r[1] )
+        created_id = self._cursor.lastrowid
+        return created_id
+
+
+    def reccursive_create( self, table_name:str, key_path:str, o, scheme : dict, keys_values: list[ tuple[ str, Any ]] )-> int:
         """
-        Build the Update Request
+        Do the creation 
 
-        :param request: the request
-        :type request: UpdateRequest
-        :return: a mongo query for this request
-        :rtype: Any
+        :param table_name: _description_
+        :type table_name: str
+        :param key_path: _description_
+        :type key_path: str
+        :param o: _description_
+        :type o: _type_
+        :param scheme: _description_
+        :type scheme: dict
+        :param keys_values: _description_
+        :type keys_values: list[ tuple[ str, Any ]]
+        :return: _description_
+        :rtype: int
         """
-        return f'id == "{request._id}"', request._id, request._data
 
-    def db_update(self, _id: str, update_request: tuple) -> Any:
-        """update one"""
-        where_condition, o, _id = update_request
+        transformer = self.get_transformer( key_path, table_name, scheme['types'] )
+        if transformer:
+            if transformer.must_be_store_in_db() is False:
+                return
+            transformer.on_create( o, key_path )
 
-        try:
-            pass
-        except Exception as e:
-            raise DBError(
-                'Sqlite3 connection error while "{0}.find_one_and_replace()"',
-                self._db_file,
-            ) from e
+        # A Dict
+        if 'sub_scheme' in scheme and isinstance( o, dict ):
 
-        return True
+            id = None
+            # Put the List objects at the end to do the creation forst to get th id for the next
+            for k, v in sorted(
+                    scheme['sub_scheme'].items(),
+                    key=lambda item: "sub_type" in item[1]
+                ):
+                new_key_path = key_path.copy()
+                new_key_path.append(k)
+                if k in o:
+                    my_id = self.reccursive_create( table_name, new_key_path, o[k], v, keys_values )
+                    if id is None:
+                        id = my_id
+            return id
 
+        # A List
+        if 'sub_type' in scheme and isinstance( o, list ):
+            id = self.create_in_db( table_name, keys_values)
+            keys_values.clear()
+
+            sub_table_name=f'{table_name}_{'_'.join(key_path)}'      
+            for d in o:
+                kv = [ ( f"{table_name}_id", id )]
+                self.reccursive_create( sub_table_name, [], d, scheme["sub_type"], kv )
+                self.create_in_db( sub_table_name, kv)
+                kv.clear()
+
+            return id
+        
+        keys_values.append( ( f'{'_'.join(key_path)}', o ) )
 
 
     def create(self, o: Any) -> str:  # pylint: disable=unused-argument
@@ -195,72 +412,99 @@ class DBSqlite3Connector(DBHandler):
         :raise Error: Raise an error DBError or any db error
 
         """
+        keys_values=[]
+        id = self.reccursive_create( self._table_name, [], o, self.model, keys_values )
+        if keys_values:
+            id = self.create_in_db( self._table_name, keys_values)
+        self._db.commit()
+        return id
 
-        if self.item_mapper:
-            self.item_mapper.do_pre_write(o)
+    def insert_in_db(self, table_name, _id:int , keys_values:dict )->None:
+        
+        l=[]
+        v=[]
+        for key, value in keys_values.items():
+            l.append(f'{key} = ?')
+            v.append( value )
 
-        req = Sqlite3CreateRequest(o, self.item_mapper)
-        data = self.db_create(self.db_build_create_request(req))
-        resp = Response()
-        resp.data = data
-        return resp.data
+        v.append( _id )
+        print( f'UPDATE {table_name} SET {", ".join(l)} WHERE id == {_id}' )
+        self._cursor.execute( f'UPDATE {table_name} SET {", ".join(l)} WHERE id == ?', tuple(v) )
 
-    def db_build_create_request(self, request: Sqlite3CreateRequest) -> Any:
+
+
+    def reccursive_save( self, table_name: str, _id: int, key_path: list [ str ], o: dict , scheme: dict , keys_values: dict )-> None:
         """
-        Build the Update Create Request
+        _summary_
 
-        :param request: the request
-        :type request: CreateRequest
-        :return: the data
-        :rtype: Any
-        """
+        UPDATE nom_table
+            SET colonne1 = valeur1,
+                colonne2 = valeur2
+        WHERE condition;
 
-        request.split( self._name )        
-        return request.requests
-
-    def db_create(self, requests: list[ str ]) -> Any:
-        """create"""
-        try:
-            for request in requests:
-                self._cursor.execute(request)
-            self._db.commit()
-        except Exception as e:
-            raise DBError(
-                'Sqlite3 connection error while "{0}.create()"', self._db_file
-            ) from e
-
-        return str(self._cursor.lastrowid)
-
-    def db_build_select_request(self, request: Sqlite3SelectRequest) -> Any:
-        """
-        transform SFilter ( request._filter ) to mongodb filter
-
+        :param table_name: _description_
+        :type table_name: str
+        :param key_path: _description_
+        :type key_path: list[ str ]
+        :param o: _description_
+        :type o: dict
+        :param model: _description_
+        :type model: dict
+        :param keys_values: _description_
+        :type keys_values: _type_
         :return: _description_
-        :rtype: Any
+        :rtype: list[ str]
         """
-        return (
-            self.item_mapper._sfilter_to_sql_query(request._filter),
-            request._projection,
-            request._page_size,
-            request._num_of_element_to_skip,
-            request._sort_object,
-        )
 
-    def db_select(self, select_request: Any) -> Any:
-        """select"""
-        where_condition, projection, page_size, num_of_element_to_skip, sort_object = (
-            select_request
-        )
+        transformer = self.get_transformer( key_path, table_name, scheme['types'] )
+        if transformer:
+            if transformer.must_be_store_in_db() is False:
+                return
+            transformer.on_save( o, key_path )
 
-        print(f"select {projection} where { where_condition } {sort_object}")
+        # A Dict
+        if 'sub_scheme' in scheme and isinstance( o, dict ):
 
-        try:
-            pass
-        except Exception as e:
-            raise DBError(
-                'Sqlite3 connection error while "{0}.find()"', self._db_file
-            ) from e
-        return None
+            # Put the List objects at the end to do the creation forst to get th id for the next
+            for k, v in sorted(
+                    scheme['sub_scheme'].items(),
+                    key=lambda item: "sub_type" in item[1]
+                ):
+                new_key_path = key_path.copy()
+                new_key_path.append(k)
+                if k in o:
+                    self.reccursive_save( table_name, _id, new_key_path, o[k], v, keys_values )
+            return
+
+        # A List
+        # delete all elements from the list and recreate it.
+        if 'sub_type' in scheme and isinstance( o, list ):
+            self.insert_in_db( table_name, _id, keys_values)
+            keys_values.clear()
+            
+            sub_table_name=f'{table_name}_{'_'.join(key_path)}'
+            sub_deleted_ids = self.delete_in_db( sub_table_name, f"{table_name}_id", _id )
+            self.reccursive_delete( sub_table_name, [] , sub_deleted_ids, scheme["sub_type"]  )
+
+
+            for d in o:
+                kv = [ ( f"{table_name}_id", _id )]
+                self.reccursive_create( sub_table_name, [], d, scheme["sub_type"], kv )
+                self.create_in_db( sub_table_name, kv)
+                kv.clear()
+
+            return
+        
+        keys_values['_'.join(key_path)]= o
+
+
+
+    def save( self, _id:str, o:dict)-> None:
+        keys_values={}
+        id = self.reccursive_save( self._table_name, int(_id), [], o, self.model, keys_values )
+        self._db.commit()
+
+
 
     def select(
         self,
@@ -285,15 +529,5 @@ class DBSqlite3Connector(DBHandler):
         :raise Error: Raise an error DBError or any db error
 
         """
-        req = Sqlite3SelectRequest(
-            select_filter, projection, page_size, num_of_element_to_skip, sort_object
-        )
-        data = self.db_select(self.db_build_select_request(req))
-        resp = Response()
-        if self.item_mapper:
-            if isinstance(data, list):
-                for d in data:
-                    self.item_mapper.do_post_read(d)
 
-        resp.data = data
-        return resp.data
+        pass

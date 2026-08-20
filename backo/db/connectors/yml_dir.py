@@ -11,7 +11,6 @@ import copy
 import re
 import yaml
 from ..db_handler import DBHandler
-from ..item_mapper import ItemMapper
 from ...error import NotFoundError, DBError
 from ..request import (
     DeleteRequest,
@@ -29,7 +28,7 @@ class DBYmlDirConnector(DBHandler):
     """
 
     def __init__(
-        self, directory: str, item_handler: ItemMapper = ItemMapper(), **kwargs
+        self, directory: str, **kwargs
     ):
         """
 
@@ -48,7 +47,15 @@ class DBYmlDirConnector(DBHandler):
         if not os.path.isdir(self._dir):
             raise DBError('Yaml path "{0}" is not a directory', self._dir)
 
-        super().__init__(directory, item_handler, **kwargs)
+        super().__init__(directory, **kwargs)
+
+
+    def connect(self)-> None:
+        return
+
+    def close(self)-> None:
+        return
+    
 
     def drop(self) -> None:
         """See :func:`DBConnector.drop`"""
@@ -72,20 +79,8 @@ class DBYmlDirConnector(DBHandler):
         """
         return str(uuid.uuid4().int >> 64)
 
-    def db_build_search_request(self, request: SearchRequest) -> Any:
-        """
-        build the request
 
-        :param request: the request
-        :type request: SearchRequest
-        :return: the understandable version of the request for thos connector
-        :rtype: Any
-        """
-        return request._id
-
-    def db_search(self, _id: str) -> Any:
-        """get one"""
-
+    def get_by_id(self, _id: str )-> dict:
         filename = os.path.join(self._dir, _id + ".yml")
         if not os.path.isfile(filename):
             raise NotFoundError('_id "{0}" not found in "{1}"', _id, self._name)
@@ -96,41 +91,20 @@ class DBYmlDirConnector(DBHandler):
 
         return None
 
-    def db_build_delete_request(self, request: DeleteRequest) -> Any:
-        """
-        build the request
 
-        :param request: the request
-        :type request: SearchRequest
-        :return: the understandable version of the request for thos connector
-        :rtype: Any
-        """
-        return request._id
-
-    def db_delete(self, _id: str) -> Any:
-        """delete"""
+    def delete_by_id(self, _id: str )-> None:
         filename = os.path.join(self._dir, _id + ".yml")
         if os.path.isfile(filename):
             os.remove(filename)
-            return True
+            return
 
         raise NotFoundError('_id "{0}" not found in "{1}"', _id, self._name)
 
-    def db_build_create_request(self, request: CreateRequest) -> Any:
-        """
-        build the request
 
-        :param request: the request
-        :type request: SearchRequest
-        :return: the understandable version of the request for thos connector
-        :rtype: Any
-        """
-        return request._data
 
-    def db_create(self, data) -> Any:
-        """update one"""
-        _id = self.generate_id(data)
-        d = copy.deepcopy(data)
+    def create(self, o: dict)-> str:
+        _id = self.generate_id(o)
+        d = copy.deepcopy(o)
         d["_id"] = _id
 
         filename = os.path.join(self._dir, _id + ".yml")
@@ -139,39 +113,17 @@ class DBYmlDirConnector(DBHandler):
 
         return _id
 
-    def db_build_update_request(self, request: UpdateRequest) -> Any:
-        """
-        build the request
+    
 
-        :param request: the request
-        :type request: SearchRequest
-        :return: the understandable version of the request for thos connector
-        :rtype: Any
-        """
-        return request._id, request._data
-
-    def db_update(self, _id, data) -> Any:
-        """update one"""
+    def save(self, _id: str, o: dict)-> None:
         filename = os.path.join(self._dir, _id + ".yml")
 
         with open(filename, mode="w", encoding="utf-8") as outfile:
-            yaml.dump(data, outfile, default_flow_style=False)
+            yaml.dump(o, outfile, default_flow_style=False)
 
-    def db_build_select_request(self, request: SelectRequest) -> Any:
-        """
-        build the request
 
-        :param request: the request
-        :type request: SearchRequest
-        :return: the understandable version of the request for thos connector
-        :rtype: Any
-        """
-        return request._filter, request._projection
 
-    def db_select(  # pylint: disable=unused-argument
-        self, db_request: SelectRequest
-    ) -> Any:
-        """select"""
+    def select(self, select_filter, projection = [], page_size = 0, num_of_element_to_skip = 0, sort_object = {}):
 
         try:
             result_list = []
@@ -189,3 +141,4 @@ class DBYmlDirConnector(DBHandler):
             raise DBError('Error while select in path "{0}"', self._dir) from e
 
         return result_list
+

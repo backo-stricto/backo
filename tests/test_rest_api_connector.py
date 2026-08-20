@@ -7,6 +7,7 @@ test for Flask and routes
 import unittest
 import json
 import multiprocessing
+import time
 
 from flask import Flask
 
@@ -18,7 +19,7 @@ from backo import Backoffice, current_user, Action, Selection, DBRedirect
 
 from backo import String, Bool, SFilter, Operator
 
-YML_DIR = "/tmp/backo_tests_routes"
+YML_DIR = "/tmp/backo_tests_routes_2"
 
 
 def launch_backoffice2():
@@ -26,6 +27,10 @@ def launch_backoffice2():
     Launching the second backoffice in background with the same
     database
     """
+
+    # ignore sessions for this campaign of tests.
+    current_user.standalone = True
+
     yml_users2 = DBYmlConnector(path=YML_DIR)
     yml_users2.generate_id = lambda o: f"User_{o.name}_{o.surname}"
 
@@ -45,6 +50,7 @@ def launch_backoffice2():
     backo2 = Backoffice("backo2")
     backo2.register_collection(users2_coll)
     yml_users2.drop()
+
 
     flask2 = Flask("backo2")
     backo2.build_routes(flask2)

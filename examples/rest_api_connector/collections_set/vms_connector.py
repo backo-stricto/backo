@@ -12,7 +12,7 @@ from backo import (
     DBError,
 )
 
-log = log_system.get_or_create_logger("vms-connector", LogLevel.DEBUG)
+log = log_system.get_or_create_logger("vms-connector")
 
 
 class VMsConnector(DBRestfullConnector):  # pylint: disable=too-many-instance-attributes

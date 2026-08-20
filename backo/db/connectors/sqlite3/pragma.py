@@ -7,7 +7,6 @@ from typing import Self
 
 
 from ...db_checker import DBChecker
-from ...attribute_mapper import AttributeMapper
 
 SQL_TYPE_MAPPER = {
     "String": "TEXT",
@@ -162,7 +161,7 @@ class TablePragma:
 
         self.db_fields[db_path].merge(f)
 
-    def get_create_pragma(self):
+    def get_create_pragma(self) -> str:
         """
         Return all informations for creation of a table
 
@@ -181,7 +180,7 @@ class TablePragma:
         f += " );\r\n"
         return f
 
-    def get_modification_pragma(self):
+    def get_modification_pragma(self) -> str:
 
         suffix = f"ALTER TABLE {self._name}  "
         s = []
@@ -206,17 +205,17 @@ class TablePragma:
                 s.append(f"{suffix}  {cp.get_drop_pragma()};")
 
         if len(s) == 0:
-            return "# Nothing changed "
+            return None
 
         return "\r\n".join(s)
 
-    def get_pragma(self):
+    def get_pragma(self)-> str:
         if len(self.db_fields.keys()) == 0:
             return self.get_create_pragma()
         return self.get_modification_pragma()
 
 
-class SqlDBChecker(DBChecker):
+class SqlDBChecker1(DBChecker):
 
     tables: dict[str, TablePragma] = {}
 
@@ -264,6 +263,8 @@ class SqlDBChecker(DBChecker):
         if res is not None:
             tables = list(res)
             if len(tables) == 1:
+
+                print(f'PRAGMA table_info({table_name});')
 
                 current_pragmas = self.db_handler._cursor.execute(
                     f"PRAGMA table_info({table_name});"

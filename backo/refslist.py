@@ -32,7 +32,7 @@ from .refs_strategies import DeleteStrategy, FillStrategy
 # WARNING: Specific import for cycling import beetween Ref and RefsLists
 from . import ref
 
-log = log_system.get_or_create_logger("ref", LogLevel.DEBUG)
+log = log_system.get_or_create_logger("ref")
 
 DEFAULT_ID = "NULL_ID"
 

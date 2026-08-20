@@ -15,7 +15,7 @@ from media_library import myapp
 from backo import log_system, LogLevel
 
 # Set migration level to debug
-log_migration = log_system.get_or_create_logger("migration", LogLevel.DEBUG)
+log_migration = log_system.get_or_create_logger("migration")
 
 
 # ---------------------------------------------

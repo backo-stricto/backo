@@ -12,7 +12,7 @@ from backo import (
     DBError,
 )
 
-log = log_system.get_or_create_logger("wget", LogLevel.DEBUG)
+log = log_system.get_or_create_logger("wget")
 
 
 class MyDBRestfullConnector(
