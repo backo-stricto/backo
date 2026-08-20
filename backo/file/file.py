@@ -19,7 +19,7 @@ from stricto import Kparse, Dict, String, Int, Bool, STypeError, SConstraintErro
 from .file_connector import FileConnector
 
 from ..error import FileError
-from ..log import log_system, LogLevel
+from ..log import log_system
 
 log = log_system.get_or_create_logger("file")
 

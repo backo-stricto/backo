@@ -8,7 +8,6 @@ Note: we assume that the signature of some inherited methods differ from the mot
 from backo import (
     DBRestfullConnector,
     log_system,
-    LogLevel,
     DBError,
 )
 

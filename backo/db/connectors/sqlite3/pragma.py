@@ -5,9 +5,6 @@ Attribut mapper for mongo db connector
 
 from typing import Self
 
-
-from ...db_checker import DBChecker
-
 SQL_TYPE_MAPPER = {
     "String": "TEXT",
     "Int": "INTEGER",
@@ -23,12 +20,23 @@ SQL_TYPE_MAPPER = {
 
 
 class SqlFieldDescription:
+    """
+    Description of a Field, il SQL and Backo
+    """
 
     def __init__(
         self,
         current_pragma: tuple[int, str, str, int, str, int] = None,
         foreign_key: tuple[int, int, str, str, str, str, str, str] = None,
     ):
+        """
+
+
+        :param current_pragma: data comes from "pragma" slite3 command, defaults to None
+        :type current_pragma: tuple[int, str, str, int, str, int], optional
+        :param foreign_key: data comes from "pragma" slite3 command, defaults to None
+        :type foreign_key: tuple[int, int, str, str, str, str, str, str], optional
+        """
         self.db_path = None
         self._sql_type = None
         self._cid = 0
@@ -67,10 +75,22 @@ class SqlFieldDescription:
                 self._match,
             ) = foreign_key
 
-    def get_drop_pragma(self):
+    def get_drop_pragma(self) -> str:
+        """
+        Return the SLite3 command for droping this key
+
+        :return: a DROP... string
+        :rtype: str
+        """
         return f"DROP COLUMN {self.db_path}"
 
-    def get_add_pragma(self):
+    def get_add_pragma(self) -> str:
+        """
+        Return the ADD sqlite3 command for adding a key
+
+        :return: the ADD... command
+        :rtype: str
+        """
         f = f"ADD COLUMN {self.db_path} {self._sql_type}"
         if self._not_null:
             f += " NOT NULL"
@@ -81,7 +101,13 @@ class SqlFieldDescription:
 
         return f
 
-    def get_create_pragma(self):
+    def get_create_pragma(self) -> str:
+        """
+        Return the CREATE sqlite3 command for a table
+
+        :return: the CREATE... command
+        :rtype: str
+        """
         f = f"{self.db_path} {self._sql_type}"
         if self._not_null:
             f += " NOT NULL"
@@ -89,29 +115,49 @@ class SqlFieldDescription:
             f += " PRIMARY KEY AUTOINCREMENT"
         return f
 
-    def get_post_pragma(self):
+    def get_post_pragma(self) -> str:
+        """
+        Return the end of the creation / modification command for foreigh keys.
+
+        :return: return FOREIGN... string
+        :rtype: str
+        """
         if self._ref_table:
             return f"FOREIGN KEY ({self.db_path}) REFERENCES {self._ref_table}({self._ref_field})"
         return ""
 
-    def equal(self, other: Self):
+    def equal(self, other: Self) -> bool:
+        """
+        Return True if the both fields are equals
+
+        :param other: _description_
+        :type other: Self
+        :return: _description_
+        :rtype: bool
+        """
         if self._not_null != other._not_null:
-            print(f"not equal for {self.db_path} not_null")
+            # print(f"not equal for {self.db_path} not_null")
             return False
         if self._sql_type != other._sql_type:
-            print(
-                f"not equal for {self.db_path} _sql_type {self._sql_type} != {other._sql_type}"
-            )
+            # print(
+            #     f"not equal for {self.db_path} _sql_type {self._sql_type} != {other._sql_type}"
+            # )
             return False
         if self._ref_table != other._ref_table:
-            print(f"not equal for {self.db_path} _ref_table")
+            # print(f"not equal for {self.db_path} _ref_table")
             return False
         if self._ref_field != other._ref_field:
-            print(f"not equal for {self.db_path} _ref_field")
+            # print(f"not equal for {self.db_path} _ref_field")
             return False
         return True
 
     def merge(self, other: Self):
+        """
+        merge fields
+
+        :param other: the second to merge into the first
+        :type other: Self
+        """
         for att in [
             "db_path",
             "_sql_type",
@@ -130,6 +176,14 @@ class SqlFieldDescription:
             setattr(self, att, getattr(self, att) or getattr(other, att))
 
     def create(self, db_path: str, shema: dict = {}):
+        """
+        fill the backo meta_data
+
+        :param db_path: the path name
+        :type db_path: str
+        :param shema: the metadata for this field, defaults to {}
+        :type shema: dict, optional
+        """
         self.db_path = db_path
 
         if shema and "types" in shema:
@@ -141,19 +195,39 @@ class SqlFieldDescription:
 
 
 class TablePragma:
+    """
+    Metadata for a sqlite3 table
+    """
 
     def __init__(self, table_name: str):
+        """
+
+        :param table_name: the name of the table
+        :type table_name: str
+        """
         self._name = table_name
 
         self.backo_fields: dict[str, SqlFieldDescription] = {}
         self.db_fields: dict[str, SqlFieldDescription] = {}
 
     def add_backo_field(self, f: SqlFieldDescription):
+        """
+        Add a backo field
+
+        :param f: the field
+        :type f: SqlFieldDescription
+        """
         db_path = f.db_path
 
         self.backo_fields[db_path] = f
 
     def add_db_field(self, f: SqlFieldDescription):
+        """
+        Add a sqlite3 field
+
+        :param f: the field
+        :type f: SqlFieldDescription
+        """
         db_path = f.db_path
         if db_path not in self.db_fields:
             self.db_fields[db_path] = f
@@ -165,8 +239,8 @@ class TablePragma:
         """
         Return all informations for creation of a table
 
-        :return: _description_
-        :rtype: _type_
+        :return: the creation string
+        :rtype: str
         """
         f = f"CREATE TABLE {self._name} (\r\n  "
         s = []
@@ -181,6 +255,12 @@ class TablePragma:
         return f
 
     def get_modification_pragma(self) -> str:
+        """
+        return the string for altering an existing table
+
+        :return: the ALTER... string
+        :rtype: str
+        """
 
         suffix = f"ALTER TABLE {self._name}  "
         s = []
@@ -209,83 +289,13 @@ class TablePragma:
 
         return "\r\n".join(s)
 
-    def get_pragma(self)-> str:
+    def get_pragma(self) -> str:
+        """
+        Return the creation or modification string
+
+        :return: the string to copy past for creation
+        :rtype: str
+        """
         if len(self.db_fields.keys()) == 0:
             return self.get_create_pragma()
         return self.get_modification_pragma()
-
-
-class SqlDBChecker1(DBChecker):
-
-    tables: dict[str, TablePragma] = {}
-
-    def get_table(self, table_name: str) -> TablePragma:
-        if table_name not in self.tables:
-            return None
-        return self.tables[table_name]
-
-    def add_table(self, t: TablePragma) -> None:
-        self.tables[t._name] = t
-
-    def check_compliance(self, collection_name: str, shema: dict) -> None:
-        """
-        Return informations about the database
-
-        :return: _description_
-        :rtype: Any
-        """
-        sub: dict = shema["item"]["sub_scheme"]
-        self._fill_table_informations(collection_name, sub)
-
-        # Do the same for all sub tables
-        for t_name, table_pragma in self.tables.items():
-            print(f'# --- table "{t_name}" ----')
-            print(table_pragma.get_pragma())
-
-    def _fill_table_informations(self, table_name: str, shema: dict) -> None:
-        """
-        Check a table Compliance
-
-        :param shema: _description_
-        :type shema: dict
-        """
-
-        checker = SqlDBChecker()
-
-        tp = checker.get_table(table_name)
-        if tp is None:
-            tp = TablePragma(table_name)
-            checker.add_table(tp)
-
-        res = self.db_handler._cursor.execute(
-            f'SELECT name FROM sqlite_master WHERE name=="{table_name}"'
-        ).fetchone()
-        if res is not None:
-            tables = list(res)
-            if len(tables) == 1:
-
-                print(f'PRAGMA table_info({table_name});')
-
-                current_pragmas = self.db_handler._cursor.execute(
-                    f"PRAGMA table_info({table_name});"
-                ).fetchall()
-
-                for current_pragma in current_pragmas:
-                    cp = SqlFieldDescription(current_pragma)
-                    tp.add_db_field(cp)
-
-                current_foreigns = self.db_handler._cursor.execute(
-                    f"PRAGMA foreign_key_list({table_name});"
-                ).fetchall()
-
-                for current_foreign in current_foreigns:
-                    cp = SqlFieldDescription(None, current_foreign)
-                    tp.add_db_field(cp)
-
-        for field_shema in shema.values():
-
-            mapper: AttributeMapper = self.db_handler.item_mapper.get_mapper(
-                field_shema["path"], field_shema["types"]
-            )
-            mapper.get_field_description(table_name, field_shema["path"], field_shema)
-

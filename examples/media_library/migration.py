@@ -12,7 +12,7 @@ sys.path.insert(1, "../")
 
 
 from media_library import myapp
-from backo import log_system, LogLevel
+from backo import log_system
 
 # Set migration level to debug
 log_migration = log_system.get_or_create_logger("migration")

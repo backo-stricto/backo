@@ -4,16 +4,12 @@ Memory DB Connector
 """
 
 import uuid
-from typing import Any
 import copy
 from stricto import SFilter
 from ..db_handler import DBHandler
 from ...error import NotFoundError
-from ..request import (
-    SearchRequest,
-    SelectRequest,
-    Response
-)
+
+# from ..request import SearchRequest, SelectRequest, Response
 
 
 class DBMemoryConnector(DBHandler):
@@ -33,9 +29,11 @@ class DBMemoryConnector(DBHandler):
         super().__init__(db_name, **kwargs)
 
     def close(self) -> None:
+        """nothing"""
         return
 
     def connect(self) -> None:
+        """nothing"""
         return
 
     def drop(self) -> None:
@@ -59,21 +57,21 @@ class DBMemoryConnector(DBHandler):
         """
         return str(uuid.uuid4().int >> 64)
 
-
-    def get_by_id(self, _id: str) -> dict: 
+    def get_by_id(self, _id: str) -> dict:
+        """Get by id"""
         d = copy.deepcopy(self._datas.get(_id))
         if not d:
             raise NotFoundError('_id "{0}" not found in "{1}"', _id, self._name)
         return d
 
     def delete_by_id(self, _id: str) -> None:
+        """delete"""
         if _id not in self._datas:
             raise NotFoundError('_id "{0}" not found in "{1}"', _id, self._name)
 
         del self._datas[_id]
 
-
-    def save(self, _id: str, o: dict)-> None:
+    def save(self, _id: str, o: dict) -> None:
         """update one"""
         if _id not in self._datas:
             raise NotFoundError('_id "{0}" not found in "{1}"', _id, self._name)
@@ -89,7 +87,7 @@ class DBMemoryConnector(DBHandler):
         page_size: int = 0,
         num_of_element_to_skip: int = 0,
         sort_object: dict = {},
-    ) -> Response:
+    ) -> list[dict]:
         """
         Select from filter in the DB and return a list of dicts, with pagination
 
@@ -110,7 +108,6 @@ class DBMemoryConnector(DBHandler):
             a.append(d)
         return a
 
-    
     def create(self, o: dict) -> str:  # pylint: disable=unused-argument
         """create"""
         _id = self.generate_id(o)
@@ -118,4 +115,3 @@ class DBMemoryConnector(DBHandler):
         d["_id"] = _id
         self._datas[_id] = d
         return _id
-

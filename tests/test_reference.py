@@ -19,7 +19,6 @@ from backo import (
     PathNotFoundError,
     BackoError,
     log_system,
-    LogLevel,
     current_user,
 )
 from backo import String, Bool, SConstraintError

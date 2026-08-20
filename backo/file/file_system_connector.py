@@ -16,7 +16,7 @@ sys.path.insert(1, "..")
 from stricto import Kparse, validation_parameters, SSyntaxError
 from .file_connector import FileConnector
 from ..error import FileError
-from ..log import log_system, LogLevel
+from ..log import log_system
 
 log = log_system.get_or_create_logger("file")
 

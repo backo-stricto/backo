@@ -3,7 +3,7 @@
 Attribut mapper for mongo db connector
 """
 
-from typing import Any, Callable
+from typing import Any
 import re
 
 from pymongo import MongoClient
@@ -16,11 +16,11 @@ from ..db_handler import DBHandler
 from ...error import NotFoundError, DBError
 from ..filter import Filter
 
+
 class MongoFilter(Filter):
-
-    def __init__(self, get_transformer: Callable ):
-        super().__init__( get_transformer )
-
+    """
+    Filter transformation for mongo
+    """
 
     def _sfilter_to_mongo_query(  # pylint: disable=too-many-return-statements, too-many-branches
         self, sf: SFilter
@@ -38,7 +38,7 @@ class MongoFilter(Filter):
         if db_path is not None:
 
             db_path = re.sub(r"^\$\.", "", db_path)
-            transformer:Transformer = self.get_transformer( [ db_path ] )
+            transformer: Transformer = self.get_transformer([db_path])
             if transformer:
                 db_path = transformer.get_key_path()
 
@@ -108,11 +108,17 @@ class MongoFilter(Filter):
         # Not implemented
         return None
 
-
-
     def build_db_filter(self, backo_filter: SFilter) -> Any:
-        return self._sfilter_to_mongo_query( backo_filter )
-        
+        """
+
+        Transform a SFilter to a mongo query
+
+        :param sf: The SFilter
+        :type sf: SFilter
+        :return: the mongo query
+        :rtype: dict
+        """
+        return self._sfilter_to_mongo_query(backo_filter)
 
 
 class DBMongoConnector(DBHandler):
@@ -134,8 +140,6 @@ class DBMongoConnector(DBHandler):
         :type connection_string: str
         :param collection: The name of the mongo collection
         :type collection: str
-        :param item_mapper: a specific ItemMapper, defaults to MongoItemMapper( default_attribute_mapper=MongoAttributeMapper )
-        :type item_mapper: MongoItemMapper, optional
         """
 
         self._connection_string = connection_string
@@ -146,8 +150,7 @@ class DBMongoConnector(DBHandler):
         self._database = self._db.get_default_database()
         self._collection = self._database[self._collection_name]
 
-
-        self.filter = MongoFilter( self.get_transformer )
+        self.filter = MongoFilter(self.get_transformer)
 
         super().__init__(collection, **kwargs)
 
@@ -196,11 +199,10 @@ class DBMongoConnector(DBHandler):
         """
         raise DBError("Cannot use generate_id() in DBMongoConnector")
 
-
-
     def get_by_id(self, _id: str) -> dict:
+        """get"""
         try:
-            o = self._collection.find_one({ '_id' : ObjectId(_id) })
+            o = self._collection.find_one({"_id": ObjectId(_id)})
         except Exception as e:
             raise DBError(
                 'Mongo connection error while "{0}.find_one()"', self._collection_name
@@ -211,10 +213,10 @@ class DBMongoConnector(DBHandler):
         o["_id"] = _id
         return o
 
-
-    def delete_by_id(self, _id: str)-> None:
+    def delete_by_id(self, _id: str) -> None:
+        """delete"""
         try:
-            result = self._collection.delete_one({ '_id' : ObjectId(_id) })
+            result = self._collection.delete_one({"_id": ObjectId(_id)})
         except Exception as e:
             raise DBError(
                 'Mongo connection error while "{0}.delete_one()"', self._collection_name
@@ -223,22 +225,20 @@ class DBMongoConnector(DBHandler):
         if result.deleted_count != 1:
             raise NotFoundError('_id "{0}" not found in "{1}"', _id, self._name)
 
-    def save(self, _id: str, o: dict)-> None:
-
+    def save(self, _id: str, o: dict) -> None:
+        """save"""
         oid = ObjectId(_id)
         o["_id"] = oid
         try:
-            self._collection.find_one_and_replace({ '_id' : oid }, o, {"upsert": True})
+            self._collection.find_one_and_replace({"_id": oid}, o, {"upsert": True})
         except Exception as e:
             raise DBError(
                 'Mongo connection error while "{0}.find_one_and_replace()"',
                 self._collection_name,
             ) from e
 
-
-
-    def create(self, o: dict)-> str:
-
+    def create(self, o: dict) -> str:
+        """create"""
         try:
             result = self._collection.insert_one(o)
         except Exception as e:
@@ -248,15 +248,14 @@ class DBMongoConnector(DBHandler):
 
         return str(result.inserted_id)
 
-
-    def select(
+    def select(  # pylint: disable=unused-argument
         self,
         select_filter: SFilter,
         projection: list[str] = [],
         page_size: int = 0,
         num_of_element_to_skip: int = 0,
         sort_object: dict = None,
-    ) -> list[ dict ]:  # pylint: disable=unused-argument
+    ) -> list[dict]:
         """
         Select from filter in the DB and return a list of dicts, with pagination
 
@@ -273,9 +272,8 @@ class DBMongoConnector(DBHandler):
 
         """
 
-
         mongo_filter = self.filter.build_db_filter(select_filter)
-        
+
         try:
             result_list = list(
                 self._collection.find(mongo_filter, projection)
@@ -288,4 +286,3 @@ class DBMongoConnector(DBHandler):
                 'Mongo connection error while "{0}.find()"', self._collection_name
             ) from e
         return result_list
-

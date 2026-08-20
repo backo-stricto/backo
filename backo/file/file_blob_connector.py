@@ -11,7 +11,7 @@ sys.path.insert(1, "../../../stricto")
 
 from stricto import validation_parameters, Bytes
 from .file_connector import FileConnector
-from ..log import log_system, LogLevel
+from ..log import log_system
 
 log = log_system.get_or_create_logger("file")
 

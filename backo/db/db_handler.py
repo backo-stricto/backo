@@ -22,52 +22,75 @@ class DBHandler(ABC):  # pylint: disable=too-many-instance-attributes
 
     This is the way to save / store / retrieve objects
 
-    :param ``**kwargs``:
-        - *restriction=* ``func`` --
-          not used yet
-
 
     """
 
-    def __init__(self, db_name: str,  **kwargs):
-        """Constructor"""
+    def __init__(self, db_name: str, **kwargs):
+        """
+
+
+        :param db_name: The name of the database (it is just a name)
+        :type db_name: str
+        """
 
         self._name = db_name
         self._table_name = None
-        self.model= None
-        self.transformers = {}
+        self.model = None
+        self.transformers: dict[str, dict[str, Transformer]] = {}
+        self.type_transformers: dict[str, Transformer] = {}
 
         options = Kparse(kwargs, KPARSE_MODEL)
 
         self.restriction_filter = options.get("restriction")
 
+    def set_model(self, scheme: dict) -> None:
+        """
+        Register the model (backo meta() into the connector)
 
-    def set_model( self, scheme: dict )->None:
-        self.model = scheme['item']
+        :param scheme: backo meta data
+        :type scheme: dict
+        """
+        self.model = scheme["item"]
 
+    def register_transformer(
+        self, transformer: Transformer, table_name: str = None
+    ) -> None:
+        """
+        Register a transformer
 
-    def register_transformer( self, transformer:Transformer, table_name:str = None )-> None:
+        :param transformer: the transformer to register
+        :type transformer: Transformer
+        :param table_name: The table_name, defaults to None
+        :type table_name: str, optional
+        """
         t_name = self._table_name if table_name is None else table_name
 
         if t_name not in self.transformers:
             self.transformers[t_name] = {}
-        self.transformers[t_name][ '_'.join(transformer.key_path) ] = transformer
+        self.transformers[t_name]["_".join(transformer.key_path)] = transformer
 
+    def register_type_transformer(self, transformer: Transformer) -> None:
+        """
+        Register a transformer for type (backo type, like String, Int...)
 
-    def register_type_transformer( self, transformer:Transformer )-> None:
+        :param transformer: the transformer
+        :type transformer: Transformer
+        """
         self.type_transformers[transformer.backo_type] = transformer
 
-
-
-    def get_transformer( self, key_path: list [ str ],  table_name:str = None, backo_types: list [ str ] = None )-> Transformer:
+    def get_transformer(
+        self, key_path: list[str], table_name: str = None, backo_types: list[str] = None
+    ) -> Transformer:
         """
-        Get a transformer for this key_path and the table
+        Get a transformer for this key_path and the table or type
 
-        :param key_path: _description_
-        :type key_path: list[ str ]
-        :param table_name: _description_, defaults to None
+        :param key_path: the key in the object (like [ 'address', 'street' ])
+        :type key_path: list[str]
+        :param table_name: the table_name, defaults to None
         :type table_name: str, optional
-        :return: _description_
+        :param backo_types: types of the key, defaults to None
+        :type backo_types: list[str], optional
+        :return: _description_A transformer or None
         :rtype: Transformer
         """
 
@@ -81,12 +104,12 @@ class DBHandler(ABC):  # pylint: disable=too-many-instance-attributes
             return None
         t_path = self.transformers[t_name]
 
-        key =  '_'.join(key_path)
+        key = "_".join(key_path)
         if key not in t_path:
             return None
         return t_path[key]
 
-    def check_structure(self)-> bool:
+    def check_structure(self) -> bool:
         """
         Check if the internal structure is compliant to the model
 
@@ -94,7 +117,7 @@ class DBHandler(ABC):  # pylint: disable=too-many-instance-attributes
         :rtype: bool
         """
         return True
-    
+
     @abstractmethod
     def drop(self) -> None:  # pylint: disable=unused-argument
         """Drop the collection
@@ -158,11 +181,10 @@ class DBHandler(ABC):  # pylint: disable=too-many-instance-attributes
         :return: The _id of the object.
         :rtype: str
 
-        
+
         :raise Error: Raise an error DBError or any db error
 
         """
-
 
     @abstractmethod
     def save(self, _id: str, o: dict) -> None:  # pylint: disable=unused-argument
@@ -179,7 +201,7 @@ class DBHandler(ABC):  # pylint: disable=too-many-instance-attributes
         """
 
     @abstractmethod
-    def delete_by_id(self, _id: str)-> None: 
+    def delete_by_id(self, _id: str) -> None:
         """The _id to delete on the db
 
         :param _id: the _id
@@ -195,7 +217,7 @@ class DBHandler(ABC):  # pylint: disable=too-many-instance-attributes
         page_size: int = 0,
         num_of_element_to_skip: int = 0,
         sort_object: dict = {},
-    ) -> list [ dict ]:
+    ) -> list[dict]:
         """
         Select from filter in the DB and return a list of dicts, with pagination
 

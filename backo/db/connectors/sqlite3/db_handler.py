@@ -17,7 +17,6 @@ from ...transformer import Transformer
 
 from .pragma import TablePragma, SqlFieldDescription
 
-from ...request import Response
 
 class DBSqlite3Connector(DBHandler):
     """
@@ -43,12 +42,11 @@ class DBSqlite3Connector(DBHandler):
         self._db_file = db_file
         self._table_name = table_name
 
-        self.pragmas: dict [ str, TablePragma ]= {}
+        self.pragmas: dict[str, TablePragma] = {}
 
         # Transformers
-        self.transformers: dict [ str, dict [ str, Transformer ]] = {}
-        self.type_transformers: dict [ str, Transformer ] = {}
-
+        self.transformers: dict[str, dict[str, Transformer]] = {}
+        self.type_transformers: dict[str, Transformer] = {}
 
         self._db = sqlite3.connect(self._db_file, **kwargs)
 
@@ -61,9 +59,6 @@ class DBSqlite3Connector(DBHandler):
         self.register_type_transformer(BooleanTransformer())
 
         self.connect()
-
-
-
 
     def connect(self):
         """Try to make a connection to the mongodb
@@ -87,37 +82,46 @@ class DBSqlite3Connector(DBHandler):
         except Exception as e:
             raise DBError('Sqlite3 close error at "{0}"', self._db_file) from e
 
-    def drop_table(self, table_name: str, key_path:list [ str ] , model : dict )-> None:
+    def _drop_table(self, table_name: str, key_path: list[str], model: dict) -> None:
+        """
+        Drop a table (a main table or a sub table)
+        and follow all its fields to check for sub tables.
 
-        if 'sub_scheme' in model:
-            for k, v in model['sub_scheme'].items():
+        :param table_name: the table name
+        :type table_name: str
+        :param key_path: the table is attach to a key in case of a sub table
+        :type key_path: list[str]
+        :param model: the model related to the key path
+        :type model: dict
+        """
+
+        if "sub_scheme" in model:
+            for k, v in model["sub_scheme"].items():
                 new_key_path = key_path.copy()
                 new_key_path.append(k)
-                self.drop_table( table_name, key_path + [ k ] , v  )
+                self._drop_table(table_name, key_path + [k], v)
             return
 
-        db_key = '_'.join(key_path)
+        db_key = "_".join(key_path)
 
         # A list
-        if 'sub_type' in model:
-            sub_model = model['sub_type']
-            sub_table_name=f'{table_name}_{db_key}'
-            self.drop_table( sub_table_name, [] , sub_model  )
+        if "sub_type" in model:
+            sub_model = model["sub_type"]
+            sub_table_name = f"{table_name}_{db_key}"
+            self._drop_table(sub_table_name, [], sub_model)
             return
 
-        self._cursor.execute( f'DELETE FROM {table_name}').fetchall()
+        self._cursor.execute(f"DELETE FROM {table_name}").fetchall()
 
         return
-
 
     def drop(self) -> None:
         """
         Drop the entire collection
 
         """
-        self.drop_table( self._table_name, [], self.model )
+        self._drop_table(self._table_name, [], self.model)
         self._db.commit()
-
 
     def generate_id(self, o: dict) -> str:  # pylint: disable=unused-argument
         """
@@ -126,8 +130,15 @@ class DBSqlite3Connector(DBHandler):
         """
         raise DBError("Cannot use generate_id() in  DBSqlite3Connector")
 
+    def _set_table_info(self, table_name: str) -> TablePragma:
+        """
+        Fill the TablePragma for this table
 
-    def _set_table_info(self, table_name ):
+        :param table_name: the name of the table
+        :type table_name: str
+        :return: the TablePragma found or created
+        :rtype: TablePragma
+        """
 
         if table_name in self.pragmas:
             tp = self.pragmas[table_name]
@@ -163,29 +174,39 @@ class DBSqlite3Connector(DBHandler):
             f._pk = True
             tp.add_backo_field(f)
 
-
         return tp
 
+    def _reccursive_check_structure(
+        self, table_name: str, key_path: list[str], scheme: dict
+    ) -> None:
+        """
+        Check the structure of the table if compliant to the scheme
 
-    def reccursive_check_structure( self, table_name:str, key_path:list [ str ] , scheme : dict )-> None:
+        :param table_name: the table name
+        :type table_name: str
+        :param key_path: the key path
+        :type key_path: list[str]
+        :param scheme: the scheme of the key path
+        :type scheme: dict
+        """
 
-        tp=self._set_table_info( table_name )
+        tp = self._set_table_info(table_name)
 
         # A Dict
-        if 'sub_scheme' in scheme:
+        if "sub_scheme" in scheme:
 
-            for k, v in scheme['sub_scheme'].items():
+            for k, v in scheme["sub_scheme"].items():
                 new_key_path = key_path.copy()
                 new_key_path.append(k)
-                self.reccursive_check_structure( table_name, new_key_path, v )
+                self._reccursive_check_structure(table_name, new_key_path, v)
             return
 
         # A List
-        if 'sub_type' in scheme:
-            sub_table_name=f'{table_name}_{'_'.join(key_path)}'      
-            self.reccursive_check_structure( sub_table_name, [], scheme["sub_type"] )
+        if "sub_type" in scheme:
+            sub_table_name = f"{table_name}_{'_'.join(key_path)}"
+            self._reccursive_check_structure(sub_table_name, [], scheme["sub_type"])
 
-            tp_sub = self._set_table_info( sub_table_name )
+            tp_sub = self._set_table_info(sub_table_name)
             f1 = SqlFieldDescription()
             f1.create(f"{table_name}_id", {"types": ["Int"], "required": False})
             f1._ref_table = table_name
@@ -194,16 +215,21 @@ class DBSqlite3Connector(DBHandler):
 
             return
 
-        transformer = self.get_transformer( key_path, table_name )
+        transformer = self.get_transformer(key_path, table_name)
         store_in_db = True if transformer is None else transformer.must_be_store_in_db()
         if store_in_db:
             f = SqlFieldDescription()
-            f.create('_'.join(key_path), scheme)
+            f.create("_".join(key_path), scheme)
             tp.add_backo_field(f)
 
+    def check_structure(self) -> bool:
+        """
+        Check all tables and sub tables
 
-    def check_structure(self)-> bool:
-        self.reccursive_check_structure( self._table_name, [], self.model )
+        :return: True if sqlie3 tables are compliants to backo
+        :rtype: bool
+        """
+        self._reccursive_check_structure(self._table_name, [], self.model)
 
         some_changements = False
 
@@ -214,17 +240,33 @@ class DBSqlite3Connector(DBHandler):
                 print(f'# --- table "{t_name}" ----')
                 print(s)
 
-        if some_changements is False :
+        if some_changements is False:
             print("No changements")
         return some_changements
 
+    def _search_in_table(self, table_name: str, id_name: str, _id: int) -> list[dict]:
+        """
+        Do a SELECT into the table for a specific _id name == _id
 
-    def search_in_db( self, table_name:str, id_name: str, id:int )-> dict:
-        list_of_results = self._cursor.execute( f'SELECT * FROM {table_name} WHERE {id_name} == ?', ( id, ) ).fetchall()
+        :param table_name: the table name
+        :type table_name: str
+        :param id_name: the name of the field
+        :type id_name: str
+        :param _id: the id in the equal
+        :type _id: int
+        :raises NotFoundError: if not found
+        :return: datas found as a list of dict
+        :rtype: list[dict]
+        """
+        list_of_results = self._cursor.execute(
+            f"SELECT * FROM {table_name} WHERE {id_name} == ?", (_id,)
+        ).fetchall()
 
         # None or empty
         if not list_of_results:
-            raise NotFoundError('{0} == {1} not found in table {2}', id_name, id, table_name )
+            raise NotFoundError(
+                "{0} == {1} not found in table {2}", id_name, _id, table_name
+            )
 
         l = []
         for res in list_of_results:
@@ -236,173 +278,229 @@ class DBSqlite3Connector(DBHandler):
             l.append(obj)
         return l
 
+    def load(
+        self, table_name: str, key_path: list[str], model: dict, loaded_object: dict
+    ) -> Any:
+        """
+        Do the load of an object and transform it with transformers
 
-    def load( self, table_name:str, key_path:list[str], model:dict , loaded_object: dict)-> Any:
+
+        :param table_name: the name of the table
+        :type table_name: str
+        :param key_path: the key path
+        :type key_path: list[str]
+        :param model: its scheme in backo
+        :type model: dict
+        :param loaded_object: the loaded object for the key path
+        :type loaded_object: dict
+        :return: the loaded value for the key path
+        :rtype: Any
         """
-        Do the load 
-        """
-        transformer = self.get_transformer( key_path, table_name, model['types'] )
+        transformer = self.get_transformer(key_path, table_name, model["types"])
         if transformer:
-            transformer.on_load( loaded_object, key_path )
+            transformer.on_load(loaded_object, key_path)
 
-
-        db_key = '_'.join(key_path)
+        db_key = "_".join(key_path)
 
         # A dict
-        if 'sub_scheme' in model:
-            o={}
-            for k, v in model['sub_scheme'].items():
-                new_key_path = key_path.copy()
-                new_key_path.append(k)
-                o[k] = self.load( table_name, key_path + [ k ] , v , loaded_object )
+        if "sub_scheme" in model:
+            o = {}
+            for k, v in model["sub_scheme"].items():
+                o[k] = self.load(table_name, key_path + [k], v, loaded_object)
             return o
 
         # A list
-        if 'sub_type' in model:
-            sub_model = model['sub_type']
-            sub_table_name=f'{table_name}_{db_key}'
-            sub_objects = self.search_in_db( sub_table_name, f"{table_name}_id", loaded_object["id"] )
+        if "sub_type" in model:
+            sub_model = model["sub_type"]
+            sub_table_name = f"{table_name}_{db_key}"
+            sub_objects = self._search_in_table(
+                sub_table_name, f"{table_name}_id", loaded_object["id"]
+            )
             values = []
             for sub_object in sub_objects:
-                sub = self.load( table_name, [] , sub_model, sub_object )
+                sub = self.load(table_name, [], sub_model, sub_object)
                 values.append(sub)
             return values
 
-
         # A normal value
         if db_key not in loaded_object:
-            return
-        
-        return loaded_object[db_key]
+            return None
 
+        return loaded_object[db_key]
 
     def search(self, _id: str) -> dict:  # pylint: disable=unused-argument
         """
         Do a search
 
         """
-        list_of_items = self.search_in_db( self._table_name, "id", int(_id))
-        o = self.load( self._table_name, [], self.model, list_of_items[0] )
+        list_of_items = self._search_in_table(self._table_name, "id", int(_id))
+        o = self.load(self._table_name, [], self.model, list_of_items[0])
         return o
 
-    def get_by_id( self, _id:str)-> dict:
-        return self.search( _id )
+    def get_by_id(self, _id: str) -> dict:
+        """do a get"""
+        return self.search(_id)
 
-    def delete_in_db( self, table_name:str, id_name: str, id:int )-> dict:
-        print( f'DELETE FROM {table_name} WHERE {id_name} == {id} RETURNING id')
-        list_of_results = self._cursor.execute( f'DELETE FROM {table_name} WHERE {id_name} == ? RETURNING id', ( id, )).fetchall()
+    def _delete_in_table(
+        self, table_name: str, id_name: str, sqlite3_id: int
+    ) -> list[int]:
+        """
+        Delete in a DB with a WHERE id_name == sqlite3_id
+
+        :param table_name: the table name
+        :type table_name: str
+        :param id_name: the name of the field
+        :type id_name: str
+        :param sqlite3_id: the value
+        :type sqlite3_id: int
+        :raises NotFoundError: if not found
+        :return: _descThe list of deleted _ids
+        :rtype: list[ int ]
+        """
+        print(f"DELETE FROM {table_name} WHERE {id_name} == {sqlite3_id} RETURNING id")
+        list_of_results = self._cursor.execute(
+            f"DELETE FROM {table_name} WHERE {id_name} == ? RETURNING id", (sqlite3_id,)
+        ).fetchall()
 
         # None or empty results
         if not list_of_results:
-            raise NotFoundError('{0} == {1} not found in table {2}', id_name, id, table_name )
-        deleted_ids= [res[0] for res in list_of_results]
+            raise NotFoundError(
+                "{0} == {1} not found in table {2}", id_name, sqlite3_id, table_name
+            )
+        deleted_ids = [res[0] for res in list_of_results]
         return deleted_ids
 
-    def reccursive_delete( self, table_name:str,key_path:list[str], deleted_ids: list[ int ], model:dict)-> None:
+    def _reccursive_delete(
+        self, table_name: str, key_path: list[str], deleted_ids: list[int], model: dict
+    ) -> None:
+        """
+        Delete in a table and all its sub table if needed
 
-        if 'sub_scheme' in model:
-            for k, v in model['sub_scheme'].items():
+        :param table_name: the table name
+        :type table_name: str
+        :param key_path: the current key path
+        :type key_path: list[str]
+        :param deleted_ids: the list od deleted ids to delete in the table
+        :type deleted_ids: list[int]
+        :param model: the current model for the key path
+        :type model: dict
+        """
+
+        if "sub_scheme" in model:
+            for k, v in model["sub_scheme"].items():
                 new_key_path = key_path.copy()
                 new_key_path.append(k)
-                self.reccursive_delete( table_name, key_path + [ k ] , deleted_ids, v  )
+                self._reccursive_delete(table_name, key_path + [k], deleted_ids, v)
             return
 
-        db_key = '_'.join(key_path)
+        db_key = "_".join(key_path)
 
         # A list
-        if 'sub_type' in model:
-            sub_model = model['sub_type']
-            sub_table_name=f'{table_name}_{db_key}'
+        if "sub_type" in model:
+            sub_model = model["sub_type"]
+            sub_table_name = f"{table_name}_{db_key}"
             for deleted_id in deleted_ids:
-                sub_deleted_ids = self.delete_in_db( sub_table_name, f"{table_name}_id", deleted_id )
-                self.reccursive_delete( sub_table_name, [] , sub_deleted_ids, sub_model  )
+                sub_deleted_ids = self._delete_in_table(
+                    sub_table_name, f"{table_name}_id", deleted_id
+                )
+                self._reccursive_delete(sub_table_name, [], sub_deleted_ids, sub_model)
             return
 
         return
-    
 
     def delete_by_id(self, _id):
-        ids = self.delete_in_db( self._table_name, "id", int(_id) )
-        self.reccursive_delete( self._table_name, [], ids, self.model )
+        """delete"""
+        ids = self._delete_in_table(self._table_name, "id", int(_id))
+        self._reccursive_delete(self._table_name, [], ids, self.model)
         self._db.commit()
 
+    def _create_in_table(
+        self, table_name: str, keys_values: list[tuple[str, Any]]
+    ) -> int:
+        """
+        Do the creation in the table
 
-
-
-
-
-
-
-
-
-
-
-    def create_in_db( self, table_name:str, keys_values: list[ tuple[ str, Any ]]) -> int:
+        :param table_name: the name of the table
+        :type table_name: str
+        :param keys_values: list of key, values
+        :type keys_values: list[tuple[str, Any]]
+        :return: the id created
+        :rtype: int
+        """
         r = tuple(map(tuple, zip(*keys_values)))
         t = ("?",) * len(r[0])
-        print( f'INSERT INTO {table_name} {r[0]} {r[0]} VALUES ({', '.join(t) })', r[1] )
-        self._cursor.execute( f'INSERT INTO {table_name} {r[0]} VALUES ({', '.join(t) })', r[1] )
+        print(f"INSERT INTO {table_name} {r[0]} {r[0]} VALUES ({', '.join(t) })", r[1])
+        self._cursor.execute(
+            f"INSERT INTO {table_name} {r[0]} VALUES ({', '.join(t) })", r[1]
+        )
         created_id = self._cursor.lastrowid
         return created_id
 
-
-    def reccursive_create( self, table_name:str, key_path:str, o, scheme : dict, keys_values: list[ tuple[ str, Any ]] )-> int:
+    def _reccursive_create(
+        self,
+        table_name: str,
+        key_path: str,
+        o: dict,
+        scheme: dict,
+        keys_values: list[tuple[str, Any]],
+    ) -> int | None:
         """
-        Do the creation 
+        Do the creation and creation in sub tables if needed
 
-        :param table_name: _description_
+        :param table_name: the table name
         :type table_name: str
-        :param key_path: _description_
+        :param key_path: the key_path
         :type key_path: str
-        :param o: _description_
-        :type o: _type_
-        :param scheme: _description_
+        :param o: the object to insert
+        :type o: dict
+        :param scheme: the schem for this key_path
         :type scheme: dict
-        :param keys_values: _description_
+        :param keys_values: list of key - values
         :type keys_values: list[ tuple[ str, Any ]]
-        :return: _description_
+        :return: the created id
         :rtype: int
         """
 
-        transformer = self.get_transformer( key_path, table_name, scheme['types'] )
+        transformer = self.get_transformer(key_path, table_name, scheme["types"])
         if transformer:
             if transformer.must_be_store_in_db() is False:
-                return
-            transformer.on_create( o, key_path )
+                return None
+            transformer.on_create(o, key_path)
 
         # A Dict
-        if 'sub_scheme' in scheme and isinstance( o, dict ):
+        if "sub_scheme" in scheme and isinstance(o, dict):
 
-            id = None
+            sqlite3_id = None
             # Put the List objects at the end to do the creation forst to get th id for the next
             for k, v in sorted(
-                    scheme['sub_scheme'].items(),
-                    key=lambda item: "sub_type" in item[1]
-                ):
+                scheme["sub_scheme"].items(), key=lambda item: "sub_type" in item[1]
+            ):
                 new_key_path = key_path.copy()
                 new_key_path.append(k)
                 if k in o:
-                    my_id = self.reccursive_create( table_name, new_key_path, o[k], v, keys_values )
-                    if id is None:
-                        id = my_id
-            return id
+                    my_id = self._reccursive_create(
+                        table_name, new_key_path, o[k], v, keys_values
+                    )
+                    if sqlite3_id is None:
+                        sqlite3_id = my_id
+            return sqlite3_id
 
         # A List
-        if 'sub_type' in scheme and isinstance( o, list ):
-            id = self.create_in_db( table_name, keys_values)
+        if "sub_type" in scheme and isinstance(o, list):
+            sqlite3_id = self._create_in_table(table_name, keys_values)
             keys_values.clear()
 
-            sub_table_name=f'{table_name}_{'_'.join(key_path)}'      
+            sub_table_name = f"{table_name}_{'_'.join(key_path)}"
             for d in o:
-                kv = [ ( f"{table_name}_id", id )]
-                self.reccursive_create( sub_table_name, [], d, scheme["sub_type"], kv )
-                self.create_in_db( sub_table_name, kv)
+                kv = [(f"{table_name}_id", sqlite3_id)]
+                self._reccursive_create(sub_table_name, [], d, scheme["sub_type"], kv)
+                self._create_in_table(sub_table_name, kv)
                 kv.clear()
 
-            return id
-        
-        keys_values.append( ( f'{'_'.join(key_path)}', o ) )
+            return sqlite3_id
 
+        keys_values.append((f"{'_'.join(key_path)}", o))
+        return None
 
     def create(self, o: Any) -> str:  # pylint: disable=unused-argument
         """Create the object into the DB and return the _id
@@ -412,99 +510,119 @@ class DBSqlite3Connector(DBHandler):
         :raise Error: Raise an error DBError or any db error
 
         """
-        keys_values=[]
-        id = self.reccursive_create( self._table_name, [], o, self.model, keys_values )
+        keys_values = []
+        _id = self._reccursive_create(self._table_name, [], o, self.model, keys_values)
         if keys_values:
-            id = self.create_in_db( self._table_name, keys_values)
+            _id = self._create_in_table(self._table_name, keys_values)
         self._db.commit()
-        return id
+        return _id
 
-    def insert_in_db(self, table_name, _id:int , keys_values:dict )->None:
-        
-        l=[]
-        v=[]
-        for key, value in keys_values.items():
-            l.append(f'{key} = ?')
-            v.append( value )
-
-        v.append( _id )
-        print( f'UPDATE {table_name} SET {", ".join(l)} WHERE id == {_id}' )
-        self._cursor.execute( f'UPDATE {table_name} SET {", ".join(l)} WHERE id == ?', tuple(v) )
-
-
-
-    def reccursive_save( self, table_name: str, _id: int, key_path: list [ str ], o: dict , scheme: dict , keys_values: dict )-> None:
+    def _insert_in_table(self, table_name: str, _id: int, keys_values: dict) -> None:
         """
-        _summary_
+        Do an insert into a table
+
+        :param table_name: the table_name
+        :type table_name: str
+        :param _id: the _id
+        :type _id: int
+        :param keys_values: list of key - values
+        :type keys_values: dict
+        """
+
+        l = []
+        v = []
+        for key, value in keys_values.items():
+            l.append(f"{key} = ?")
+            v.append(value)
+
+        v.append(_id)
+        print(f'UPDATE {table_name} SET {", ".join(l)} WHERE id == {_id}')
+        self._cursor.execute(
+            f'UPDATE {table_name} SET {", ".join(l)} WHERE id == ?', tuple(v)
+        )
+
+    def _reccursive_save(
+        self,
+        table_name: str,
+        _id: int,
+        key_path: list[str],
+        o: dict,
+        scheme: dict,
+        keys_values: dict,
+    ) -> None:
+        """
+        Do an update and do update into sub tables or update
+        key_values with keys and values (in case of a Dict)
 
         UPDATE nom_table
             SET colonne1 = valeur1,
                 colonne2 = valeur2
         WHERE condition;
 
-        :param table_name: _description_
+        :param table_name: the table name
         :type table_name: str
-        :param key_path: _description_
+        :param key_path: the key path
         :type key_path: list[ str ]
-        :param o: _description_
+        :param o: the data to insert as a dict
         :type o: dict
-        :param model: _description_
+        :param model: the model for key_path
         :type model: dict
-        :param keys_values: _description_
+        :param keys_values: the list of key values (can be modified)
         :type keys_values: _type_
-        :return: _description_
-        :rtype: list[ str]
         """
 
-        transformer = self.get_transformer( key_path, table_name, scheme['types'] )
+        transformer = self.get_transformer(key_path, table_name, scheme["types"])
         if transformer:
             if transformer.must_be_store_in_db() is False:
                 return
-            transformer.on_save( o, key_path )
+            transformer.on_save(o, key_path)
 
         # A Dict
-        if 'sub_scheme' in scheme and isinstance( o, dict ):
+        if "sub_scheme" in scheme and isinstance(o, dict):
 
             # Put the List objects at the end to do the creation forst to get th id for the next
             for k, v in sorted(
-                    scheme['sub_scheme'].items(),
-                    key=lambda item: "sub_type" in item[1]
-                ):
+                scheme["sub_scheme"].items(), key=lambda item: "sub_type" in item[1]
+            ):
                 new_key_path = key_path.copy()
                 new_key_path.append(k)
                 if k in o:
-                    self.reccursive_save( table_name, _id, new_key_path, o[k], v, keys_values )
+                    self._reccursive_save(
+                        table_name, _id, new_key_path, o[k], v, keys_values
+                    )
             return
 
         # A List
         # delete all elements from the list and recreate it.
-        if 'sub_type' in scheme and isinstance( o, list ):
-            self.insert_in_db( table_name, _id, keys_values)
+        if "sub_type" in scheme and isinstance(o, list):
+            self._insert_in_table(table_name, _id, keys_values)
             keys_values.clear()
-            
-            sub_table_name=f'{table_name}_{'_'.join(key_path)}'
-            sub_deleted_ids = self.delete_in_db( sub_table_name, f"{table_name}_id", _id )
-            self.reccursive_delete( sub_table_name, [] , sub_deleted_ids, scheme["sub_type"]  )
 
+            sub_table_name = f"{table_name}_{'_'.join(key_path)}"
+            sub_deleted_ids = self._delete_in_table(
+                sub_table_name, f"{table_name}_id", _id
+            )
+            self._reccursive_delete(
+                sub_table_name, [], sub_deleted_ids, scheme["sub_type"]
+            )
 
             for d in o:
-                kv = [ ( f"{table_name}_id", _id )]
-                self.reccursive_create( sub_table_name, [], d, scheme["sub_type"], kv )
-                self.create_in_db( sub_table_name, kv)
+                kv = [(f"{table_name}_id", _id)]
+                self._reccursive_create(sub_table_name, [], d, scheme["sub_type"], kv)
+                self._create_in_table(sub_table_name, kv)
                 kv.clear()
 
             return
-        
-        keys_values['_'.join(key_path)]= o
 
+        keys_values["_".join(key_path)] = o
 
-
-    def save( self, _id:str, o:dict)-> None:
-        keys_values={}
-        id = self.reccursive_save( self._table_name, int(_id), [], o, self.model, keys_values )
+    def save(self, _id: str, o: dict) -> None:
+        """save"""
+        keys_values = {}
+        self._reccursive_save(
+            self._table_name, int(_id), [], o, self.model, keys_values
+        )
         self._db.commit()
-
-
 
     def select(
         self,
@@ -513,7 +631,7 @@ class DBSqlite3Connector(DBHandler):
         page_size: int = 0,
         num_of_element_to_skip: int = 0,
         sort_object: dict = None,
-    ) -> Response:  # pylint: disable=unused-argument
+    ) -> list[dict]:  # pylint: disable=unused-argument
         """
         Select from filter in the DB and return a list of dicts, with pagination
 
@@ -529,5 +647,3 @@ class DBSqlite3Connector(DBHandler):
         :raise Error: Raise an error DBError or any db error
 
         """
-
-        pass

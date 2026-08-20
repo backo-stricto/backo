@@ -3,9 +3,7 @@
 Attribut mapper for sql db connector
 """
 
-from typing import  Callable
 from ...transformer import Transformer
-
 
 
 class BooleanTransformer(Transformer):
@@ -13,25 +11,24 @@ class BooleanTransformer(Transformer):
     Transform a Boolean into 0 - 1 int for Sqlite3
 
     """
-    def __init__(self):
-        """
-        """
-        super().__init__(None, 'Bool' )
 
-    def on_load(self, _loaded_object:dict, _key_path : list [str ]):
+    def __init__(self):
+        """ """
+        super().__init__(None, "Bool")
+
+    def on_load(self, _loaded_object: dict, _key_path: list[str]):
         """
-        Change the 0-1 into a bool value on load the object 
+        Change the 0-1 into a bool value on load the object
 
         :param _loaded_object: The loaded dict
         :type _loaded_object: dict
         :param _key_path: the path of the bool in this _loaded_object
         :type _key_path: list[str ]
         """
-        db_path = '_'.join(_key_path)
-        _loaded_object[ db_path ] = bool( _loaded_object[ db_path ] )
-        return
+        db_path = "_".join(_key_path)
+        _loaded_object[db_path] = bool(_loaded_object[db_path])
 
-        
+
 class IdTransformer(Transformer):
     """
     specific transformer for _id
@@ -39,9 +36,9 @@ class IdTransformer(Transformer):
     """
 
     def __init__(self):
-        super().__init__([ '_id' ])
+        super().__init__(["_id"])
 
-    def must_be_store_in_db( self ):
+    def must_be_store_in_db(self):
         """
         _id as a field must be ignored into the DB (and use the build-in "id")
 
@@ -50,7 +47,7 @@ class IdTransformer(Transformer):
         """
         return False
 
-    def on_load(self, _loaded_object:dict , _key_path : list [str ]):
+    def on_load(self, _loaded_object: dict, _key_path: list[str]):
         """
         Change the id into _id and transform it from int to string
 
@@ -58,19 +55,24 @@ class IdTransformer(Transformer):
         :type _loaded_object: dict
         :param _key_path: Not used
         """
-        _loaded_object['_id'] = str(_loaded_object['id'])
+        _loaded_object["_id"] = str(_loaded_object["id"])
         del _loaded_object["id"]
-        
-    def on_create(self, _obj:dict):
+
+    def on_create(self, _obj: dict):
+        """
+        Delete the _id field if exists
+
+        :param _obj: _description_
+        :type _obj: dict
+        """
         del _obj["_id"]
-        return
-    
-    def on_save(self, obj:dict):
+
+    def on_save(self, obj: dict):
         """
         Transform _id(string) into id(int)
 
         :param obj: _description_
         :type obj: dict
         """
-        obj['id'] = int(obj['_id'])
+        obj["id"] = int(obj["_id"])
         del obj["_id"]

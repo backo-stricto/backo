@@ -1,7 +1,11 @@
 [MASTER]
 init-hook='import sys; sys.path.append("../stricto")'
 
+# Whitelisting sqlite3 C extension
+generated-members=sqlite3.connect
+
 [DESIGN]
+max-locals=16
 max-attributes=16
 max-args = 7
 max-positional-arguments = 7

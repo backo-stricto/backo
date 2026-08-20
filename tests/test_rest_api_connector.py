@@ -7,7 +7,6 @@ test for Flask and routes
 import unittest
 import json
 import multiprocessing
-import time
 
 from flask import Flask
 
@@ -50,7 +49,6 @@ def launch_backoffice2():
     backo2 = Backoffice("backo2")
     backo2.register_collection(users2_coll)
     yml_users2.drop()
-
 
     flask2 = Flask("backo2")
     backo2.build_routes(flask2)

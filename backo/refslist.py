@@ -25,7 +25,7 @@ from stricto import (
 
 from .loop_path import LoopPath
 from .error import PathNotFoundError, BackoError
-from .log import log_system, LogLevel
+from .log import log_system
 
 from .refs_strategies import DeleteStrategy, FillStrategy
 

@@ -5,20 +5,12 @@ Yaml connector as a directory
 """
 
 import uuid
-from typing import Any
 import os
 import copy
 import re
 import yaml
 from ..db_handler import DBHandler
 from ...error import NotFoundError, DBError
-from ..request import (
-    DeleteRequest,
-    UpdateRequest,
-    CreateRequest,
-    SearchRequest,
-    SelectRequest,
-)
 
 
 class DBYmlDirConnector(DBHandler):
@@ -27,9 +19,7 @@ class DBYmlDirConnector(DBHandler):
     (each item is in one file)
     """
 
-    def __init__(
-        self, directory: str, **kwargs
-    ):
+    def __init__(self, directory: str, **kwargs):
         """
 
         :param directory: the directory to store items
@@ -49,13 +39,11 @@ class DBYmlDirConnector(DBHandler):
 
         super().__init__(directory, **kwargs)
 
+    def connect(self) -> None:
+        """No connection"""
 
-    def connect(self)-> None:
-        return
-
-    def close(self)-> None:
-        return
-    
+    def close(self) -> None:
+        """No close"""
 
     def drop(self) -> None:
         """See :func:`DBConnector.drop`"""
@@ -79,8 +67,16 @@ class DBYmlDirConnector(DBHandler):
         """
         return str(uuid.uuid4().int >> 64)
 
+    def get_by_id(self, _id: str) -> dict:
+        """
+        Get by id
 
-    def get_by_id(self, _id: str )-> dict:
+        :param _id: the _id
+        :type _id: str
+        :raises NotFoundError: _description_
+        :return: the object
+        :rtype: dict
+        """
         filename = os.path.join(self._dir, _id + ".yml")
         if not os.path.isfile(filename):
             raise NotFoundError('_id "{0}" not found in "{1}"', _id, self._name)
@@ -91,8 +87,14 @@ class DBYmlDirConnector(DBHandler):
 
         return None
 
+    def delete_by_id(self, _id: str) -> None:
+        """
+        Delete
 
-    def delete_by_id(self, _id: str )-> None:
+        :param _id: the _id of the objtct to delete
+        :type _id: str
+        :raises NotFoundError: if not found
+        """
         filename = os.path.join(self._dir, _id + ".yml")
         if os.path.isfile(filename):
             os.remove(filename)
@@ -100,9 +102,15 @@ class DBYmlDirConnector(DBHandler):
 
         raise NotFoundError('_id "{0}" not found in "{1}"', _id, self._name)
 
+    def create(self, o: dict) -> str:
+        """
+        Create an object
 
-
-    def create(self, o: dict)-> str:
+        :param o: The object
+        :type o: dict
+        :return: the If of the created object
+        :rtype: str
+        """
         _id = self.generate_id(o)
         d = copy.deepcopy(o)
         d["_id"] = _id
@@ -113,17 +121,31 @@ class DBYmlDirConnector(DBHandler):
 
         return _id
 
-    
+    def save(self, _id: str, o: dict) -> None:
+        """
+        Save an existing object (update)
 
-    def save(self, _id: str, o: dict)-> None:
+        :param _id: the _id of the object
+        :type _id: str
+        :param o: the object
+        :type o: dict
+        """
         filename = os.path.join(self._dir, _id + ".yml")
 
         with open(filename, mode="w", encoding="utf-8") as outfile:
             yaml.dump(o, outfile, default_flow_style=False)
 
-
-
-    def select(self, select_filter, projection = [], page_size = 0, num_of_element_to_skip = 0, sort_object = {}):
+    def select(  # pylint: disable=unused-argument
+        self,
+        select_filter,
+        projection=[],
+        page_size=0,
+        num_of_element_to_skip=0,
+        sort_object={},
+    ):
+        """
+        Make a selection
+        """
 
         try:
             result_list = []
@@ -141,4 +163,3 @@ class DBYmlDirConnector(DBHandler):
             raise DBError('Error while select in path "{0}"', self._dir) from e
 
         return result_list
-
