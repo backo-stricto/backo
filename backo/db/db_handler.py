@@ -13,6 +13,7 @@ sys.path.insert(1, "../../../stricto")
 from stricto import Kparse, SFilter
 
 from .transformer import Transformer
+from .filter import Filter
 
 KPARSE_MODEL = {"restriction": Callable}
 
@@ -36,6 +37,7 @@ class DBHandler(ABC):  # pylint: disable=too-many-instance-attributes
         self._name = db_name
         self._table_name = None
         self.model = None
+        self.filter: Filter = None
         self.transformers: dict[str, dict[str, Transformer]] = {}
         self.type_transformers: dict[str, Transformer] = {}
 
@@ -51,6 +53,8 @@ class DBHandler(ABC):  # pylint: disable=too-many-instance-attributes
         :type scheme: dict
         """
         self.model = scheme["item"]
+        if self.filter:
+            self.filter.set_model(scheme)
 
     def register_transformer(
         self, transformer: Transformer, table_name: str = None

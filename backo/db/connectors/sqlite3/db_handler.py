@@ -16,6 +16,7 @@ from .transformers import IdTransformer, BooleanTransformer
 from ...transformer import Transformer
 
 from .pragma import TablePragma, SqlFieldDescription
+from .filter import SQlite3Filter
 
 
 class DBSqlite3Connector(DBHandler):
@@ -57,6 +58,8 @@ class DBSqlite3Connector(DBHandler):
 
         self.register_transformer(IdTransformer())
         self.register_type_transformer(BooleanTransformer())
+
+        self.filter = SQlite3Filter(self._table_name, self.get_transformer)
 
         self.connect()
 
@@ -215,6 +218,10 @@ class DBSqlite3Connector(DBHandler):
 
             return
 
+        # In case of a list of not a Dict,
+        if not key_path:
+            key_path = ["_"]
+
         transformer = self.get_transformer(key_path, table_name)
         store_in_db = True if transformer is None else transformer.must_be_store_in_db()
         if store_in_db:
@@ -222,51 +229,62 @@ class DBSqlite3Connector(DBHandler):
             f.create("_".join(key_path), scheme)
             tp.add_backo_field(f)
 
-    def check_structure(self) -> bool:
+    def check_structure(self, update_directly=False) -> bool:
         """
         Check all tables and sub tables
 
         :return: True if sqlie3 tables are compliants to backo
         :rtype: bool
         """
+        self.pragmas.clear()
+
         self._reccursive_check_structure(self._table_name, [], self.model)
 
         some_changements = False
 
         for t_name, tp in self.pragmas.items():
             s = tp.get_pragma()
-            if s is not None:
+            if s:
                 some_changements = True
-                print(f'# --- table "{t_name}" ----')
-                print(s)
 
-        if some_changements is False:
-            print("No changements")
-        return some_changements
+                if update_directly:
+                    self._cursor.execute(s)
+                else:
+                    print(f'/* --- table "{t_name}" ---- */')
+                    print(s)
+            else:
+                if not update_directly:
+                    print(f"Nothing to change on table {tp._name}")
 
-    def _search_in_table(self, table_name: str, id_name: str, _id: int) -> list[dict]:
+        if some_changements and update_directly:
+            print("Do a commit")
+            self._db.commit()
+
+        return not some_changements
+
+    def _search_in_table(
+        self, table_name: str, id_name: str, sqlite3_id: int
+    ) -> list[dict]:
         """
-        Do a SELECT into the table for a specific _id name == _id
+        Do a SELECT into the table for a specific _id name == sqlite3_id
 
         :param table_name: the table name
         :type table_name: str
         :param id_name: the name of the field
         :type id_name: str
-        :param _id: the id in the equal
-        :type _id: int
+        :param sqlite3_id: the id in the equal
+        :type sqlite3_id: int
         :raises NotFoundError: if not found
         :return: datas found as a list of dict
         :rtype: list[dict]
         """
         list_of_results = self._cursor.execute(
-            f"SELECT * FROM {table_name} WHERE {id_name} == ?", (_id,)
+            f"SELECT * FROM {table_name} WHERE {id_name} == ?", (sqlite3_id,)
         ).fetchall()
 
         # None or empty
         if not list_of_results:
-            raise NotFoundError(
-                "{0} == {1} not found in table {2}", id_name, _id, table_name
-            )
+            return []
 
         l = []
         for res in list_of_results:
@@ -334,6 +352,9 @@ class DBSqlite3Connector(DBHandler):
 
         """
         list_of_items = self._search_in_table(self._table_name, "id", int(_id))
+        if not list_of_items:
+            raise NotFoundError('_id "{0}" not found in "{1}"', _id, self._name)
+
         o = self.load(self._table_name, [], self.model, list_of_items[0])
         return o
 
@@ -364,9 +385,10 @@ class DBSqlite3Connector(DBHandler):
 
         # None or empty results
         if not list_of_results:
-            raise NotFoundError(
-                "{0} == {1} not found in table {2}", id_name, sqlite3_id, table_name
-            )
+            return []
+            # raise NotFoundError(
+            #     "{0} == {1} not found in table {2}", id_name, sqlite3_id, table_name
+            # )
         deleted_ids = [res[0] for res in list_of_results]
         return deleted_ids
 
@@ -411,6 +433,9 @@ class DBSqlite3Connector(DBHandler):
     def delete_by_id(self, _id):
         """delete"""
         ids = self._delete_in_table(self._table_name, "id", int(_id))
+        if not ids:
+            raise NotFoundError('_id "{0}" not found in "{1}"', _id, self._name)
+
         self._reccursive_delete(self._table_name, [], ids, self.model)
         self._db.commit()
 
@@ -499,6 +524,10 @@ class DBSqlite3Connector(DBHandler):
 
             return sqlite3_id
 
+        # In case of a list of not a Dict,
+        if not key_path:
+            key_path = ["_"]
+
         keys_values.append((f"{'_'.join(key_path)}", o))
         return None
 
@@ -515,7 +544,7 @@ class DBSqlite3Connector(DBHandler):
         if keys_values:
             _id = self._create_in_table(self._table_name, keys_values)
         self._db.commit()
-        return _id
+        return str(_id)
 
     def _insert_in_table(self, table_name: str, _id: int, keys_values: dict) -> None:
         """
@@ -614,6 +643,10 @@ class DBSqlite3Connector(DBHandler):
 
             return
 
+        # In case of a list of not a Dict,
+        if not key_path:
+            key_path = ["_"]
+
         keys_values["_".join(key_path)] = o
 
     def save(self, _id: str, o: dict) -> None:
@@ -624,14 +657,19 @@ class DBSqlite3Connector(DBHandler):
         )
         self._db.commit()
 
-    def select(
+    def _reccursive_select(
+        self, table_name: str, fields_to_get: str, select_filter: SFilter, model: dict
+    ):
+        pass
+
+    def select(  # pylint: disable=unused-argument
         self,
         select_filter: SFilter,
         projection: list[str] = [],
         page_size: int = 0,
         num_of_element_to_skip: int = 0,
         sort_object: dict = None,
-    ) -> list[dict]:  # pylint: disable=unused-argument
+    ) -> list[dict]:
         """
         Select from filter in the DB and return a list of dicts, with pagination
 
@@ -647,3 +685,25 @@ class DBSqlite3Connector(DBHandler):
         :raise Error: Raise an error DBError or any db error
 
         """
+        where_conditions, values = self.filter.build_db_filter(select_filter)
+
+        list_of_items = self._cursor.execute(
+            f"SELECT * FROM {self._table_name} WHERE {where_conditions}", values
+        ).fetchall()
+
+        # None or empty
+        if not list_of_items:
+            return []
+
+        result = []
+        for item in list_of_items:
+
+            obj = {}
+            for idx, attribute in enumerate(self._cursor.description):
+                key_path = attribute[0]
+                obj[key_path] = item[idx]
+
+            o = self.load(self._table_name, [], self.model, obj)
+            result.append(o)
+
+        return result

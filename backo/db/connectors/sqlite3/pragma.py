@@ -4,6 +4,7 @@ Attribut mapper for mongo db connector
 """
 
 from typing import Self
+from ....error import DBError
 
 SQL_TYPE_MAPPER = {
     "String": "TEXT",
@@ -17,6 +18,23 @@ SQL_TYPE_MAPPER = {
     "Dict": "TEXT",
     "Tuple": "TEXT",
 }
+
+
+def get_sqlite3_type_from_backo(backo_types: list[str]) -> str:
+    """
+    Return the SQlite3 type for this backo type
+
+    :param backo_types: like [ 'Int', 'GenericType' ]
+    :type backo_types: list[str]
+    :raises DBError: If the backo type is not implemented into the Sqlite3
+    :return: SQL_TYPE_MAPPER
+    :rtype: str
+    """
+    for backo_type in backo_types:
+        if backo_type in SQL_TYPE_MAPPER:
+            return SQL_TYPE_MAPPER[backo_type]
+
+    raise DBError("Backo type {0} not implemented in Sqlite3", backo_types)
 
 
 class SqlFieldDescription:
@@ -187,11 +205,9 @@ class SqlFieldDescription:
         self.db_path = db_path
 
         if shema and "types" in shema:
-            for backo_type in shema["types"]:
-                if backo_type in SQL_TYPE_MAPPER:
-                    self._sql_type = SQL_TYPE_MAPPER[backo_type]
-                    if shema["required"] is True:
-                        self._not_null = True
+            self._sql_type = get_sqlite3_type_from_backo(shema["types"])
+            if shema["required"] is True:
+                self._not_null = True
 
 
 class TablePragma:

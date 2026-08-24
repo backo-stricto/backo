@@ -6,7 +6,6 @@ test for DBConnectors
 
 import unittest
 
-
 from backo import (
     NotFoundError,
     Backoffice,
@@ -15,13 +14,14 @@ from backo import (
     String,
     FillStrategy,
     Ref,
+    Int,
     Dict,
     List,
     Bool,
     RefsList,
     DeleteStrategy,
 )
-from backo import SFilter, Operator
+from backo import SFilter, Operator, DBError
 from backo.db import DBHandler
 from backo.db import (
     DBMemoryConnector,
@@ -181,6 +181,7 @@ class TestDBConnector(unittest.TestCase):
                 {
                     "name": String(),
                     "surname": String(),
+                    "age": Int(),
                     "nicknames": List(Dict({"a": String()})),
                     "site": Ref(
                         coll="sites", field="$.users", ofs=FillStrategy.NOT_FILL
@@ -214,34 +215,68 @@ class TestDBConnector(unittest.TestCase):
         backoffice.register_collection(coll_sites)
 
         con_users.set_model(coll_users.get_meta())
-        con_users.check_structure()
-        con_users.drop()
-        data_id = con_users.create(
-            {
-                "name": "toto",
-                "surname": "roberto",
-                "male": True,
-                "nicknames": [{"a": "aa"}, {"a": "ff"}],
-            }
+        con_sites.set_model(coll_sites.get_meta())
+
+        # Create the structure
+        con_users.check_structure(True)
+
+        # check the structure
+        must_be_ok = con_users.check_structure()
+        self.assertEqual(must_be_ok, True)
+
+        # Create the structure
+        con_sites.check_structure(True)
+
+        # check the structure
+        must_be_ok = con_sites.check_structure()
+        self.assertEqual(must_be_ok, True)
+
+        # con_users.create( { "name" : "bebert", "nicknames" : [ { "a" : "al"}, { "a" : "bert"} ], "age" : 10 })
+
+        # check filters
+        where, values = con_users.filter.build_db_filter(
+            SFilter("$.name", Operator.EQ, "zaza")
         )
-        o = con_users.search(str(data_id))
-        print(f"got o = {o}")
-        o["surname"] = "johnny"
-        con_users.save(data_id, o)
-        o = con_users.search(str(data_id))
-        print(f"got o = {o}")
+        self.assertEqual(where, "( users.name == ?)")
+        self.assertEqual(values, ("zaza",))
 
-        # con_users.delete_by_id( str(data_id) )
-        # con_users.delete_by_id( str(data_id) )
+        where, values = con_users.filter.build_db_filter(
+            SFilter(
+                None,
+                Operator.AND,
+                [
+                    SFilter("$.name", Operator.EQ, "zaza"),
+                    SFilter("$.surname", Operator.EQ, "zozo"),
+                ],
+            )
+        )
+        self.assertEqual(where, "( ( users.name == ?) AND ( users.surname == ?) )")
+        self.assertEqual(
+            values,
+            (
+                "zaza",
+                "zozo",
+            ),
+        )
 
-        # checker = SqlDBChecker()
-        # checker.set_db_handler(coll_users.db_handler)
-        # checker.check_compliance("users", coll_users.get_meta())
-        # checker.check_compliance("sites", coll_sites.get_meta())
+        # with a list error
+        with self.assertRaises(DBError) as e:
+            con_users.filter.build_db_filter(
+                SFilter("$.nicknames.a", Operator.EQ, "zaza")
+            )
+        self.assertEqual(
+            e.exception.to_string(),
+            "Filter in list not implemented (path=$.nicknames.a)",
+        )
 
-        # con_users.get_by_id("1234")
+        # unknown path
+        with self.assertRaises(DBError) as e:
+            con_users.filter.build_db_filter(
+                SFilter("$.notexists", Operator.EQ, "zaza")
+            )
+        self.assertEqual(
+            e.exception.to_string(), "Wrong path $.notexists (doesnt exists in model)"
+        )
 
-        # coll_users.db_handler.check_compliance(coll_users.get_meta())
-        # coll_sites.db_handler.check_compliance(coll_sites.get_meta())
-
-        con_users.close()
+        with self.subTest(con=con_users):
+            self.sub_test_crud_connector(con_users, f"{SQLITE3_DB}(users)")

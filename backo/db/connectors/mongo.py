@@ -150,10 +150,9 @@ class DBMongoConnector(DBHandler):
         self._database = self._db.get_default_database()
         self._collection = self._database[self._collection_name]
 
-        self.filter = MongoFilter(self.get_transformer)
-
         super().__init__(collection, **kwargs)
 
+        self.filter = MongoFilter(self.get_transformer)
         self.connect()
 
     def connect(self):
