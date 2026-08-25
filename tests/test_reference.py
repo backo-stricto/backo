@@ -560,8 +560,8 @@ class TestReferences(unittest.TestCase):
         )
 
         # Hard clean before tests
-        self.yml_sites.delete_by_id("Site_moon")
-        self.yml_users.delete_by_id("User_bebert_bebert")
+        self.yml_sites.drop()
+        self.yml_users.drop()
 
         current_user.standalone = True
         si = backoffice.sites.new()
