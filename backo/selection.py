@@ -35,7 +35,6 @@ KPARSE_MODEL = {
         "type": Callable | SFilter,
         "default": SFilter(None, Operator.TRUE, None),
     },
-    "db_filter": Callable,
 }
 
 
@@ -51,8 +50,6 @@ class Selection(CollectionAddon):
     :param ``**kwargs``:
         - *filter=* ``dict|tuple`` --
           the filter whe want. See stricto for details
-        - *db_filter=* ``dict`` --
-          The filter to pass to the :py:class:`DBConnector`
 
 
 
@@ -100,7 +97,7 @@ class Selection(CollectionAddon):
         # Get the filter in SFilter format
         self._filter = options.get("filter")
 
-        self._db_filter = options.get("db_filter")
+        # self._db_filter = options.get("db_filter")
 
         CollectionAddon.__init__(self)
         self._permissions = Permissions(**kwargs)
@@ -174,9 +171,18 @@ class Selection(CollectionAddon):
         if self.can_read() is False:
             raise SRightError("Execute {0} selection is forbidden", self.name)
 
+        # build the filter with filter given and self._filter
+        # --------------------------------------------------
+        f = self._filter() if callable(self._filter) else self._filter
+        if not isinstance(f, SFilter):
+            raise SSyntaxError(
+                'select "{0}" filter "{1}" is not type SFilter', self.name, f
+            )
+        filter_object: SFilter = match_filter.merge_and(f)
+
         # Do the DB selection without pagination
         db_list = self.collection.db_handler.select(
-            self._db_filter, {}, 0, 0, db_sort_object
+            filter_object, {}, 0, 0, db_sort_object
         )
         if not isinstance(db_list, list):
             raise DBError(
@@ -189,15 +195,6 @@ class Selection(CollectionAddon):
             "_skip": num_of_element_to_skip,
             "_page": page_size,
         }
-
-        # build the filter with filter given and self._filter
-        # --------------------------------------------------
-        f = self._filter() if callable(self._filter) else self._filter
-        if not isinstance(f, SFilter):
-            raise SSyntaxError(
-                'select "{0}" filter "{1}" is not type SFilter', self.name, f
-            )
-        filter_object: SFilter = match_filter.merge_and(self._filter)
 
         # Do the selection on the object
         index = 0

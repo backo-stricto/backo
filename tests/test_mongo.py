@@ -9,7 +9,7 @@ import time
 
 
 from backo import Item, Collection
-from backo import DBMongoConnector
+from backo.db import DBMongoConnector
 from backo import Backoffice, NotFoundError, DBError, current_user
 
 from backo import String, Bool, SFilter, Operator  # , Error as StrictoError
@@ -27,14 +27,10 @@ class TestMongo(unittest.TestCase):
         super().__init__(*args, **kwargs)
 
         # --- DB for user
-        self.db_users = DBMongoConnector(
-            connection_string="mongodb://localhost:27017/testMongo", collection="Users"
-        )
+        self.db_users = DBMongoConnector("mongodb://localhost:27017/testMongo", "Users")
 
         # --- DB for sites
-        self.db_site = DBMongoConnector(
-            connection_string="mongodb://localhost:27017/testMongo", collection="Sites"
-        )
+        self.db_site = DBMongoConnector("mongodb://localhost:27017/testMongo", "Sites")
 
     def tearDown(self):
         self.db_site.close()
@@ -46,8 +42,8 @@ class TestMongo(unittest.TestCase):
         try to connect error
         """
         a = DBMongoConnector(
-            connection_string="mongodb://localhost:666/testMongo",
-            collection="test",
+            "mongodb://localhost:666/testMongo",
+            "test",
             serverSelectionTimeoutMS=1,
         )
         with self.assertRaises(DBError) as e:
@@ -85,7 +81,14 @@ class TestMongo(unittest.TestCase):
             'Mongo connection error while "Users.delete_one()"',
         )
         # delete a non exinsting user
-        self.assertEqual(self.db_users.delete_by_id("66a8ee2614c85110d75b9cf8"), False)
+        with self.assertRaises(NotFoundError) as e:
+            self.assertEqual(
+                self.db_users.delete_by_id("66a8ee2614c85110d75b9cf8"), False
+            )
+        self.assertEqual(
+            e.exception.to_string(),
+            '_id "66a8ee2614c85110d75b9cf8" not found in "Users"',
+        )
 
         # Load a non existing user
         with self.assertRaises(DBError) as e:
@@ -98,7 +101,7 @@ class TestMongo(unittest.TestCase):
             self.db_users.get_by_id("66a8ee2614c85110d75b9cf8")
         self.assertEqual(
             e.exception.to_string(),
-            '_id "66a8ee2614c85110d75b9cf8" not found in collection "Users"',
+            '_id "66a8ee2614c85110d75b9cf8" not found in "Users"',
         )
 
         v = backoffice.users.create({"name": "bebert", "surname": "bebert"})

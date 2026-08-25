@@ -22,7 +22,6 @@ from backo import (
     File,
     Dict,
     String,
-    DBYmlConnector,
     FileError,
     StrictoEncoder,
     SSyntaxError,
@@ -32,6 +31,7 @@ from backo import (
     BlobFile,
     GenericMetaDataHandler,
 )
+from backo.db import DBYmlDirConnector
 
 TEST_PATH = os.path.join(tempfile.gettempdir(), "backo_file_tests")
 TEST_PATH2 = os.path.join(tempfile.gettempdir(), "backo_file_tests_2")
@@ -66,8 +66,9 @@ class TestFile(unittest.TestCase):
 
         self.work_connector = FileSystemConnector(path=TEST_PATH)
 
-        self.yml_users = DBYmlConnector(path=YML_DIR)
-        self.yml_users.generate_id = lambda o: f"User_{o.name}_{o.surname}"
+        # self.yml_users = DBYmlConnector(path=YML_DIR)
+        self.yml_users = DBYmlDirConnector(YML_DIR)
+        self.yml_users.generate_id = lambda o: f"User_{o["name"]}_{o["surname"]}"
 
     def clean(self, path: str):
         """Erase all"""

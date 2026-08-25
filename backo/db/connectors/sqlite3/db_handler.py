@@ -180,34 +180,34 @@ class DBSqlite3Connector(DBHandler):
         return tp
 
     def _reccursive_check_structure(
-        self, table_name: str, key_path: list[str], scheme: dict
+        self, table_name: str, key_path: list[str], model: dict
     ) -> None:
         """
-        Check the structure of the table if compliant to the scheme
+        Check the structure of the table if compliant to the model
 
         :param table_name: the table name
         :type table_name: str
         :param key_path: the key path
         :type key_path: list[str]
-        :param scheme: the scheme of the key path
-        :type scheme: dict
+        :param model: the model of the key path
+        :type model: dict
         """
 
         tp = self._set_table_info(table_name)
 
         # A Dict
-        if "sub_scheme" in scheme:
+        if "sub_scheme" in model:
 
-            for k, v in scheme["sub_scheme"].items():
+            for k, v in model["sub_scheme"].items():
                 new_key_path = key_path.copy()
                 new_key_path.append(k)
                 self._reccursive_check_structure(table_name, new_key_path, v)
             return
 
         # A List
-        if "sub_type" in scheme:
+        if "sub_type" in model:
             sub_table_name = f"{table_name}_{'_'.join(key_path)}"
-            self._reccursive_check_structure(sub_table_name, [], scheme["sub_type"])
+            self._reccursive_check_structure(sub_table_name, [], model["sub_type"])
 
             tp_sub = self._set_table_info(sub_table_name)
             f1 = SqlFieldDescription()
@@ -226,10 +226,10 @@ class DBSqlite3Connector(DBHandler):
         store_in_db = True if transformer is None else transformer.must_be_store_in_db()
         if store_in_db:
             f = SqlFieldDescription()
-            f.create("_".join(key_path), scheme)
+            f.create("_".join(key_path), model)
             tp.add_backo_field(f)
 
-    def check_structure(self, update_directly=False) -> bool:
+    def check_structure(self, update_directly=False) -> tuple[bool, str]:
         """
         Check all tables and sub tables
 
@@ -237,6 +237,7 @@ class DBSqlite3Connector(DBHandler):
         :rtype: bool
         """
         self.pragmas.clear()
+        message = ""
 
         self._reccursive_check_structure(self._table_name, [], self.model)
 
@@ -250,17 +251,16 @@ class DBSqlite3Connector(DBHandler):
                 if update_directly:
                     self._cursor.execute(s)
                 else:
-                    print(f'/* --- table "{t_name}" ---- */')
-                    print(s)
+                    message += f'/* --- table "{t_name}" ---- */'
+                    message += s
             else:
                 if not update_directly:
-                    print(f"Nothing to change on table {tp._name}")
+                    message += f"Nothing to change on table {tp._name}"
 
         if some_changements and update_directly:
-            print("Do a commit")
             self._db.commit()
 
-        return not some_changements
+        return (not some_changements, message)
 
     def _search_in_table(
         self, table_name: str, id_name: str, sqlite3_id: int
@@ -307,7 +307,7 @@ class DBSqlite3Connector(DBHandler):
         :type table_name: str
         :param key_path: the key path
         :type key_path: list[str]
-        :param model: its scheme in backo
+        :param model: its model in backo
         :type model: dict
         :param loaded_object: the loaded object for the key path
         :type loaded_object: dict
@@ -466,7 +466,7 @@ class DBSqlite3Connector(DBHandler):
         table_name: str,
         key_path: str,
         o: dict,
-        scheme: dict,
+        model: dict,
         keys_values: list[tuple[str, Any]],
     ) -> int | None:
         """
@@ -478,27 +478,27 @@ class DBSqlite3Connector(DBHandler):
         :type key_path: str
         :param o: the object to insert
         :type o: dict
-        :param scheme: the schem for this key_path
-        :type scheme: dict
+        :param model: the schem for this key_path
+        :type model: dict
         :param keys_values: list of key - values
         :type keys_values: list[ tuple[ str, Any ]]
         :return: the created id
         :rtype: int
         """
 
-        transformer = self.get_transformer(key_path, table_name, scheme["types"])
+        transformer = self.get_transformer(key_path, table_name, model["types"])
         if transformer:
             if transformer.must_be_store_in_db() is False:
                 return None
             transformer.on_create(o, key_path)
 
         # A Dict
-        if "sub_scheme" in scheme and isinstance(o, dict):
+        if "sub_scheme" in model and isinstance(o, dict):
 
             sqlite3_id = None
             # Put the List objects at the end to do the creation forst to get th id for the next
             for k, v in sorted(
-                scheme["sub_scheme"].items(), key=lambda item: "sub_type" in item[1]
+                model["sub_scheme"].items(), key=lambda item: "sub_type" in item[1]
             ):
                 new_key_path = key_path.copy()
                 new_key_path.append(k)
@@ -511,14 +511,14 @@ class DBSqlite3Connector(DBHandler):
             return sqlite3_id
 
         # A List
-        if "sub_type" in scheme and isinstance(o, list):
+        if "sub_type" in model and isinstance(o, list):
             sqlite3_id = self._create_in_table(table_name, keys_values)
             keys_values.clear()
 
             sub_table_name = f"{table_name}_{'_'.join(key_path)}"
             for d in o:
                 kv = [(f"{table_name}_id", sqlite3_id)]
-                self._reccursive_create(sub_table_name, [], d, scheme["sub_type"], kv)
+                self._reccursive_create(sub_table_name, [], d, model["sub_type"], kv)
                 self._create_in_table(sub_table_name, kv)
                 kv.clear()
 
@@ -576,7 +576,7 @@ class DBSqlite3Connector(DBHandler):
         _id: int,
         key_path: list[str],
         o: dict,
-        scheme: dict,
+        model: dict,
         keys_values: dict,
     ) -> None:
         """
@@ -600,18 +600,18 @@ class DBSqlite3Connector(DBHandler):
         :type keys_values: _type_
         """
 
-        transformer = self.get_transformer(key_path, table_name, scheme["types"])
+        transformer = self.get_transformer(key_path, table_name, model["types"])
         if transformer:
             if transformer.must_be_store_in_db() is False:
                 return
             transformer.on_save(o, key_path)
 
         # A Dict
-        if "sub_scheme" in scheme and isinstance(o, dict):
+        if "sub_scheme" in model and isinstance(o, dict):
 
             # Put the List objects at the end to do the creation forst to get th id for the next
             for k, v in sorted(
-                scheme["sub_scheme"].items(), key=lambda item: "sub_type" in item[1]
+                model["sub_scheme"].items(), key=lambda item: "sub_type" in item[1]
             ):
                 new_key_path = key_path.copy()
                 new_key_path.append(k)
@@ -623,7 +623,7 @@ class DBSqlite3Connector(DBHandler):
 
         # A List
         # delete all elements from the list and recreate it.
-        if "sub_type" in scheme and isinstance(o, list):
+        if "sub_type" in model and isinstance(o, list):
             self._insert_in_table(table_name, _id, keys_values)
             keys_values.clear()
 
@@ -632,12 +632,12 @@ class DBSqlite3Connector(DBHandler):
                 sub_table_name, f"{table_name}_id", _id
             )
             self._reccursive_delete(
-                sub_table_name, [], sub_deleted_ids, scheme["sub_type"]
+                sub_table_name, [], sub_deleted_ids, model["sub_type"]
             )
 
             for d in o:
                 kv = [(f"{table_name}_id", _id)]
-                self._reccursive_create(sub_table_name, [], d, scheme["sub_type"], kv)
+                self._reccursive_create(sub_table_name, [], d, model["sub_type"], kv)
                 self._create_in_table(sub_table_name, kv)
                 kv.clear()
 

@@ -113,14 +113,18 @@ class DBHandler(ABC):  # pylint: disable=too-many-instance-attributes
             return None
         return t_path[key]
 
-    def check_structure(self) -> bool:
+    def check_structure(self, _update_directly=False) -> tuple[bool, str]:
         """
+
         Check if the internal structure is compliant to the model
 
-        :return: True if compliant, or False
-        :rtype: bool
+
+        :param _update_directly: do the update automatically, defaults to False
+        :type _update_directly: bool, optional
+        :return: True if compliant, or False, and a message with things to do to be compliant
+        :rtype: tuple [ bool, str ]
         """
-        return True
+        return (True, None)
 
     @abstractmethod
     def drop(self) -> None:  # pylint: disable=unused-argument

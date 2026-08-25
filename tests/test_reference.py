@@ -7,7 +7,8 @@ test for References()
 import os
 import unittest
 from backo import Item, Collection
-from backo import DBYmlConnector
+from backo.db import DBYmlDirConnector
+
 from backo import Backoffice
 from backo import (
     Ref,
@@ -43,20 +44,20 @@ class TestReferences(unittest.TestCase):
         super().__init__(*args, **kwargs)
 
         # --- DB for user
-        self.yml_users = DBYmlConnector(path=os.path.join(YML_DIR, "Users"))
-        self.yml_users.generate_id = lambda o: f"User_{o.name}_{o.surname}"
+        self.yml_users = DBYmlDirConnector(os.path.join(YML_DIR, "Users"))
+        self.yml_users.generate_id = lambda o: f"User_{o["name"]}_{o["surname"]}"
 
         # --- DB for sites
-        self.yml_sites = DBYmlConnector(path=os.path.join(YML_DIR, "Sites"))
-        self.yml_sites.generate_id = lambda o: f"Site_{o.name}"
+        self.yml_sites = DBYmlDirConnector(os.path.join(YML_DIR, "Sites"))
+        self.yml_sites.generate_id = lambda o: f"Site_{o["name"]}"
 
         # --- DB for humans
-        self.yml_humans = DBYmlConnector(path=os.path.join(YML_DIR, "Humans"))
-        self.yml_humans.generate_id = lambda o: f"Human_{o.name}"
+        self.yml_humans = DBYmlDirConnector(os.path.join(YML_DIR, "Humans"))
+        self.yml_humans.generate_id = lambda o: f"Human_{o["name"]}"
 
         # --- DB for animals
-        self.yml_animals = DBYmlConnector(path=os.path.join(YML_DIR, "Animals"))
-        self.yml_animals.generate_id = lambda o: f"Animal_{o.desc}"
+        self.yml_animals = DBYmlDirConnector(os.path.join(YML_DIR, "Animals"))
+        self.yml_animals.generate_id = lambda o: f"Animal_{o["desc"]}"
 
     def test_references_one_to_many_fill(self):
         """
@@ -444,7 +445,7 @@ class TestReferences(unittest.TestCase):
             u.reload()
         self.assertEqual(
             e.exception.to_string(),
-            '_id "User_bebert_bebert" not found in path "/tmp/backo_tests_references/Users"',
+            '_id "User_bebert_bebert" not found in "/tmp/backo_tests_references/Users"',
         )
 
     def test_references_one_to_many_strategy_delete_nofill(self):
@@ -514,7 +515,7 @@ class TestReferences(unittest.TestCase):
             u.reload()
         self.assertEqual(
             e.exception.to_string(),
-            '_id "User_bebert_bebert" not found in path "/tmp/backo_tests_references/Users"',
+            '_id "User_bebert_bebert" not found in "/tmp/backo_tests_references/Users"',
         )
 
     def test_references_errors(self):
@@ -609,7 +610,7 @@ class TestReferences(unittest.TestCase):
             )
         self.assertEqual(
             e.exception.to_string(),
-            '_id "no_ref" not found in path "/tmp/backo_tests_references/Sites"',
+            '_id "no_ref" not found in "/tmp/backo_tests_references/Sites"',
         )
         backoffice.rollback_transaction(t_id)
 

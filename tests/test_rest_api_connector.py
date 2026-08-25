@@ -7,13 +7,13 @@ test for Flask and routes
 import unittest
 import json
 import multiprocessing
-
+import time
 from flask import Flask
 
 # get the resources folder in the tests folder
 
 from backo import Item, Collection
-from backo import DBYmlConnector
+from backo.db import DBYmlDirConnector
 from backo import Backoffice, current_user, Action, Selection, DBRedirect
 
 from backo import String, Bool, SFilter, Operator
@@ -30,8 +30,10 @@ def launch_backoffice2():
     # ignore sessions for this campaign of tests.
     current_user.standalone = True
 
-    yml_users2 = DBYmlConnector(path=YML_DIR)
-    yml_users2.generate_id = lambda o: f"User_{o.name}_{o.surname}"
+    # yml_users2 = DBYmlConnector(path=YML_DIR)
+    # yml_users2.generate_id = lambda o: f"User_{o.name}_{o.surname}"
+    yml_users2 = DBYmlDirConnector(YML_DIR)
+    yml_users2.generate_id = lambda o: f"User_{o["name"]}_{o["surname"]}"
 
     users2_coll = Collection(
         "users2",
@@ -48,7 +50,6 @@ def launch_backoffice2():
     )
     backo2 = Backoffice("backo2")
     backo2.register_collection(users2_coll)
-    yml_users2.drop()
 
     flask2 = Flask("backo2")
     backo2.build_routes(flask2)
@@ -126,21 +127,19 @@ class TestRestApiConnector(unittest.TestCase):
     def setUpClass(cls):
         cls.PROC = multiprocessing.Process(target=launch_backoffice2, args=())
         cls.PROC.start()
-        # time.sleep(1)
+        time.sleep(1)
 
     def setUp(self):
-        yml_users2 = DBYmlConnector(path=YML_DIR)
-        yml_users2.drop()
-        yml_users2.create(
-            {"_id": "User_bebert_bebert", "name": "bebert", "surname": "bebert"}
-        )
-        yml_users2.create(
-            {"_id": "User_bert1_bert1", "name": "bert1", "surname": "bert1"}
-        )
-        yml_users2.create(
-            {"_id": "User_bert2_bert2", "name": "bert2", "surname": "bert2"}
-        )
+        # yml_users2 = DBYmlConnector(path=YML_DIR)
+        print("In setup2")
+        yml_users2 = DBYmlDirConnector(YML_DIR)
+        yml_users2.generate_id = lambda o: f"User_{o["name"]}_{o["surname"]}"
 
+        yml_users2.drop()
+        yml_users2.create({"name": "bebert", "surname": "bebert"})
+        yml_users2.create({"name": "bert1", "surname": "bert1"})
+        yml_users2.create({"name": "bert2", "surname": "bert2"})
+        # time.sleep(1)
         return super().setUp()
 
     @classmethod
@@ -461,6 +460,5 @@ class TestRestApiConnector(unittest.TestCase):
             self.assertEqual("item" in collection.keys(), True)
             self.assertEqual(isinstance(collection["actions"], list), True)
             self.assertEqual(isinstance(collection["selections"], list), True)
-            print(json.dumps(collection["selections"], indent=2))
             schema = collection["item"]
             self.assertEqual("types" in schema, True)

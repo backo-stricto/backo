@@ -6,7 +6,7 @@ test for References()
 
 import unittest
 from backo import Item, Collection
-from backo import DBYmlConnector
+from backo.db import DBYmlDirConnector
 from backo import Backoffice
 from backo import current_user
 from backo import (
@@ -46,10 +46,9 @@ class TestMigrations(unittest.TestCase):
         super().__init__(*args, **kwargs)
 
         # --- DB for user
-        self.yml_users = DBYmlConnector(path=YML_DIR)
-        self.yml_users.generate_id = (
-            lambda o: "User_" + o.name.get_value() + "_" + o.surname.get_value()
-        )
+        # self.yml_users = DBYmlConnector(path=YML_DIR)
+        self.yml_users = DBYmlDirConnector(YML_DIR)
+        self.yml_users.generate_id = lambda o: f"User_{o["name"]}_{o["surname"]}"
 
         self.backo = Backoffice("myApp")
         self.users = Collection(

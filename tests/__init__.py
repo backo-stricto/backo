@@ -21,3 +21,4 @@ from .test_migrations import TestMigrations
 from .test_file import TestFile
 from .test_rest_api_connector import TestRestApiConnector
 from .test_db_connector import TestDBConnector
+from .test_openapi import TestOpenAPI

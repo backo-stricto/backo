@@ -5,10 +5,9 @@ test for Meta data
 # pylint: disable=wrong-import-position, no-member, import-error, protected-access, wrong-import-order, duplicate-code
 
 import unittest
-import json
 
 from backo import Item, Collection, Selection
-from backo import DBYmlConnector
+from backo.db import DBYmlDirConnector
 from backo import Backoffice, current_user
 from backo import Ref, RefsList, DeleteStrategy
 from backo import String, Bool
@@ -33,14 +32,12 @@ class TestMeta(unittest.TestCase):
         super().__init__(*args, **kwargs)
 
         # --- DB for user
-        self.yml_users = DBYmlConnector(path=YML_DIR)
-        self.yml_users.generate_id = (
-            lambda o: "User_" + o.name.get_value() + "_" + o.surname.get_value()
-        )
+        self.yml_users = DBYmlDirConnector(YML_DIR)
+        self.yml_users.generate_id = lambda o: f"User_{o["name"]}_{o["surname"]}"
 
         # --- DB for sites
-        self.yml_sites = DBYmlConnector(path=YML_DIR)
-        self.yml_sites.generate_id = lambda o: "Site_" + o.name.get_value()
+        self.yml_sites = DBYmlDirConnector(YML_DIR)
+        self.yml_sites.generate_id = lambda o: f"Site_{o["name"]}"
 
         self.backoffice = Backoffice("myApp")
         self.users = Collection(
@@ -114,7 +111,6 @@ class TestMeta(unittest.TestCase):
             self.assertEqual("item" in collection.keys(), True)
             self.assertEqual(isinstance(collection["actions"], list), True)
             self.assertEqual(isinstance(collection["selections"], list), True)
-            print(json.dumps(collection["selections"], indent=2))
             schema = collection["item"]
             self.assertEqual("types" in schema, True)
 

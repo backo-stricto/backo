@@ -10,3 +10,4 @@ from .connectors.memory import DBMemoryConnector
 from .connectors.yml_dir import DBYmlDirConnector
 from .connectors.mongo import DBMongoConnector
 from .connectors.sqlite3 import DBSqlite3Connector
+from .connectors.yml import DBYmlConnector

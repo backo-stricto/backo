@@ -11,7 +11,7 @@ from functools import wraps
 from flask import Flask, request, jsonify, make_response
 from datetime import datetime, timezone, timedelta
 from backo import Item, Collection
-from backo import DBYmlConnector
+from backo.db import DBYmlDirConnector
 from backo import Backoffice, current_user, CurrentUser
 from backo import String, Bool, STypeError, SAttributeError
 
@@ -30,8 +30,8 @@ class TestCurrentUser(unittest.TestCase):
         super().__init__(*args, **kwargs)
 
         # --- DB for user
-        self.yml_users = DBYmlConnector(path=YML_DIR)
-        self.yml_users.generate_id = lambda o: f"User_{o.name}_{o.surname}"
+        self.yml_users = DBYmlDirConnector(YML_DIR)
+        self.yml_users.generate_id = lambda o: f"User_{o["name"]}_{o["surname"]}"
 
         # --- DB for sites
         # self.yml_sites = DBYmlConnector(path=YML_DIR)
@@ -58,8 +58,6 @@ class TestCurrentUser(unittest.TestCase):
         self.backo.register_collection(self.users_coll)
 
         self.yml_users.drop()
-
-        self.yml_users.delete_by_id("User_bebert_bebert")
 
         u = self.backo.users.create({"name": "bebert", "surname": "bebert"})
         self.assertEqual(u._id, "User_bebert_bebert")

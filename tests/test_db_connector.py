@@ -28,10 +28,12 @@ from backo.db import (
     DBYmlDirConnector,
     DBMongoConnector,
     DBSqlite3Connector,
+    DBYmlConnector,
 )
 
 YML_DIR = "/tmp/backo_tests_connector"
 SQLITE3_DB = "/tmp/backo_tests_connector_sqlite3.db"
+YML_FILE_DB = "/tmp/backo_yml_file.yml"
 
 
 class TestDBConnector(unittest.TestCase):
@@ -50,8 +52,8 @@ class TestDBConnector(unittest.TestCase):
         test CRUD for every DBHandler
 
         """
-
-        self.assertEqual(con.check_structure(), True)
+        rep, _mess = con.check_structure()
+        self.assertEqual(rep, True)
 
         con.drop()
         _id = con.create({"name": "toto", "age": 22})
@@ -114,6 +116,78 @@ class TestDBConnector(unittest.TestCase):
 
         with self.subTest(con=con):
             self.sub_test_crud_connector(con, YML_DIR)
+
+        con.close()
+
+    def test_yml_connector_by_id_no_path(self):
+        """
+        test for yml connector by _id with no path
+        """
+        con = DBYmlConnector(YML_FILE_DB, db_path=["home", "sub"])
+
+        # Create the structure
+        con.check_structure(True)
+
+        # check the structure
+        must_be_ok, _mess = con.check_structure()
+        self.assertEqual(must_be_ok, True)
+
+        with self.subTest(con=con):
+            self.sub_test_crud_connector(con, YML_FILE_DB)
+
+        con.close()
+
+    def test_yml_connector_by_id_path(self):
+        """
+        test for yml connector by _id with a path
+        """
+        con = DBYmlConnector(YML_FILE_DB)
+
+        # Create the structure
+        con.check_structure(True)
+
+        # check the structure
+        must_be_ok, _mess = con.check_structure()
+        self.assertEqual(must_be_ok, True)
+
+        with self.subTest(con=con):
+            self.sub_test_crud_connector(con, YML_FILE_DB)
+
+        con.close()
+
+    def test_yml_connector_array_no_path(self):
+        """
+        test for yml connector in a list with no path
+        """
+        con = DBYmlConnector(YML_FILE_DB, by__id=False)
+
+        # Create the structure
+        con.check_structure(True)
+
+        # check the structure
+        must_be_ok, _mess = con.check_structure()
+        self.assertEqual(must_be_ok, True)
+
+        with self.subTest(con=con):
+            self.sub_test_crud_connector(con, YML_FILE_DB)
+
+        con.close()
+
+    def test_yml_connector_array_path(self):
+        """
+        test for yml connector in a list with no path
+        """
+        con = DBYmlConnector(YML_FILE_DB, by_id=False, db_path=["home", "sub2"])
+
+        # Create the structure
+        con.check_structure(True)
+
+        # check the structure
+        must_be_ok, _mess = con.check_structure()
+        self.assertEqual(must_be_ok, True)
+
+        with self.subTest(con=con):
+            self.sub_test_crud_connector(con, YML_FILE_DB)
 
         con.close()
 
@@ -221,14 +295,14 @@ class TestDBConnector(unittest.TestCase):
         con_users.check_structure(True)
 
         # check the structure
-        must_be_ok = con_users.check_structure()
+        must_be_ok, _mess = con_users.check_structure()
         self.assertEqual(must_be_ok, True)
 
         # Create the structure
         con_sites.check_structure(True)
 
         # check the structure
-        must_be_ok = con_sites.check_structure()
+        must_be_ok, _mess = con_sites.check_structure()
         self.assertEqual(must_be_ok, True)
 
         # con_users.create( { "name" : "bebert", "nicknames" : [ { "a" : "al"}, { "a" : "bert"} ], "age" : 10 })

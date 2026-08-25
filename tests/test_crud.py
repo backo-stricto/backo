@@ -10,7 +10,7 @@ from datetime import datetime, timedelta
 
 from ipaddress import IPv4Address
 from backo import Item, Collection
-from backo import DBYmlConnector
+from backo.db import DBYmlDirConnector
 from backo import Backoffice, NotFoundError, BackoError, current_user
 from backo import String, Bool, Int, SRightError, Ipaddress
 
@@ -32,12 +32,12 @@ class TestCRUD(unittest.TestCase):
         current_user.standalone = True
 
         # --- DB for user
-        self.yml_users = DBYmlConnector(path=YML_DIR)
-        self.yml_users.generate_id = lambda o: f"User_{o.name}_{o.surname}"
+        self.yml_users = DBYmlDirConnector(YML_DIR)
+        self.yml_users.generate_id = lambda o: f"User_{o["name"]}_{o["surname"]}"
 
         # --- DB for sites
-        self.yml_sites = DBYmlConnector(path=YML_DIR)
-        self.yml_sites.generate_id = lambda o: f"Site_{o.name}"
+        self.yml_sites = DBYmlDirConnector(YML_DIR)
+        self.yml_sites.generate_id = lambda o: f"Site_{o["name"]}"
 
     def test_errors_on_create_delete(self):
         """
@@ -151,7 +151,7 @@ class TestCRUD(unittest.TestCase):
             v.load("User_bebert_bebert")
         self.assertEqual(
             e.exception.to_string(),
-            '_id "User_bebert_bebert" not found in path "/tmp/backo_tests_crud"',
+            '_id "User_bebert_bebert" not found in "/tmp/backo_tests_crud"',
         )
         current_user.standalone = False
 

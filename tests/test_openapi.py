@@ -11,12 +11,12 @@ from backo import (
     BlobFile,
     Bool,
     Collection,
-    DBYmlConnector,
     Float,
     Int,
     Item,
     String,
 )
+from backo.db import DBYmlDirConnector
 from backo.action import Action
 from backo.selection import Selection
 
@@ -31,7 +31,8 @@ class TestOpenAPI(unittest.TestCase):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # Setup test DBYmlConnector and clean it before each test
-        self.__connector = DBYmlConnector(path=YML_DIR)
+        # self.__connector = DBYmlConnector(path=YML_DIR)
+        self.__connector = DBYmlDirConnector(YML_DIR)
 
     def test_openapi_route(self):
         """

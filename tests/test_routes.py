@@ -11,7 +11,7 @@ from flask import Flask
 # get the resources folder in the tests folder
 
 from backo import Item, Collection
-from backo import DBYmlConnector
+from backo.db import DBYmlDirConnector
 from backo import Backoffice, current_user, Action, Selection
 
 from backo import String, Bool, SFilter, Operator
@@ -34,12 +34,8 @@ class TestRoutes(unittest.TestCase):
         current_user.standalone = True
 
         # --- DB for user
-        self.yml_users = DBYmlConnector(path=YML_DIR)
-        self.yml_users.generate_id = lambda o: f"User_{o.name}_{o.surname}"
-
-        # --- DB for sites
-        # self.yml_sites = DBYmlConnector(path=YML_DIR)
-        # self.yml_sites.generate_id = lambda o: f"Site_{o.name}"
+        self.yml_users = DBYmlDirConnector(YML_DIR)
+        self.yml_users.generate_id = lambda o: f"User_{o["name"]}_{o["surname"]}"
 
         self.backo = Backoffice("myApp")
 
@@ -80,8 +76,6 @@ class TestRoutes(unittest.TestCase):
         self.backo.register_collection(self.users_coll)
 
         self.yml_users.drop()
-
-        self.yml_users.delete_by_id("User_bebert_bebert")
 
         u = self.backo.users.create({"name": "bebert", "surname": "bebert"})
         self.assertEqual(u._id, "User_bebert_bebert")
@@ -431,6 +425,5 @@ class TestRoutes(unittest.TestCase):
             self.assertEqual("item" in collection.keys(), True)
             self.assertEqual(isinstance(collection["actions"], list), True)
             self.assertEqual(isinstance(collection["selections"], list), True)
-            print(json.dumps(collection["selections"], indent=2))
             schema = collection["item"]
             self.assertEqual("types" in schema, True)
