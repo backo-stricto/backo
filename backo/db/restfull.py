@@ -1,22 +1,21 @@
+# pylint: disable=relative-beyond-top-level
 """
-Module providing a generic REST API based database connector.
+DB Connector as a restfull client
 """
 
-# pylint: disable=logging-fstring-interpolation
+import uuid
+import copy
 
-from abc import abstractmethod
 from typing import Callable
 import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
-from stricto import Kparse
 
-from .db_connector import DBConnector
-from .error import NotFoundError, DBError
-from .log import log_system, LogLevel
+from stricto import SFilter, Kparse
+from .generic.db_handler import DBHandler
+from ..error import NotFoundError, DBError
 
-log = log_system.get_or_create_logger("db-restfull-connector", LogLevel.DEBUG)
-
+# from ..request import SearchRequest, SelectRequest, Response
 
 KPARSE_MODEL = {
     "host": {"type": str | None, "default": "localhost"},
@@ -39,16 +38,16 @@ KPARSE_MODEL_ENDPOINT = {
 }
 
 
-class DBRestfullConnector(DBConnector):
-    """DBConnector for REST API backends.
-
-    This connector allows complete interaction with other REST APIs.
-
+class DBRestFullConnector(DBHandler):
+    """
+    A DB connector to address a web service (restfull api)
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, db_name: str, **kwargs):
         """
 
+        :param db_name: Name of th DB (only user in messages)
+        :type db_name: str
         :param ``**kwargs``:
             - *host=* ``str`` -- The API host
             - *port=* ``int`` -- The API port
@@ -75,13 +74,27 @@ class DBRestfullConnector(DBConnector):
         # Store the API base URI for use in endpoint methods
         self._uri = self._build_uri()
 
+        self._session = None
+        super().__init__(db_name, **kwargs)
+        self.connect()
+
+    def close(self) -> None:
+        """nothing"""
+        return
+
+    def connect(self) -> None:
+        """
+        open the session
+        """
         self._session = requests.Session()
         retry = Retry(connect=3, backoff_factor=0.5)
         adapter = HTTPAdapter(max_retries=retry)
         self._session.mount(self._uri, adapter)
-        self._session.mount(self._uri, adapter)
 
-        DBConnector.__init__(self, **kwargs)
+    def drop(self) -> None:
+        """
+        Nothing to do
+        """
 
     def _build_uri(self) -> str:
         """Return the configured API base URI."""
@@ -140,7 +153,7 @@ class DBRestfullConnector(DBConnector):
         if self._auth_token is not None:
             headers["Authorization"] = f"Bearer {self._auth_token}"
 
-        log.debug(f"{method.upper()} {uri}?{query_options}")
+        # log.debug(f"{method.upper()} {uri}?{query_options}")
 
         try:
             response = self._session.request(
@@ -171,66 +184,35 @@ class DBRestfullConnector(DBConnector):
         except Exception as e:  # pylint: disable=broad-exception-caught
             return None, None, e
 
-    @abstractmethod
-    def drop(self, **kwargs):
-        """Drop the collection / table / resource (TO implement in subclasses)
-
-        
-        :param ``**kwargs``:
-            - *endpoint=* ``str | None`` -- endpoint name relative to ``self._uri``
-            - *method=* ``str | None`` -- HTTP method option from endpoint model \
-                (ignored by create, which always uses ``POST``)
-            - *url_parameters=* ``list | None`` -- path parameters appended to endpoint
-            - *query_options=* ``dict | None`` -- query string options appended after ``?``
-            - *data=* ``dict | None`` -- payload option from endpoint model (ignored by create,
-                which uses ``o`` as request payload)
-            - *username=* ``str`` -- Username for basic authentication (optional)
-            - *password=* ``str`` -- Password for basic authentication (optional)
-            - *auth_token=* ``str`` -- Bearer token for authentication (optional)
-            - *restriction=* ``Callable`` -- Restriction filter function (not implemented)
-
-        :return: True if the object was successfully deleted
-        :rtype: bool
-        :raise Error: Raise an error DBError, NotFoundError or any db error
-
+    def generate_id(self, o: dict) -> str:  # pylint: disable=unused-argument
         """
+        The function to generate an Id.
 
-    def create(self, o: dict, **kwargs) -> str:  # pylint: disable=unused-argument
-        """Create the object by issuing a POST request to the REST API and return the _id
+        Mainly, not used, because the database itself do the job (like mongo).
+        But for other cases, you must generate by yourself the uniq *_id* for the object
 
         :param o: The object given (json format)
         :type o: dict
-        :param kwargs: Endpoint options
-        :type kwargs: dict
-        :param kwargs.endpoint: endpoint name relative to ``self._uri``
-        :type kwargs.endpoint: str | None
-        :param kwargs.method: HTTP method option from endpoint model (ignored by create,
-            which always uses ``POST``)
-        :type kwargs.method: str | None
-        :param kwargs.url_parameters: path parameters appended to endpoint
-        :type kwargs.url_parameters: list | None
-        :param kwargs.query_options: query string options appended after ``?``
-        :type kwargs.query_options: dict | None
-        :param kwargs.data: payload option from endpoint model (ignored by create,
-            which uses ``o`` as request payload)
-        :type kwargs.data: dict | list | None
-        :return: the object _id
+        :return: an Id
         :rtype: str
-        :raise Error: Raise an error DBError, NotFoundError or any db error
 
         """
+        return str(uuid.uuid4().int >> 64)
+
+    def _internal_create(
+        self, o: dict, **kwargs
+    ) -> str:  # pylint: disable=unused-argument
+        """create"""
+        d = copy.deepcopy(o)
+
         options = Kparse(kwargs, KPARSE_MODEL_ENDPOINT)
 
         endpoint = options.get("endpoint")
         url_parameters = options.get("url_parameters")
         query_options = options.get("query_options")
 
-        log.debug(
-            "Create object on endpoint %r with url_parameters %r and query_options %r",
-            endpoint,
-            url_parameters,
-            query_options,
-        )
+        # Do all transformations on the object
+        self._transform_on_create(d)
 
         status_code, data, error = self._request(
             endpoint=endpoint,
@@ -256,14 +238,16 @@ class DBRestfullConnector(DBConnector):
                 status_code,
             )
 
-        if isinstance(data, dict) and data.get("_id") is not None:
+        if isinstance(data, dict) and "_id" in data:
             return data.get("_id")
 
         raise DBError(
             "REST API create response does not contain _id",
         )
 
-    def save(self, _id: str, o: dict, **kwargs):  # pylint: disable=unused-argument
+    def _internal_save(
+        self, _id: str, o: dict, **kwargs
+    ) -> None:  # pylint: disable=unused-argument
         """Save / update the object by issuing a PUT request to the REST API and return the _id
 
         :param o: The object given (json format)
@@ -293,13 +277,13 @@ class DBRestfullConnector(DBConnector):
         url_parameters = options.get("url_parameters")
         query_options = options.get("query_options")
 
-        log.debug(
-            "Update %r from endpoint %r with url_parameters %r and query_options %r",
-            _id,
-            endpoint,
-            url_parameters,
-            query_options,
-        )
+        # log.debug(
+        #     "Update %r from endpoint %r with url_parameters %r and query_options %r",
+        #     _id,
+        #     endpoint,
+        #     url_parameters,
+        #     query_options,
+        # )
 
         status_code, _data, error = self._request(
             endpoint=endpoint,
@@ -312,7 +296,6 @@ class DBRestfullConnector(DBConnector):
         if error is not None:
             if status_code == 404:
                 raise NotFoundError('_id "{0}" not found', _id) from error
-            log.error(error)
             raise DBError('Endpoint "{0}" error', endpoint) from error
 
         if status_code == 404:
@@ -325,7 +308,7 @@ class DBRestfullConnector(DBConnector):
                 _id,
             )
 
-    def delete_by_id(self, _id: str, **kwargs) -> bool:
+    def _internal_delete_by_id(self, _id: str, **kwargs):
         """Delete the object by issuing a DELETE request to the REST API
 
         :param _id: The object _id to delete
@@ -355,13 +338,13 @@ class DBRestfullConnector(DBConnector):
         url_parameters = options.get("url_parameters")
         query_options = options.get("query_options")
 
-        log.debug(
-            "Delete %r from endpoint %r with url_parameters %r and query_options %r",
-            _id,
-            endpoint,
-            url_parameters,
-            query_options,
-        )
+        # log.debug(
+        #     "Delete %r from endpoint %r with url_parameters %r and query_options %r",
+        #     _id,
+        #     endpoint,
+        #     url_parameters,
+        #     query_options,
+        # )
 
         status_code, _data, error = self._request(
             endpoint=endpoint,
@@ -385,7 +368,7 @@ class DBRestfullConnector(DBConnector):
                 _id,
             )
 
-    def get_by_id(self, _id: str, **kwargs) -> dict:
+    def _internal_get_by_id(self, _id: str, **kwargs) -> dict:
         """Get the objectby its _id by issuing a GET request to the REST API
 
         :param _id: The object _id to get
@@ -415,9 +398,9 @@ class DBRestfullConnector(DBConnector):
         url_parameters = options.get("url_parameters")
         query_options = options.get("query_options")
 
-        log.debug(
-            f"Get {_id} from endpoint {endpoint} with url_parameters {url_parameters} and query_options {query_options}"
-        )
+        # log.debug(
+        #     f"Get {_id} from endpoint {endpoint} with url_parameters {url_parameters} and query_options {query_options}"
+        # )
         status_code, data, error = self._request(
             endpoint=endpoint,
             url_parameters=url_parameters or [_id],
@@ -445,10 +428,9 @@ class DBRestfullConnector(DBConnector):
 
         return data
 
-    @abstractmethod
-    def select(
+    def _internal_select(   # pylint: disable=unused-argument
         self,
-        select_filter,
+        select_filter: SFilter,
         projection: dict = {},
         page_size: int = 0,
         num_of_element_to_skip: int = 0,

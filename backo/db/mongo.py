@@ -5,16 +5,17 @@ Attribut mapper for mongo db connector
 
 from typing import Any
 import re
+import copy
 
 from pymongo import MongoClient
 from bson.objectid import ObjectId
 
 from stricto import SFilter, Operator
 
-from ..transformer import Transformer
-from ..db_handler import DBHandler
-from ...error import NotFoundError, DBError
-from ..filter import Filter
+from .generic.transformer import Transformer
+from .generic.db_handler import DBHandler
+from ..error import NotFoundError, DBError
+from .generic.filter import Filter
 
 
 class MongoFilter(Filter):
@@ -34,13 +35,14 @@ class MongoFilter(Filter):
         :return: the mongo query
         :rtype: dict
         """
-        db_path = sf._path
-        if db_path is not None:
+        db_path_string = sf._path
+        if db_path_string is not None:
 
-            db_path = re.sub(r"^\$\.", "", db_path)
-            transformer: Transformer = self.get_transformer([db_path])
+            db_path_string = re.sub(r"^\$\.", "", db_path_string)
+            transformer: Transformer = self.get_transformer(db_path_string.split("."))
             if transformer:
-                db_path = transformer.get_key_path()
+                db_path = transformer.get_db_path()
+                db_path_string = ".".join(db_path)
 
         if sf._operator == Operator.AND:
             q = {}
@@ -67,42 +69,42 @@ class MongoFilter(Filter):
 
         if sf._operator == Operator.EQ:
             q = {}
-            q[db_path] = sf._value
+            q[db_path_string] = sf._value
             return q
 
         if sf._operator == Operator.GT:
             q = {}
-            q[db_path] = {"$gt": sf._value}
+            q[db_path_string] = {"$gt": sf._value}
             return q
 
         if sf._operator == Operator.GTE:
             q = {}
-            q[db_path] = {"$gte": sf._value}
+            q[db_path_string] = {"$gte": sf._value}
             return q
 
         if sf._operator == Operator.LTE:
             q = {}
-            q[db_path] = {"$lte": sf._value}
+            q[db_path_string] = {"$lte": sf._value}
             return q
 
         if sf._operator == Operator.LT:
             q = {}
-            q[db_path] = {"$lt": sf._value}
+            q[db_path_string] = {"$lt": sf._value}
             return q
 
         if sf._operator == Operator.NE:
             q = {}
-            q[db_path] = {"$ne": sf._value}
+            q[db_path_string] = {"$ne": sf._value}
             return q
 
         if sf._operator == Operator.REG:
             q = {}
-            q[db_path] = {"$regex": sf._value}
+            q[db_path_string] = {"$regex": sf._value}
             return q
 
         if sf._operator == Operator.SIZE:
             q = {}
-            q[db_path] = {"$size": sf._value}
+            q[db_path_string] = {"$size": sf._value}
             return q
 
         # Not implemented
@@ -210,6 +212,10 @@ class DBMongoConnector(DBHandler):
         if o is None:
             raise NotFoundError('_id "{0}" not found in "{1}"', _id, self._name)
         o["_id"] = _id
+
+        # Do all transformations on the object
+        self._transform_on_load(o)
+
         return o
 
     def delete_by_id(self, _id: str) -> None:
@@ -227,9 +233,17 @@ class DBMongoConnector(DBHandler):
     def save(self, _id: str, o: dict) -> None:
         """save"""
         oid = ObjectId(_id)
-        o["_id"] = oid
+
+        copied_object = copy.deepcopy(o)
+        copied_object["_id"] = oid
+
+        # Do all transformations on the object
+        self._transform_on_save(copied_object)
+
         try:
-            self._collection.find_one_and_replace({"_id": oid}, o, {"upsert": True})
+            self._collection.find_one_and_replace(
+                {"_id": oid}, copied_object, {"upsert": True}
+            )
         except Exception as e:
             raise DBError(
                 'Mongo connection error while "{0}.find_one_and_replace()"',
@@ -238,11 +252,16 @@ class DBMongoConnector(DBHandler):
 
     def create(self, o: dict) -> str:
         """create"""
-        try:
-            if "_id" in o:
-                del o["_id"]
 
-            result = self._collection.insert_one(o)
+        if "_id" in o:
+            del o["_id"]
+
+        copied_object = copy.deepcopy(o)
+        # Do all transformations on the object
+        self._transform_on_create(copied_object)
+
+        try:
+            result = self._collection.insert_one(copied_object)
         except Exception as e:
             raise DBError(
                 'Mongo connection error while "{0}.insert_one()"', self._collection_name
@@ -276,6 +295,8 @@ class DBMongoConnector(DBHandler):
 
         mongo_filter = self.filter.build_db_filter(select_filter)
 
+        # print(f'filter = {mongo_filter}')
+
         try:
             result_list = list(
                 self._collection.find(mongo_filter, projection)
@@ -287,4 +308,9 @@ class DBMongoConnector(DBHandler):
             raise DBError(
                 'Mongo connection error while "{0}.find()"', self._collection_name
             ) from e
+
+        for o in result_list:
+            # Do all transformations on the object
+            self._transform_on_load(o)
+
         return result_list

@@ -29,6 +29,8 @@ from backo.db import (
     DBMongoConnector,
     DBSqlite3Connector,
     DBYmlConnector,
+    RenameTransformer,
+    IgnoreTransformer,
 )
 
 YML_DIR = "/tmp/backo_tests_connector"
@@ -67,6 +69,12 @@ class TestDBConnector(unittest.TestCase):
         # create / delete
         _id = con.create({"name": "toto2", "age": 12})
         self.assertIsNotNone(_id)
+        u = con.get_by_id(_id)
+        self.assertIsNotNone(u)
+        self.assertEqual("age" in u, True)
+        self.assertEqual("name" in u, True)
+        self.assertEqual(u["age"], 12)
+
         con.delete_by_id(_id)
 
         # get error not found
@@ -92,6 +100,22 @@ class TestDBConnector(unittest.TestCase):
         self.assertEqual(type(res), list)
         self.assertGreaterEqual(len(res), 1)
 
+        # update
+        con.save(_id, {"name": "toto2", "age": 13})
+        u = con.get_by_id(_id)
+        self.assertIsNotNone(u)
+        self.assertEqual("age" in u, True)
+        self.assertEqual("name" in u, True)
+        self.assertEqual(u["age"], 13)
+
+        res = con.select(SFilter("$.name", Operator.EQ, "toto"))
+        self.assertEqual(type(res), list)
+        self.assertGreaterEqual(len(res), 1)
+
+        res = con.select(SFilter("$.age", Operator.GTE, 13))
+        self.assertEqual(type(res), list)
+        self.assertGreaterEqual(len(res), 1)
+
     def test_memory_connector(self):
         """
         create
@@ -100,6 +124,12 @@ class TestDBConnector(unittest.TestCase):
 
         con = DBMemoryConnector("Memory")
         # con.item_mapper.add_attribute_transformer("$.name", RenameTransformer("$.nom"))
+
+        with self.subTest(con=con):
+            self.sub_test_crud_connector(con, "Memory")
+
+        con.register_transformer(RenameTransformer(["age"], ["age_in_db"]))
+        con.register_transformer(IgnoreTransformer(["not", "exists"]))
 
         with self.subTest(con=con):
             self.sub_test_crud_connector(con, "Memory")
@@ -113,6 +143,12 @@ class TestDBConnector(unittest.TestCase):
         """
         con = DBYmlDirConnector(YML_DIR)
         # con.item_mapper.add_attribute_transformer("$.name", RenameTransformer("$.nom"))
+
+        with self.subTest(con=con):
+            self.sub_test_crud_connector(con, YML_DIR)
+
+        con.register_transformer(RenameTransformer(["age"], ["age_in_db"]))
+        con.register_transformer(IgnoreTransformer(["not", "exists"]))
 
         with self.subTest(con=con):
             self.sub_test_crud_connector(con, YML_DIR)
@@ -135,6 +171,12 @@ class TestDBConnector(unittest.TestCase):
         with self.subTest(con=con):
             self.sub_test_crud_connector(con, YML_FILE_DB)
 
+        con.register_transformer(RenameTransformer(["age"], ["age_in_db"]))
+        con.register_transformer(IgnoreTransformer(["not", "exists"]))
+
+        with self.subTest(con=con):
+            self.sub_test_crud_connector(con, YML_FILE_DB)
+
         con.close()
 
     def test_yml_connector_by_id_path(self):
@@ -149,6 +191,12 @@ class TestDBConnector(unittest.TestCase):
         # check the structure
         must_be_ok, _mess = con.check_structure()
         self.assertEqual(must_be_ok, True)
+
+        with self.subTest(con=con):
+            self.sub_test_crud_connector(con, YML_FILE_DB)
+
+        con.register_transformer(RenameTransformer(["age"], ["age_in_db"]))
+        con.register_transformer(IgnoreTransformer(["not", "exists"]))
 
         with self.subTest(con=con):
             self.sub_test_crud_connector(con, YML_FILE_DB)
@@ -171,6 +219,12 @@ class TestDBConnector(unittest.TestCase):
         with self.subTest(con=con):
             self.sub_test_crud_connector(con, YML_FILE_DB)
 
+        con.register_transformer(RenameTransformer(["age"], ["age_in_db"]))
+        con.register_transformer(IgnoreTransformer(["not", "exists"]))
+
+        with self.subTest(con=con):
+            self.sub_test_crud_connector(con, YML_FILE_DB)
+
         con.close()
 
     def test_yml_connector_array_path(self):
@@ -189,6 +243,12 @@ class TestDBConnector(unittest.TestCase):
         with self.subTest(con=con):
             self.sub_test_crud_connector(con, YML_FILE_DB)
 
+        con.register_transformer(RenameTransformer(["age"], ["age_in_db"]))
+        con.register_transformer(IgnoreTransformer(["not", "exists"]))
+
+        with self.subTest(con=con):
+            self.sub_test_crud_connector(con, YML_FILE_DB)
+
         con.close()
 
     def test_mongo_connector(self):
@@ -199,6 +259,48 @@ class TestDBConnector(unittest.TestCase):
         con = DBMongoConnector("mongodb://localhost:27017/testMongo", "MyColl")
         # con.item_mapper.add_attribute_transformer("$.name", RenameTransformer("$.nom"))
         # con.item_mapper.add_attribute_mappers("$.name", MongoRenameMapper("$.nom"))
+
+        with self.subTest(con=con):
+            self.sub_test_crud_connector(con, "MyColl")
+
+        res = con.select(
+            SFilter(
+                None,
+                Operator.AND,
+                [
+                    SFilter("$.name", Operator.EQ, "toto"),
+                    SFilter("$.age", Operator.GTE, 18),
+                ],
+            )
+        )
+        self.assertEqual(type(res), list)
+        self.assertEqual(len(res), 1)
+
+        res = con.select(
+            SFilter(
+                None,
+                Operator.OR,
+                [
+                    SFilter("$.age", Operator.LTE, 13),
+                    SFilter("$.age", Operator.GTE, 18),
+                ],
+            )
+        )
+        self.assertEqual(len(res), 2)
+        res = con.select(
+            SFilter(
+                None,
+                Operator.AND,
+                [
+                    SFilter("$.age", Operator.LTE, 13),
+                    SFilter("$.age", Operator.GTE, 18),
+                ],
+            )
+        )
+        self.assertEqual(len(res), 0)
+
+        con.register_transformer(RenameTransformer(["age"], ["age_in_db"]))
+        con.register_transformer(IgnoreTransformer(["not", "exists"]))
 
         with self.subTest(con=con):
             self.sub_test_crud_connector(con, "MyColl")
@@ -288,6 +390,9 @@ class TestDBConnector(unittest.TestCase):
 
         backoffice.register_collection(coll_sites)
 
+        # Add a transformater (for the fun)
+        con_users.register_transformer(RenameTransformer(["age"], ["age_in_db"]))
+
         con_users.set_model(coll_users.get_meta())
         con_sites.set_model(coll_sites.get_meta())
 
@@ -305,7 +410,15 @@ class TestDBConnector(unittest.TestCase):
         must_be_ok, _mess = con_sites.check_structure()
         self.assertEqual(must_be_ok, True)
 
-        # con_users.create( { "name" : "bebert", "nicknames" : [ { "a" : "al"}, { "a" : "bert"} ], "age" : 10 })
+        _id = con_users.create(
+            {"name": "bebert", "nicknames": [{"a": "al"}, {"a": "bert"}], "age": 10}
+        )
+        self.assertIsNotNone(_id)
+        u = con_users.get_by_id(_id)
+        self.assertIsNotNone(u)
+
+        self.assertEqual("age" in u, True)
+        self.assertEqual("age_in_db" in u, False)
 
         # check filters
         where, values = con_users.filter.build_db_filter(

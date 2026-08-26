@@ -4,16 +4,17 @@ Attribut mapper for mongo db connector
 """
 
 from typing import Any
+import copy
 
 import sqlite3
 
 from stricto import SFilter
 
-from ...db_handler import DBHandler
-from ....error import NotFoundError, DBError
+from ..generic.db_handler import DBHandler
+from ...error import NotFoundError, DBError
 
 from .transformers import IdTransformer, BooleanTransformer
-from ...transformer import Transformer
+from ..generic.transformer import Transformer
 
 from .pragma import TablePragma, SqlFieldDescription
 from .filter import SQlite3Filter
@@ -223,10 +224,14 @@ class DBSqlite3Connector(DBHandler):
             key_path = ["_"]
 
         transformer = self.get_transformer(key_path, table_name)
-        store_in_db = True if transformer is None else transformer.must_be_store_in_db()
+        store_in_db = True
+        db_path = key_path
+        if transformer:
+            store_in_db = transformer.must_be_store_in_db()
+            db_path = transformer.get_db_path()
         if store_in_db:
             f = SqlFieldDescription()
-            f.create("_".join(key_path), model)
+            f.create("_".join(db_path), model)
             tp.add_backo_field(f)
 
     def check_structure(self, update_directly=False) -> tuple[bool, str]:
@@ -249,13 +254,14 @@ class DBSqlite3Connector(DBHandler):
                 some_changements = True
 
                 if update_directly:
-                    self._cursor.execute(s)
+                    self._cursor.executescript(s)
                 else:
-                    message += f'/* --- table "{t_name}" ---- */'
+                    message += f'/* --- table "{t_name}" ---- */\r\n'
                     message += s
+                    message += "\r\n\r\n"
             else:
                 if not update_directly:
-                    message += f"Nothing to change on table {tp._name}"
+                    message += f"/* Nothing to change on table {tp._name} */\r\n\r\n"
 
         if some_changements and update_directly:
             self._db.commit()
@@ -454,7 +460,7 @@ class DBSqlite3Connector(DBHandler):
         """
         r = tuple(map(tuple, zip(*keys_values)))
         t = ("?",) * len(r[0])
-        print(f"INSERT INTO {table_name} {r[0]} {r[0]} VALUES ({', '.join(t) })", r[1])
+        print(f"INSERT INTO {table_name} {r[0]} VALUES ({', '.join(t) })", r[1])
         self._cursor.execute(
             f"INSERT INTO {table_name} {r[0]} VALUES ({', '.join(t) })", r[1]
         )
@@ -487,10 +493,11 @@ class DBSqlite3Connector(DBHandler):
         """
 
         transformer = self.get_transformer(key_path, table_name, model["types"])
+        db_path = key_path
         if transformer:
             if transformer.must_be_store_in_db() is False:
                 return None
-            transformer.on_create(o, key_path)
+            db_path = transformer.get_db_path()
 
         # A Dict
         if "sub_scheme" in model and isinstance(o, dict):
@@ -525,10 +532,10 @@ class DBSqlite3Connector(DBHandler):
             return sqlite3_id
 
         # In case of a list of not a Dict,
-        if not key_path:
-            key_path = ["_"]
+        if not db_path:
+            db_path = ["_"]
 
-        keys_values.append((f"{'_'.join(key_path)}", o))
+        keys_values.append((f"{'_'.join(db_path)}", o))
         return None
 
     def create(self, o: Any) -> str:  # pylint: disable=unused-argument
@@ -565,7 +572,7 @@ class DBSqlite3Connector(DBHandler):
             v.append(value)
 
         v.append(_id)
-        print(f'UPDATE {table_name} SET {", ".join(l)} WHERE id == {_id}')
+        print(f'UPDATE {table_name} SET {", ".join(l)} WHERE id == ?, {tuple(v)}')
         self._cursor.execute(
             f'UPDATE {table_name} SET {", ".join(l)} WHERE id == ?', tuple(v)
         )
@@ -601,10 +608,11 @@ class DBSqlite3Connector(DBHandler):
         """
 
         transformer = self.get_transformer(key_path, table_name, model["types"])
+        db_path = key_path
         if transformer:
             if transformer.must_be_store_in_db() is False:
                 return
-            transformer.on_save(o, key_path)
+            db_path = transformer.get_db_path()
 
         # A Dict
         if "sub_scheme" in model and isinstance(o, dict):
@@ -644,10 +652,10 @@ class DBSqlite3Connector(DBHandler):
             return
 
         # In case of a list of not a Dict,
-        if not key_path:
-            key_path = ["_"]
+        if not db_path:
+            db_path = ["_"]
 
-        keys_values["_".join(key_path)] = o
+        keys_values["_".join(db_path)] = o
 
     def save(self, _id: str, o: dict) -> None:
         """save"""
@@ -655,6 +663,8 @@ class DBSqlite3Connector(DBHandler):
         self._reccursive_save(
             self._table_name, int(_id), [], o, self.model, keys_values
         )
+        if keys_values:
+            self._insert_in_table(self._table_name, int(_id), keys_values)
         self._db.commit()
 
     def _reccursive_select(
@@ -686,10 +696,12 @@ class DBSqlite3Connector(DBHandler):
 
         """
         where_conditions, values = self.filter.build_db_filter(select_filter)
-
+        print(f"SELECT * FROM {self._table_name} WHERE {where_conditions}  {values}")
         list_of_items = self._cursor.execute(
             f"SELECT * FROM {self._table_name} WHERE {where_conditions}", values
         ).fetchall()
+
+        cursor_desc_copy = copy.deepcopy(self._cursor.description)
 
         # None or empty
         if not list_of_items:
@@ -699,7 +711,7 @@ class DBSqlite3Connector(DBHandler):
         for item in list_of_items:
 
             obj = {}
-            for idx, attribute in enumerate(self._cursor.description):
+            for idx, attribute in enumerate(cursor_desc_copy):
                 key_path = attribute[0]
                 obj[key_path] = item[idx]
 

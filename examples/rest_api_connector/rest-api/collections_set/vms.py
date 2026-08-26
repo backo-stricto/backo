@@ -6,10 +6,9 @@ from backo import (
     Collection,
     Item,
     GenericMetaDataHandler,
-    DBYmlConnector,
 )
-
-vms_store = DBYmlConnector(path=str(get_data_dir() / "vms"))
+from backo.db import DBYmlDirConnector
+vms_store = DBYmlDirConnector(str(get_data_dir() / "vms"))
 
 vms = Item(
     {"name": String(required=True), "image": String(required=True)},

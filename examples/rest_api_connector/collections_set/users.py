@@ -7,12 +7,12 @@ from backo import (
     String,
     Collection,
     Item,
-    DBYmlConnector,
     GenericMetaDataHandler,
     log_system,
     LogLevel,
     RefsList,
 )
+from backo.db import DBYmlDirConnector
 
 log = log_system.get_or_create_logger("users", LogLevel.INFO)
 
@@ -42,7 +42,7 @@ item = Item(
 # ------------------------------------------------
 
 # First define the connector  = where to store datas
-connector = DBYmlConnector(path=str(get_data_dir() / "users"))
+connector = DBYmlDirConnector(str(get_data_dir() / "users"))
 
 
 #

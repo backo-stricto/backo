@@ -6,21 +6,22 @@ Note: we assume that the signature of some inherited methods differ from the mot
 
 # pylint: disable=logging-fstring-interpolation,arguments-differ
 from backo import (
-    DBRestfullConnector,
     log_system,
     DBError,
 )
+from backo.db import DBRestFullConnector
 
 log = log_system.get_or_create_logger("vms-connector")
 
 
-class VMsConnector(DBRestfullConnector):  # pylint: disable=too-many-instance-attributes
+class VMsConnector(DBRestFullConnector):  # pylint: disable=too-many-instance-attributes
     """An example of a rest API connector"""
 
     def __init__(self, **kwargs):
         """constructor"""
-        DBRestfullConnector.__init__(
+        DBRestFullConnector.__init__(
             self,
+            "vms",
             host="localhost",
             port=12345,
             tls=False,
@@ -44,27 +45,27 @@ class VMsConnector(DBRestfullConnector):  # pylint: disable=too-many-instance-at
         raise DBError("VMsConnector doenst implement drop() method")
 
     def create(self, o: dict) -> str:  # pylint: disable=unused-argument
-        return super().create(
+        return self._internal_create(
+            o,
             endpoint="vms",
-            o=o,
         )
 
     def save(self, _id: str, o: dict):  # pylint: disable=unused-argument
-        return super().save(
+        return self._internal_save(
             _id,
+            o,
             endpoint="vms",
-            o=o,
         )
 
     def delete_by_id(self, _id: str):  # pylint: disable=unused-argument
-        return super().delete_by_id(
+        return self._internal_delete_by_id(
             _id,
             endpoint="vms",
         )
 
     def get_by_id(self, _id: str) -> dict:
-        """See :func:`DBConnector.get_by_id`"""
-        return super().get_by_id(
+        """See :func:`DBHandler.get_by_id`"""
+        return self._internal_get_by_id(
             _id,
             endpoint="vms",
         )
@@ -76,9 +77,8 @@ class VMsConnector(DBRestfullConnector):  # pylint: disable=too-many-instance-at
         page_size=0,
         num_of_element_to_skip=0,
         sort_object={"_id": 1},
-        **kwargs,
     ) -> list:
-        """See :func:`DBConnector.select`
+        """See :func:`DBHandler.select`
 
         Params ``select_filter`` and ``projection`` are not used
 
@@ -92,7 +92,7 @@ class VMsConnector(DBRestfullConnector):  # pylint: disable=too-many-instance-at
             page_size,
         )
 
-        return super().select(
+        return self._internal_select(
             select_filter,
             projection,
             sort_object,

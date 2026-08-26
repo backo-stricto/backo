@@ -4,7 +4,7 @@ Attribut mapper for mongo db connector
 """
 
 from typing import Self
-from ....error import DBError
+from ...error import DBError
 
 SQL_TYPE_MAPPER = {
     "String": "TEXT",

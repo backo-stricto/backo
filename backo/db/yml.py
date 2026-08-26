@@ -12,25 +12,14 @@ from jsonpath import pointer, patch
 
 from stricto import Kparse
 
-from ..db_handler import DBHandler
-from ...error import NotFoundError, DBError
+from .generic.db_handler import DBHandler
+from ..error import NotFoundError, DBError
+from .generic.transformer import path_to_json_path
 
 KPARSE_MODEL = {
     "db_path": {"type": list[str], "default": []},
     "by_id": {"type": bool, "default": True},
 }
-
-
-def path_to_json_path(p: list[str]) -> str:
-    """
-    Transform the list path into a string wuth '/' as separators
-
-    :param p: list of path
-    :type p: list[str]
-    :return: the /foo/bar
-    :rtype: str
-    """
-    return "/" + "/".join(p)
 
 
 class DBYmlConnector(DBHandler):
@@ -127,7 +116,7 @@ class DBYmlConnector(DBHandler):
         :raises DBError: if the file is not available
         """
         try:
-            open( # pylint: disable=consider-using-with
+            open(  # pylint: disable=consider-using-with
                 self._filename, mode="r", encoding="utf-8"
             )
         except Exception as e:
@@ -227,6 +216,10 @@ class DBYmlConnector(DBHandler):
         if o is None:
             raise NotFoundError('_id "{0}" not found in "{1}"', _id, self._name)
         o["_id"] = _id
+
+        # Do all transformations on the object
+        self._transform_on_load(o)
+
         return o
 
     def _modify_list(self, patch_operation: dict) -> bool:
@@ -316,6 +309,9 @@ class DBYmlConnector(DBHandler):
         if obj is not None:
             raise DBError('_id "{0}" already exists in "{1}"', _id, self._name)
 
+        # Do all transformations on the object
+        self._transform_on_create(copied_object)
+
         if self._by_id:
             p = self._db_path.copy()
             p.append(_id)
@@ -346,6 +342,10 @@ class DBYmlConnector(DBHandler):
             raise NotFoundError('_id "{0}" not found in "{1}"', _id, self._name)
 
         copied_object = copy.deepcopy(o)
+
+        # Do all transformations on the object
+        self._transform_on_save(copied_object)
+
         if self._by_id:
             p = self._db_path.copy()
             p.append(_id)
@@ -355,7 +355,7 @@ class DBYmlConnector(DBHandler):
         else:
             p = self._db_path.copy()
             p.append(str(idx))
-            copied_object[_id] = _id
+            copied_object["_id"] = _id
             self._modify_list(
                 {"op": "replace", "path": path_to_json_path(p), "value": copied_object}
             )
@@ -393,6 +393,10 @@ class DBYmlConnector(DBHandler):
                 result_list = []
                 for _id, o in db.items():
                     o[_id] = _id
+
+                    # Do all transformations on the object
+                    self._transform_on_load(o)
+
                     result_list.append(o)
                 return result_list
             if not isinstance(db, list):
@@ -402,4 +406,9 @@ class DBYmlConnector(DBHandler):
                     ".".join(self._db_path),
                     type(db),
                 )
+
+            # Do all transformations on the object
+            for o in db:
+                self._transform_on_load(o)
+
             return db

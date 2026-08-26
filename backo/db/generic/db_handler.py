@@ -1,6 +1,8 @@
 """
 Module providing the Generic() Class for connection on DB
 """
+# pylint: disable=relative-beyond-top-level
+# (due to a pylint bug)
 
 import uuid
 import sys
@@ -81,6 +83,25 @@ class DBHandler(ABC):  # pylint: disable=too-many-instance-attributes
         :type transformer: Transformer
         """
         self.type_transformers[transformer.backo_type] = transformer
+
+    def _transform_on_load(self, loaded_object: dict):
+        for transformers in self.transformers.values():
+            for transformer in transformers.values():
+                db_path = transformer.get_db_path()
+                if transformer.path_exists_in_object(db_path, loaded_object):
+                    transformer.on_load(loaded_object, db_path)
+
+    def _transform_on_create(self, obj: dict):
+        for transformers in self.transformers.values():
+            for transformer in transformers.values():
+                if transformer.path_exists_in_object(transformer.key_path, obj):
+                    transformer.on_create(obj, transformer.key_path)
+
+    def _transform_on_save(self, obj: dict):
+        for transformers in self.transformers.values():
+            for transformer in transformers.values():
+                if transformer.path_exists_in_object(transformer.key_path, obj):
+                    transformer.on_save(obj, transformer.key_path)
 
     def get_transformer(
         self, key_path: list[str], table_name: str = None, backo_types: list[str] = None

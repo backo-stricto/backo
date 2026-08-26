@@ -6,8 +6,8 @@ Memory DB Connector
 import uuid
 import copy
 from stricto import SFilter
-from ..db_handler import DBHandler
-from ...error import NotFoundError
+from .generic.db_handler import DBHandler
+from ..error import NotFoundError
 
 # from ..request import SearchRequest, SelectRequest, Response
 
@@ -62,6 +62,10 @@ class DBMemoryConnector(DBHandler):
         d = copy.deepcopy(self._datas.get(_id))
         if not d:
             raise NotFoundError('_id "{0}" not found in "{1}"', _id, self._name)
+
+        # Do all transformations on the object
+        self._transform_on_load(d)
+
         return d
 
     def delete_by_id(self, _id: str) -> None:
@@ -78,6 +82,10 @@ class DBMemoryConnector(DBHandler):
 
         d = copy.deepcopy(o)
         d[_id] = _id
+
+        # Do all transformations on the object
+        self._transform_on_save(d)
+
         self._datas[_id] = d
 
     def select(  # pylint: disable=unused-argument
@@ -105,6 +113,10 @@ class DBMemoryConnector(DBHandler):
         """
         a = []
         for d in self._datas.values():
+
+            # Do all transformations on the object
+            self._transform_on_load(d)
+
             a.append(d)
         return a
 
@@ -113,5 +125,9 @@ class DBMemoryConnector(DBHandler):
         _id = self.generate_id(o)
         d = copy.deepcopy(o)
         d["_id"] = _id
+
+        # Do all transformations on the object
+        self._transform_on_create(d)
+
         self._datas[_id] = d
         return _id

@@ -8,9 +8,9 @@ from typing import Callable
 
 
 from stricto import SFilter, Operator
-from ...filter import Filter
-from ...transformer import Transformer
-from ....error import DBError
+from ..generic.filter import Filter
+from ..generic.transformer import Transformer
+from ...error import DBError
 from .pragma import get_sqlite3_type_from_backo
 
 
@@ -104,7 +104,7 @@ class SQlite3Filter(Filter):
 
         transformer: Transformer = self.get_transformer(db_path)
         if transformer:
-            db_path = transformer.get_key_path()
+            db_path = transformer.get_db_path()
 
         table_field_name = f"{self._main_table_name}.{'_'.join(db_path)}"
 

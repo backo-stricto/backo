@@ -13,8 +13,8 @@ from flask import Flask
 # get the resources folder in the tests folder
 
 from backo import Item, Collection
-from backo.db import DBYmlDirConnector
-from backo import Backoffice, current_user, Action, Selection, DBRedirect
+from backo.db import DBYmlDirConnector, DBBackoRedirectConnector
+from backo import Backoffice, current_user, Action, Selection
 
 from backo import String, Bool, SFilter, Operator
 
@@ -72,7 +72,7 @@ class TestRestApiConnector(unittest.TestCase):
 
         self.backo = Backoffice("myApp")
 
-        db_redirect_connector = DBRedirect(
+        db_redirect_connector = DBBackoRedirectConnector(
             "users2",
             host="localhost",
             port=5050,

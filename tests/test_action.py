@@ -8,7 +8,8 @@ import unittest
 
 
 from backo import Item, Collection, Action
-from backo import DBYmlConnector, current_user
+from backo import current_user
+from backo.db import DBYmlDirConnector
 from backo import Backoffice, SRightError
 from backo import String, Int, List
 
@@ -30,16 +31,13 @@ class TestAction(unittest.TestCase):
         self.can_execute = True
 
         # --- DB for user
-        self.yml_users = DBYmlConnector(path=YML_DIR)
-        self.yml_users.generate_id = (
-            lambda o: "User_" + o.name.get_value() + "_" + o.surname.get_value()
-        )
+        self.yml_users = DBYmlDirConnector(YML_DIR)
+        self.yml_users.generate_id = lambda o: f"User_{o["name"]}_{o["surname"]}"
         self.yml_users.drop()
 
         # --- DB for sites
-        self.yml_sites = DBYmlConnector(path=YML_DIR)
-        self.yml_sites.generate_id = lambda o: "Site_" + o.name.get_value()
-
+        self.yml_sites = DBYmlDirConnector(YML_DIR)
+        self.yml_sites.generate_id = lambda o: f"Site_{o["name"]}"
         self.yml_sites.drop()
 
     def is_available(self, right_name, o):  # pylint: disable=unused-argument
@@ -104,7 +102,8 @@ class TestAction(unittest.TestCase):
         coll.register_action("increase", incr)
         coll.register_action("decrease", decr)
 
-        self.yml_users.delete_by_id("User_bebert_bebert")
+        self.yml_users.drop()
+        self.yml_sites.drop()
 
         current_user.standalone = True
 

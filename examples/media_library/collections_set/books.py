@@ -12,7 +12,6 @@ from backo import (
     Collection,
     Item,
     current_user,
-    DBMongoConnector,
     log_system,
     LogLevel,
     Ref,
@@ -21,6 +20,7 @@ from backo import (
     SFilter,
     Operator,
 )
+from backo.db import DBMongoConnector
 
 log = log_system.get_or_create_logger("books", LogLevel.INFO)
 
@@ -111,9 +111,7 @@ books_item = Item(
 # ------------------------------------------------
 # COLLECTION
 # ------------------------------------------------
-connector = DBMongoConnector(
-    connection_string="mongodb://localhost:27017/media_library", collection="Books"
-)
+connector = DBMongoConnector("mongodb://localhost:27017/media_library", "Books")
 
 
 def can_create(right_name: str, book: Item) -> bool:

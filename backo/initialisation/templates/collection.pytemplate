@@ -12,13 +12,13 @@ from backo import (
     Collection,
     Item,
     current_user,
-    DBMongoConnector,
     log_system,
     LogLevel,
     Ref,
     Action,
     Selection,
 )
+from backo.db import DBMongoConnector
 
 log = log_system.get_or_create_logger("{{ name }}", LogLevel.INFO)
 
@@ -40,7 +40,7 @@ log = log_system.get_or_create_logger("{{ name }}", LogLevel.INFO)
 # COLLECTION
 # ------------------------------------------------
 connector = DBMongoConnector(
-    connection_string="mongodb://localhost:27017/{{ app_name }}", collection="{{ name }}"
+    mongodb://localhost:27017/{{ app_name }}", "{{ name }}"
 )
 
 

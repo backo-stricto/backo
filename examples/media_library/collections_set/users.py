@@ -9,12 +9,12 @@ from backo import (
     Collection,
     Item,
     current_user,
-    DBMongoConnector,
     Action,
     log_system,
     LogLevel,
     RefsList,
 )
+from backo.db import DBMongoConnector
 
 log = log_system.get_or_create_logger("user", LogLevel.INFO)
 

@@ -42,7 +42,6 @@ from .api_toolbox import (
     multidict_to_sfilter,
 )
 from .db import DBHandler
-from .db_connector import DBConnector
 from .error import PathNotFoundError
 from .file.file import File
 from .item import Item
@@ -78,7 +77,7 @@ class Collection:
 
     A collection is the main object in backo. It contains
         - an :py:class:`Item` = the description of the object structure
-        - an :py:class:`DBConnector` = the database connector to say how and where to save the object
+        - an :py:class:`DBHandler` = the database connector to say how and where to save the object
         - some :py:class:`Selection` = some preset *select* for this collection
         - some :py:class:`Action` = a list of actions to do on this collection
 
@@ -88,7 +87,7 @@ class Collection:
     :param model: The description of the structure (an Item)
     :type model: Item
     :param db_handler: The database handler
-    :type db_handler: DBConnector
+    :type db_handler: DBHandler
 
     :param ``**kwargs``:
         - *refuse_filter=* ``func`` --
@@ -131,13 +130,11 @@ class Collection:
     """The name of the collection"""
     model: Item = None
     """The item definition"""
-    db_handler: DBConnector = None
+    db_handler: DBHandler = None
     """The database connector"""
 
     @validation_parameters
-    def __init__(
-        self, name: str, model: Item, db_handler: DBConnector | DBHandler, **kwargs
-    ):
+    def __init__(self, name: str, model: Item, db_handler: DBHandler, **kwargs):
         """Constructor"""
         self.db_handler = db_handler
         self.name: str = name

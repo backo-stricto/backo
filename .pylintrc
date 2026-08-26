@@ -5,8 +5,8 @@ init-hook='import sys; sys.path.append("../stricto")'
 generated-members=sqlite3.connect
 
 [DESIGN]
-max-locals=16
-max-attributes=16
+max-locals=20
+max-attributes=20
 max-args = 7
 max-positional-arguments = 7
 

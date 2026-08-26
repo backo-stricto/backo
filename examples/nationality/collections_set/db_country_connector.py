@@ -6,23 +6,24 @@ Note: we assume that the signature of some inherited methods differ from the mot
 
 # pylint: disable=logging-fstring-interpolation,arguments-differ
 from backo import (
-    DBRestfullConnector,
     log_system,
     DBError,
 )
+from backo.db import DBRestFullConnector
 
 log = log_system.get_or_create_logger("wget")
 
 
 class MyDBRestfullConnector(
-    DBRestfullConnector
+    DBRestFullConnector
 ):  # pylint: disable=too-many-instance-attributes
     """An example of a rest API connector"""
 
     def __init__(self, **kwargs):
         """constructor"""
-        DBRestfullConnector.__init__(
+        DBRestFullConnector.__init__(
             self,
+            "nationality",
             host="www.apicountries.com",
             tls=True,
             prefix="countries",
@@ -71,7 +72,7 @@ class MyDBRestfullConnector(
 
     def get_by_id(self, _id: str) -> dict:
         """See :func:`DBConnector.get_by_id`"""
-        return super().get_by_id(
+        return self._internal_get_by_id(
             _id,
             endpoint="alpha",
             query_options={"fields": "name,flags,alpha2Code,alpha3Code"},
@@ -100,7 +101,7 @@ class MyDBRestfullConnector(
             page_size,
         )
 
-        return super().select(
+        return self._internal_select(
             select_filter,
             projection,
             page_size,

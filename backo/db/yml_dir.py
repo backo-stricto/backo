@@ -9,8 +9,8 @@ import os
 import copy
 import re
 import yaml
-from ..db_handler import DBHandler
-from ...error import NotFoundError, DBError
+from .generic.db_handler import DBHandler
+from ..error import NotFoundError, DBError
 
 
 class DBYmlDirConnector(DBHandler):
@@ -83,6 +83,10 @@ class DBYmlDirConnector(DBHandler):
 
         with open(filename, mode="r", encoding="utf-8") as stream:
             data_loaded = yaml.safe_load(stream)
+
+            # Do all transformations on the object
+            self._transform_on_load(data_loaded)
+
             return data_loaded
 
         return None
@@ -115,6 +119,9 @@ class DBYmlDirConnector(DBHandler):
         d = copy.deepcopy(o)
         d["_id"] = _id
 
+        # Do all transformations on the object
+        self._transform_on_create(d)
+
         filename = os.path.join(self._dir, _id + ".yml")
         with open(filename, mode="w", encoding="utf-8") as outfile:
             yaml.dump(d, outfile, default_flow_style=False)
@@ -131,6 +138,9 @@ class DBYmlDirConnector(DBHandler):
         :type o: dict
         """
         filename = os.path.join(self._dir, _id + ".yml")
+
+        # Do all transformations on the object
+        self._transform_on_save(o)
 
         with open(filename, mode="w", encoding="utf-8") as outfile:
             yaml.dump(o, outfile, default_flow_style=False)
@@ -158,6 +168,10 @@ class DBYmlDirConnector(DBHandler):
                     os.path.join(self._dir, file), mode="r", encoding="utf-8"
                 ) as stream:
                     data_loaded = yaml.safe_load(stream)
+
+                # Do all transformations on the object
+                self._transform_on_load(data_loaded)
+
                 result_list.append(data_loaded)
         except Exception as e:
             raise DBError('Error while select in path "{0}"', self._dir) from e

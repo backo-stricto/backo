@@ -6,13 +6,13 @@ from backo import (
     String,
     Collection,
     Item,
-    DBMongoConnector,
     GenericMetaDataHandler,
     log_system,
     LogLevel,
     Ref,
     RefsList,
 )
+from backo.db import DBMongoConnector
 
 log = log_system.get_or_create_logger("user", LogLevel.INFO)
 
@@ -42,9 +42,7 @@ item = Item(
 # ------------------------------------------------
 
 # First define the connector  = where to store datas
-connector = DBMongoConnector(
-    connection_string="mongodb://localhost:27017/country", collection="Users"
-)
+connector = DBMongoConnector("mongodb://localhost:27017/country", "Users")
 
 
 #

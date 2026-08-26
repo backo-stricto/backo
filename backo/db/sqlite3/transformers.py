@@ -3,7 +3,7 @@
 Attribut mapper for sql db connector
 """
 
-from ...transformer import Transformer
+from ..generic.transformer import Transformer
 
 
 class BooleanTransformer(Transformer):
@@ -58,16 +58,15 @@ class IdTransformer(Transformer):
         _loaded_object["_id"] = str(_loaded_object["id"])
         del _loaded_object["id"]
 
-    def on_create(self, _obj: dict):
+    def on_create(self, obj: dict, _key_path: list[str]):
         """
         Delete the _id field if exists
 
-        :param _obj: _description_
-        :type _obj: dict
         """
-        del _obj["_id"]
+        print(f"on create _id {obj}")
+        del obj["_id"]
 
-    def on_save(self, obj: dict):
+    def on_save(self, obj: dict, _key_path: list[str]):
         """
         Transform _id(string) into id(int)
 

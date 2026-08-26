@@ -8,7 +8,6 @@ import sys
 import copy
 
 from .error import BackoError
-from .db_connector import DBConnector
 from .db import DBHandler
 from .transaction import OperatorType
 from .log import log_system
@@ -103,7 +102,7 @@ class Item(Dict):  # pylint: disable=too-many-instance-attributes
             self.meta_data_handler.append_schema(self)
 
     @validation_parameters
-    def set_db_handler(self, db_connector: DBConnector | DBHandler) -> None:
+    def set_db_handler(self, db_connector: DBHandler) -> None:
         """
         Set or modify the Database Handler
 
