@@ -1,6 +1,7 @@
 """
 Module providing the Generic() Class for connection on DB
 """
+
 # pylint: disable=relative-beyond-top-level
 # (due to a pylint bug)
 
@@ -16,6 +17,7 @@ from stricto import Kparse, SFilter
 
 from .transformer import Transformer
 from .filter import Filter
+from .interface import SelectResponse
 
 KPARSE_MODEL = {"restriction": Callable}
 
@@ -242,11 +244,11 @@ class DBHandler(ABC):  # pylint: disable=too-many-instance-attributes
     def select(  # pylint: disable=unused-argument
         self,
         select_filter: SFilter,
-        projection: list[str] = [],
+        projection: list[str] = None,
         page_size: int = 0,
         num_of_element_to_skip: int = 0,
-        sort_object: dict = {},
-    ) -> list[dict]:
+        sort_object: list[str] = [],
+    ) -> SelectResponse:
         """
         Select from filter in the DB and return a list of dicts, with pagination
 

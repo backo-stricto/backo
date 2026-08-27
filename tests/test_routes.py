@@ -248,7 +248,7 @@ class TestRoutes(unittest.TestCase):
         response = self.client.get("/myApp/users?_page=11")
         self.assertEqual(response.status_code, 200)
         results = json.loads(response.data)
-        self.assertEqual(results["total"], 3)
+        self.assertEqual(results["total"], None)
 
         l = self.backo.users.set(results["result"])
         self.assertEqual(len(l), 3)
@@ -260,7 +260,7 @@ class TestRoutes(unittest.TestCase):
         response = self.client.get("/myApp/users?name=bert1")
         self.assertEqual(response.status_code, 200)
         results = json.loads(response.data)
-        self.assertEqual(results["total"], 1)
+        self.assertEqual(results["total"], None)
 
         l = self.backo.users.set(results["result"])
         self.assertEqual(len(l), 1)
@@ -272,7 +272,8 @@ class TestRoutes(unittest.TestCase):
         response = self.client.get("/myApp/users?name.$reg=b")
         self.assertEqual(response.status_code, 200)
         results = json.loads(response.data)
-        self.assertEqual(results["total"], 3)
+        self.assertEqual(results["total"], None)
+        self.assertEqual(len(results["result"]), 3)
 
         l = self.backo.users.set(results["result"])
         self.assertEqual(len(l), 3)
@@ -280,7 +281,8 @@ class TestRoutes(unittest.TestCase):
         response = self.client.get("/myApp/users?name.$reg=b&_page=2")
         self.assertEqual(response.status_code, 200)
         results = json.loads(response.data)
-        self.assertEqual(results["total"], 3)
+        self.assertEqual(results["total"], None)
+        self.assertEqual(len(results["result"]), 2)
 
         l = self.backo.users.set(results["result"])
         self.assertEqual(len(l), 2)
@@ -288,7 +290,9 @@ class TestRoutes(unittest.TestCase):
         response = self.client.get("/myApp/users?name.$reg=b&_page=2&_skip=2")
         self.assertEqual(response.status_code, 200)
         results = json.loads(response.data)
-        self.assertEqual(results["total"], 3)
+        self.assertEqual(results["total"], None)
+
+        self.assertEqual(len(results["result"]), 1)
 
         l = self.backo.users.set(results["result"])
         self.assertEqual(len(l), 1)
@@ -304,7 +308,8 @@ class TestRoutes(unittest.TestCase):
         response = self.client.get("/myApp/users/_selections/bert_only?name.$reg=.*1")
         self.assertEqual(response.status_code, 200)
         results = json.loads(response.data)
-        self.assertEqual(results["total"], 1)
+        self.assertEqual(results["total"], None)
+        self.assertEqual(len(results["result"]), 1)
 
     def test_select_route_filter_post(self):
         """
@@ -313,13 +318,15 @@ class TestRoutes(unittest.TestCase):
         response = self.client.post("/myApp/users/_selections/bert_only", json={})
         self.assertEqual(response.status_code, 200)
         results = json.loads(response.data)
-        self.assertEqual(results["total"], 2)
+        self.assertEqual(results["total"], None)
+        self.assertEqual(len(results["result"]), 2)
         response = self.client.post(
             "/myApp/users/_selections/bert_only", json={"$.name.$reg": ".*1"}
         )
         self.assertEqual(response.status_code, 200)
         results = json.loads(response.data)
-        self.assertEqual(results["total"], 1)
+        self.assertEqual(results["total"], None)
+        self.assertEqual(len(results["result"]), 1)
 
     def test_check_route_filter(self):
         """

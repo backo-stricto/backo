@@ -22,8 +22,9 @@ from backo import (
     DeleteStrategy,
 )
 from backo import SFilter, Operator, DBError
-from backo.db import DBHandler
 from backo.db import (
+    DBHandler,
+    SelectResponse,
     DBMemoryConnector,
     DBYmlDirConnector,
     DBMongoConnector,
@@ -97,8 +98,9 @@ class TestDBConnector(unittest.TestCase):
         _id = con.create({"name": "toto2", "age": 12})
         self.assertIsNotNone(_id)
         res = con.select(SFilter("$.name", Operator.EQ, "toto"))
-        self.assertEqual(type(res), list)
-        self.assertGreaterEqual(len(res), 1)
+        self.assertEqual(type(res), SelectResponse)
+        self.assertGreaterEqual(len(res.items), 1)
+        self.assertGreaterEqual(res.total, 1)
 
         # update
         con.save(_id, {"name": "toto2", "age": 13})
@@ -109,12 +111,12 @@ class TestDBConnector(unittest.TestCase):
         self.assertEqual(u["age"], 13)
 
         res = con.select(SFilter("$.name", Operator.EQ, "toto"))
-        self.assertEqual(type(res), list)
-        self.assertGreaterEqual(len(res), 1)
+        self.assertEqual(type(res), SelectResponse)
+        self.assertGreaterEqual(len(res.items), 1)
 
         res = con.select(SFilter("$.age", Operator.GTE, 13))
-        self.assertEqual(type(res), list)
-        self.assertGreaterEqual(len(res), 1)
+        self.assertEqual(type(res), SelectResponse)
+        self.assertGreaterEqual(len(res.items), 1)
 
     def test_memory_connector(self):
         """
@@ -273,8 +275,8 @@ class TestDBConnector(unittest.TestCase):
                 ],
             )
         )
-        self.assertEqual(type(res), list)
-        self.assertEqual(len(res), 1)
+        self.assertEqual(type(res), SelectResponse)
+        self.assertEqual(len(res.items), 1)
 
         res = con.select(
             SFilter(
@@ -286,7 +288,8 @@ class TestDBConnector(unittest.TestCase):
                 ],
             )
         )
-        self.assertEqual(len(res), 2)
+        self.assertEqual(type(res), SelectResponse)
+        self.assertEqual(len(res.items), 2)
         res = con.select(
             SFilter(
                 None,
@@ -297,7 +300,7 @@ class TestDBConnector(unittest.TestCase):
                 ],
             )
         )
-        self.assertEqual(len(res), 0)
+        self.assertEqual(len(res.items), 0)
 
         con.register_transformer(RenameTransformer(["age"], ["age_in_db"]))
         con.register_transformer(IgnoreTransformer(["not", "exists"]))
@@ -315,8 +318,8 @@ class TestDBConnector(unittest.TestCase):
                 ],
             )
         )
-        self.assertEqual(type(res), list)
-        self.assertEqual(len(res), 1)
+        self.assertEqual(type(res), SelectResponse)
+        self.assertEqual(len(res.items), 1)
 
         res = con.select(
             SFilter(
@@ -328,7 +331,8 @@ class TestDBConnector(unittest.TestCase):
                 ],
             )
         )
-        self.assertEqual(len(res), 2)
+        self.assertEqual(type(res), SelectResponse)
+        self.assertEqual(len(res.items), 2)
         res = con.select(
             SFilter(
                 None,
@@ -339,7 +343,8 @@ class TestDBConnector(unittest.TestCase):
                 ],
             )
         )
-        self.assertEqual(len(res), 0)
+        self.assertEqual(type(res), SelectResponse)
+        self.assertEqual(len(res.items), 0)
 
         con.close()
 

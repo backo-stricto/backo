@@ -9,7 +9,10 @@ import os
 import copy
 import re
 import yaml
+from stricto import SFilter
 from .generic.db_handler import DBHandler
+from .generic.interface import SelectResponse
+
 from ..error import NotFoundError, DBError
 
 
@@ -147,21 +150,31 @@ class DBYmlDirConnector(DBHandler):
 
     def select(  # pylint: disable=unused-argument
         self,
-        select_filter,
-        projection=[],
+        select_filter: SFilter,
+        projection: list[str] = [],
         page_size=0,
         num_of_element_to_skip=0,
-        sort_object={},
-    ):
+        sort_object: list[str] = [],
+    ) -> SelectResponse:
         """
         Make a selection
         """
 
+        response = SelectResponse(page_size, num_of_element_to_skip)
+
         try:
-            result_list = []
             dirs = os.listdir(self._dir)
+            idx = 0
             for file in dirs:
                 if not re.match(r".*\.yml$", file):
+                    continue
+
+                idx += 1
+                # keep only elements in the windows [ num_of_element_to_skip, page_size + num_of_element_to_skip ]
+                if idx < num_of_element_to_skip or (
+                    num_of_element_to_skip
+                    and idx > (page_size + num_of_element_to_skip)
+                ):
                     continue
 
                 with open(
@@ -172,8 +185,10 @@ class DBYmlDirConnector(DBHandler):
                 # Do all transformations on the object
                 self._transform_on_load(data_loaded)
 
-                result_list.append(data_loaded)
+                response.items.append(data_loaded)
+                response.total = idx
+
         except Exception as e:
             raise DBError('Error while select in path "{0}"', self._dir) from e
 
-        return result_list
+        return response

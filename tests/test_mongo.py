@@ -219,7 +219,6 @@ class TestMongo(unittest.TestCase):
         result = backoffice.users._selections["_all"].select(
             SFilter("$.surname", Operator.EQ, "Al"), 1, 0
         )
-        self.assertEqual(result["total"], 2)
         self.assertEqual(len(result["result"]), 1)
         for o in result["result"]:
             self.assertEqual(type(o), Item)

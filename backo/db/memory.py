@@ -7,6 +7,7 @@ import uuid
 import copy
 from stricto import SFilter
 from .generic.db_handler import DBHandler
+from .generic.interface import SelectResponse
 from ..error import NotFoundError
 
 # from ..request import SearchRequest, SelectRequest, Response
@@ -91,11 +92,11 @@ class DBMemoryConnector(DBHandler):
     def select(  # pylint: disable=unused-argument
         self,
         select_filter: SFilter,
-        projection: list[str] = [],
+        projection: list[str] = None,
         page_size: int = 0,
         num_of_element_to_skip: int = 0,
-        sort_object: dict = {},
-    ) -> list[dict]:
+        sort_object: list[str] = [],
+    ) -> SelectResponse:
         """
         Select from filter in the DB and return a list of dicts, with pagination
 
@@ -111,14 +112,22 @@ class DBMemoryConnector(DBHandler):
         :raise Error: Raise an error DBError or any db error
 
         """
-        a = []
-        for d in self._datas.values():
+        response = SelectResponse(page_size, num_of_element_to_skip)
+        response.total = len(self._datas.keys())
+        for idx, d in enumerate(self._datas.values()):
+
+            # keep only elements in the windows [ num_of_element_to_skip, page_size + num_of_element_to_skip ]
+            if idx < num_of_element_to_skip or (
+                num_of_element_to_skip and idx > (page_size + num_of_element_to_skip)
+            ):
+                continue
 
             # Do all transformations on the object
             self._transform_on_load(d)
 
-            a.append(d)
-        return a
+            response.items.append(d)
+
+        return response
 
     def create(self, o: dict) -> str:  # pylint: disable=unused-argument
         """create"""

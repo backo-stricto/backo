@@ -50,6 +50,7 @@ from .migration_report import MigrationReport
 from .patch import Patch
 from .request_decorators import check_content_type, error_to_http_handler
 from .selection import Selection
+from .db.generic.interface import SelectResponse
 
 log = log_system.get_or_create_logger("collection", LogLevel.INFO)
 log_migration = log_system.get_or_create_logger("migration")
@@ -373,8 +374,8 @@ class Collection:
         log_migration.info(f"{self.name} start migration (dry_run={dry_run}) ")
         if _ids is None:
             # Do the DB selection without pagination
-            db_list = self.db_handler.select(None, {}, 0, 0, {})
-            for obj in db_list:
+            response: SelectResponse = self.db_handler.select(None, None, 0, 0, None)
+            for obj in response.items:
                 changes = self._migrate_obj(migration_function, obj, dry_run)
                 if changes is None:
                     report.add_no_change(obj["_id"])

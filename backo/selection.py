@@ -21,8 +21,8 @@ from stricto import (
     get_content,
 )
 
-# from .item import Item
-# from .action import Action
+from .db.generic.interface import SelectResponse
+
 from .collection_addon import CollectionAddon
 from .log import log_system, LogLevel
 from .error import DBError
@@ -75,6 +75,9 @@ class Selection(CollectionAddon):
 
         # ...
     """
+
+    batch_size: int = 100
+    """The best page size for this collection"""
 
     @validation_parameters
     def __init__(self, selectors: list[str] | None = None, **kwargs):
@@ -152,12 +155,86 @@ class Selection(CollectionAddon):
 
         return f
 
+    def _fill_response(
+        self, response: SelectResponse, filter_object: SFilter, sort_object: list[str]
+    ) -> None:
+        """
+        Do some select into the DD by batch (size self.batch_size)
+
+        :param response: The respons to fill with datas
+        :type response: SelectResponse
+        :param filter_object: The SFilter
+        :type filter_object: SFilter
+        :param sort_object: the sorting attributes
+        :type sort_object: list[str]
+        :raises DBError: In cas of DB return someting different from a SelectResponse
+        """
+
+        num_of_element_to_skip = 0
+        idx_of_available_item = 0
+
+        while True:
+            # Do the DB selection without pagination
+
+            resp: SelectResponse = self.collection.db_handler.select(
+                filter_object,
+                self._selectors,
+                self.batch_size,
+                num_of_element_to_skip,
+                sort_object,
+            )
+            if not isinstance(resp, SelectResponse):
+                raise DBError(
+                    'DBHandler does nor return a SelectResponse "{0}"', self.name
+                )
+
+            # At the end of elements in the DB
+            if not resp.items:
+                break
+
+            for obj in resp.items:
+                o = self.collection.new_item()
+                o.set(obj)
+                o.enable_permissions()
+                o.set_status_saved()
+
+                # Ignore all elements matched by the refuse filter
+                if self.collection._permissions.is_allowed_to("read", o) is not True:
+                    continue
+
+                # The DBHandler did not all the selection. Do it by hand
+                if response.more_than_filter is True and filter_object.check(o) is False:
+                    continue
+
+                idx_of_available_item += 1
+                if idx_of_available_item <= response.num_of_element_to_skip:
+                    continue
+
+                # Set the projection
+                if self._selectors:
+                    a = []
+                    for path in self._selectors:
+                        a.append(o.select(path))
+                    response.items.append(a)
+                else:
+                    response.items.append(o)
+                if response.page_size and len(response.items) >= response.page_size:
+                    break
+
+            # read the next group of elements
+            num_of_element_to_skip += self.batch_size
+
+        # The end of the loop
+        # Page size not set, the total can be computed
+        if not response.page_size:
+            response.total = idx_of_available_item
+
     def select(
         self,
-        match_filter: SFilter = SFilter("", Operator.TRUE, None),
-        page_size=0,
-        num_of_element_to_skip=0,
-        db_sort_object={"_id": 1},
+        select_filter: SFilter = None,
+        page_size: int = 0,
+        num_of_element_to_skip: int = 0,
+        sort_object: list[str] = [],
     ):
         """
         Do the selection
@@ -178,49 +255,10 @@ class Selection(CollectionAddon):
             raise SSyntaxError(
                 'select "{0}" filter "{1}" is not type SFilter', self.name, f
             )
-        filter_object: SFilter = match_filter.merge_and(f)
 
-        # Do the DB selection without pagination
-        db_list = self.collection.db_handler.select(
-            filter_object, {}, 0, 0, db_sort_object
-        )
-        if not isinstance(db_list, list):
-            raise DBError(
-                'select "{0}" return a database error (not a list)', self.name
-            )
+        filter_object: SFilter = select_filter.merge_and(f) if select_filter else f
 
-        output = {
-            "result": [],
-            "total": 0,
-            "_skip": num_of_element_to_skip,
-            "_page": page_size,
-        }
+        response = SelectResponse(page_size, num_of_element_to_skip)
+        self._fill_response(response, filter_object, sort_object)
 
-        # Do the selection on the object
-        index = 0
-        log.debug(f"try match {filter_object} for {len(db_list)}")
-        for obj in db_list:
-            obj["_id"] = str(obj["_id"])
-            o = self.collection.new_item()
-
-            o.set(obj)
-            o.enable_permissions()
-            o.set_status_saved()
-            # Do the post match filtering
-
-            # Ignore all elements matched by the refuse filter
-            if self.collection._permissions.is_allowed_to("read", o) is not True:
-                continue
-
-            if filter_object.check(o):
-                if index >= num_of_element_to_skip:
-                    if page_size == 0 or (
-                        page_size > 0 and index < (num_of_element_to_skip + page_size)
-                    ):
-                        output["result"].append(o.multi_select(self._selectors))
-                index += 1
-            else:
-                log.debug(f"No match {filter_object} for {o}")
-
-        output["total"] = index
-        return output
+        return response.get_as_dict()

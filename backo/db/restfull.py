@@ -13,6 +13,8 @@ from urllib3.util.retry import Retry
 
 from stricto import SFilter, Kparse
 from .generic.db_handler import DBHandler
+from .generic.interface import SelectResponse
+
 from ..error import NotFoundError, DBError
 
 # from ..request import SearchRequest, SelectRequest, Response
@@ -33,7 +35,7 @@ KPARSE_MODEL_ENDPOINT = {
     "endpoint": {"type": str | None, "default": ""},
     "method": {"type": str | None, "default": "GET"},
     "url_parameters": {"type": list | None, "default": []},
-    "query_options": {"type": dict | None, "default": None},
+    "query_options": {"type": dict | None, "default": {}},
     "data": {"type": dict | list | None, "default": None},
 }
 
@@ -154,7 +156,7 @@ class DBRestFullConnector(DBHandler):
             headers["Authorization"] = f"Bearer {self._auth_token}"
 
         # log.debug(f"{method.upper()} {uri}?{query_options}")
-
+        print(f"{method.upper()} {uri}?{query_options}")
         try:
             response = self._session.request(
                 method=method.upper(),
@@ -428,15 +430,15 @@ class DBRestFullConnector(DBHandler):
 
         return data
 
-    def _internal_select(   # pylint: disable=unused-argument
+    def _internal_select(  # pylint: disable=unused-argument
         self,
         select_filter: SFilter,
-        projection: dict = {},
+        projection: list[str] = None,
         page_size: int = 0,
         num_of_element_to_skip: int = 0,
-        sort_object: dict = {},
+        sort_object: list[str] = [],
         **kwargs,
-    ) -> list:
+    ) -> SelectResponse:
         """
         Select from filter in the DB and return a list of dicts, with pagination (TO implement in subclasses)
 
@@ -472,11 +474,15 @@ class DBRestFullConnector(DBHandler):
         options = Kparse(kwargs, KPARSE_MODEL_ENDPOINT)
 
         endpoint = options.get("endpoint")
+        query_options = options.get("query_options")
+
+        query_options["_skip"] = num_of_element_to_skip
+        query_options["_page"] = page_size
 
         status_code, data, error = self._request(
             endpoint=endpoint,
             url_parameters=options.get("url_parameters"),
-            query_options=options.get("query_options"),
+            query_options=query_options,
             method="GET",
         )
 
@@ -491,25 +497,29 @@ class DBRestFullConnector(DBHandler):
         if status_code != 200:
             raise DBError('selection error "{0}"', status_code)
 
+        response = SelectResponse(page_size, num_of_element_to_skip)
+
         if data is None:
-            return []
+            return response
 
-        if isinstance(data, list):
-            if hasattr(self, "_clean_data"):
-                r = []
-                for d in data:
-                    r.append(self._clean_data(d))
-                return r
-            return data
-
+        list_items = data
         if isinstance(data, dict):
             if "result" in data and isinstance(data["result"], list):
-                if hasattr(self, "_clean_data"):
-                    r = []
-                    for d in data["result"]:
-                        r.append(self._clean_data(d))
-                    return r
+                list_items = data["result"]
+                if "total" in data:
+                    response.total = data["total"]
 
-                return data["result"]
+        if isinstance(list_items, list):
+            for d in list_items:
+                if hasattr(self, "_clean_data"):
+                    self._clean_data(d)
+
+                # Do all transformations on the object
+                self._transform_on_load(d)
+
+                response.items.append(d)
+
+            print(f"response filled {response}")
+            return response
 
         raise DBError('select endpoint "{0}" return non understandable dict', endpoint)

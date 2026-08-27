@@ -10,7 +10,7 @@ import re
 # used for developpement
 sys.path.insert(1, "../../stricto")
 
-from stricto import Dict, String
+from stricto import Dict, String, GenericType
 
 
 def must(value, o) -> bool:  # pylint: disable=unused-argument
@@ -44,6 +44,6 @@ class Patch(Dict):  # pylint: disable=too-few-public-methods
                     # constraint=lambda value, o: bool(re.match(r"^\$.*", value)),
                     constraint=must,
                 ),
-                "value": String(),
+                "value": GenericType(),
             },
         )

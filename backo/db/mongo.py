@@ -14,8 +14,10 @@ from stricto import SFilter, Operator
 
 from .generic.transformer import Transformer
 from .generic.db_handler import DBHandler
-from ..error import NotFoundError, DBError
+from .generic.interface import SelectResponse
 from .generic.filter import Filter
+
+from ..error import NotFoundError, DBError
 
 
 class MongoFilter(Filter):
@@ -123,6 +125,33 @@ class MongoFilter(Filter):
         return self._sfilter_to_mongo_query(backo_filter)
 
 
+class IdTransformer(Transformer):
+    """
+    specific transformer for _id
+    (Sqlite3 use int for _ids and backo use String )
+    """
+
+    def __init__(self):
+        super().__init__(["_id"])
+
+    def on_load(self, _loaded_object: dict, _key_path: list[str]):
+        """
+        Change the id into _id and transform it from int to string
+
+        :param _loaded_object: the object loaded
+        :type _loaded_object: dict
+        :param _key_path: Not used
+        """
+        _loaded_object["_id"] = str(_loaded_object["_id"])
+
+    def on_create(self, obj: dict, _key_path: list[str]):
+        """
+        Delete the _id field if exists
+
+        """
+        del obj["_id"]
+
+
 class DBMongoConnector(DBHandler):
     """
     DBConnector for mongoDB
@@ -155,6 +184,7 @@ class DBMongoConnector(DBHandler):
         super().__init__(collection, **kwargs)
 
         self.filter = MongoFilter(self.get_transformer)
+        self.register_transformer(IdTransformer())
         # self.connect()
 
     def connect(self):
@@ -272,11 +302,11 @@ class DBMongoConnector(DBHandler):
     def select(  # pylint: disable=unused-argument
         self,
         select_filter: SFilter,
-        projection: list[str] = [],
+        projection: list[str] = None,
         page_size: int = 0,
         num_of_element_to_skip: int = 0,
-        sort_object: dict = None,
-    ) -> list[dict]:
+        sort_object: list[str] = [],
+    ) -> SelectResponse:
         """
         Select from filter in the DB and return a list of dicts, with pagination
 
@@ -297,6 +327,8 @@ class DBMongoConnector(DBHandler):
 
         # print(f'filter = {mongo_filter}')
 
+        response = SelectResponse(page_size, num_of_element_to_skip)
+
         try:
             result_list = list(
                 self._collection.find(mongo_filter, projection)
@@ -304,6 +336,9 @@ class DBMongoConnector(DBHandler):
                 .skip(num_of_element_to_skip)
                 .limit(page_size)
             )
+            if not page_size:
+                response.total = len(result_list)
+
         except Exception as e:
             raise DBError(
                 'Mongo connection error while "{0}.find()"', self._collection_name
@@ -313,4 +348,6 @@ class DBMongoConnector(DBHandler):
             # Do all transformations on the object
             self._transform_on_load(o)
 
-        return result_list
+            response.items.append(o)
+
+        return response

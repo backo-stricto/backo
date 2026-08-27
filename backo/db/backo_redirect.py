@@ -3,8 +3,10 @@
 DB Connector redirect to another backo server
 """
 
+from stricto import SFilter
 from ..error import DBError
 from .restfull import DBRestFullConnector
+from .generic.interface import SelectResponse
 
 
 class DBBackoRedirectConnector(
@@ -51,12 +53,12 @@ class DBBackoRedirectConnector(
 
     def select(
         self,
-        select_filter,
-        projection={},
+        select_filter: SFilter,
+        projection: list[str] = None,
         page_size=0,
         num_of_element_to_skip=0,
-        sort_object={"_id": 1},
-    ) -> list:
+        sort_object: list[str] = [],
+    ) -> SelectResponse:
         """See :func:`DBConnector.select`
 
         Params ``select_filter`` and ``projection`` are not used

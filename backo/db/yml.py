@@ -10,11 +10,13 @@ import copy
 import yaml
 from jsonpath import pointer, patch
 
-from stricto import Kparse
+from stricto import Kparse, SFilter
 
 from .generic.db_handler import DBHandler
-from ..error import NotFoundError, DBError
 from .generic.transformer import path_to_json_path
+from .generic.interface import SelectResponse
+
+from ..error import NotFoundError, DBError
 
 KPARSE_MODEL = {
     "db_path": {"type": list[str], "default": []},
@@ -362,15 +364,16 @@ class DBYmlConnector(DBHandler):
 
     def select(  # pylint: disable=unused-argument
         self,
-        select_filter,
-        projection=[],
-        page_size=0,
-        num_of_element_to_skip=0,
-        sort_object={},
-    ):
+        select_filter: SFilter,
+        projection: list[str] = [],
+        page_size: int = 0,
+        num_of_element_to_skip: int = 0,
+        sort_object: list[str] = None,
+    ) -> SelectResponse:
         """
         Make a selection
         """
+        response = SelectResponse(page_size, num_of_element_to_skip)
 
         with open(self._filename, mode="r", encoding="utf-8") as stream:
             data_loaded = yaml.safe_load(stream)
@@ -390,15 +393,24 @@ class DBYmlConnector(DBHandler):
                         ".".join(self._db_path),
                         type(db),
                     )
-                result_list = []
+                idx = 0
                 for _id, o in db.items():
                     o[_id] = _id
+                    idx += 1
+                    # keep only elements in the windows [ num_of_element_to_skip, page_size + num_of_element_to_skip ]
+                    if idx < num_of_element_to_skip or (
+                        num_of_element_to_skip
+                        and idx > (page_size + num_of_element_to_skip)
+                    ):
+                        continue
 
                     # Do all transformations on the object
                     self._transform_on_load(o)
 
-                    result_list.append(o)
-                return result_list
+                    response.items.append(o)
+                response.total = idx
+                return response
+
             if not isinstance(db, list):
                 raise DBError(
                     'Database "{0}.{1}" must be a list (and is {2})',
@@ -406,9 +418,20 @@ class DBYmlConnector(DBHandler):
                     ".".join(self._db_path),
                     type(db),
                 )
-
             # Do all transformations on the object
-            for o in db:
+            for idx, o in enumerate(db):
+
+                # keep only elements in the windows [ num_of_element_to_skip, page_size + num_of_element_to_skip ]
+                if idx < num_of_element_to_skip or (
+                    num_of_element_to_skip
+                    and idx > (page_size + num_of_element_to_skip)
+                ):
+                    continue
+
+                # Do all transformations on the object
                 self._transform_on_load(o)
 
-            return db
+                response.items.append(o)
+
+            response.total = idx
+            return response
