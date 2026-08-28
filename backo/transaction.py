@@ -2,7 +2,7 @@
 The transaction module
 """
 
-# pylint: disable=wrong-import-position, no-member, import-error, protected-access, wrong-import-order, duplicate-code, logging-fstring-interpolation
+# pylint: disable=wrong-import-position, no-member, import-error, protected-access, wrong-import-order, duplicate-code
 
 from enum import Enum, auto
 from .log import log_system

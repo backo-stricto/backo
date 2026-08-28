@@ -1,6 +1,6 @@
 """Books module"""
 
-# pylint: disable=unused-argument, logging-fstring-interpolation
+# pylint: disable=unused-argument
 
 from datetime import datetime
 from backo import (

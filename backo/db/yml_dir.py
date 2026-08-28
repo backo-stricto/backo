@@ -15,6 +15,10 @@ from .generic.interface import SelectResponse
 
 from ..error import NotFoundError, DBError
 
+from ..log import log_system
+
+log = log_system.get_or_create_logger("DBYmlDirConnector")
+
 
 class DBYmlDirConnector(DBHandler):
     """

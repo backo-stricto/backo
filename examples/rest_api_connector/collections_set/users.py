@@ -1,6 +1,6 @@
 """Users module"""
 
-# pylint: disable=unused-argument, logging-fstring-interpolation
+# pylint: disable=unused-argument
 
 from constants import get_data_dir
 from backo import (

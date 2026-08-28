@@ -2,7 +2,6 @@
 The Collection module
 """
 
-# pylint: disable=logging-fstring-interpolation
 import copy
 import sys
 from typing import Callable

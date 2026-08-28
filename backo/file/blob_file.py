@@ -13,7 +13,7 @@ from .file_connector import FileConnector
 from .file_blob_connector import FileBlobConnector
 from .file import File, MIME
 from ..error import FileError
-from ..log import log_system, LogLevel
+from ..log import log_system
 
 log = log_system.get_or_create_logger("file")
 

@@ -7,6 +7,10 @@ test for Flask and routes
 import unittest
 import json
 import jwt
+
+from random import choice
+from string import ascii_uppercase
+
 from functools import wraps
 from flask import Flask, request, jsonify, make_response
 from datetime import datetime, timezone, timedelta
@@ -16,6 +20,7 @@ from backo import Backoffice, current_user, CurrentUser
 from backo import String, Bool, STypeError, SAttributeError
 
 YML_DIR = "/tmp/backo_tests_current_user"
+JWTOKEN_SECRET_KEY = "".join(choice(ascii_uppercase) for i in range(64))
 
 
 class TestCurrentUser(unittest.TestCase):
@@ -88,7 +93,7 @@ class TestCurrentUser(unittest.TestCase):
                     "exp": datetime.now(timezone.utc) + timedelta(hours=1),
                     "user": {"_id": "test_id", "login": "test"},
                 },
-                "myappsecretkey",
+                JWTOKEN_SECRET_KEY,
                 algorithm="HS256",
             )
             response = make_response(json.dumps({"login": "ok"}))
@@ -102,7 +107,7 @@ class TestCurrentUser(unittest.TestCase):
                 if not token:
                     return jsonify({"message": "Token is missing!"}), 401
                 try:
-                    data = jwt.decode(token, "myappsecretkey", algorithms=["HS256"])
+                    data = jwt.decode(token, JWTOKEN_SECRET_KEY, algorithms=["HS256"])
                 except:  # pylint: disable=bare-except
                     return jsonify({"message": "Token is invalid!"}), 401
 

@@ -96,7 +96,7 @@ class DBHandler(ABC):  # pylint: disable=too-many-instance-attributes
                     if transformer.path_exists_in_object(db_path, loaded_object):
                         transformer.on_load(loaded_object, db_path)
                 except Exception as e:
-                    raise DBError('Transformer on load error') from e
+                    raise DBError("Transformer on load error") from e
 
     def _transform_on_create(self, obj: dict):
         for transformers in self.transformers.values():
@@ -105,7 +105,7 @@ class DBHandler(ABC):  # pylint: disable=too-many-instance-attributes
                     if transformer.path_exists_in_object(transformer.key_path, obj):
                         transformer.on_create(obj, transformer.key_path)
                 except Exception as e:
-                    raise DBError('Transformer on create error') from e
+                    raise DBError("Transformer on create error") from e
 
     def _transform_on_save(self, obj: dict):
         for transformers in self.transformers.values():
@@ -114,7 +114,7 @@ class DBHandler(ABC):  # pylint: disable=too-many-instance-attributes
                     if transformer.path_exists_in_object(transformer.key_path, obj):
                         transformer.on_save(obj, transformer.key_path)
                 except Exception as e:
-                    raise DBError('Transformer on save error') from e
+                    raise DBError("Transformer on save error") from e
 
     def get_transformer(
         self, key_path: list[str], table_name: str = None, backo_types: list[str] = None

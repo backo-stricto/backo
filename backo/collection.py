@@ -45,7 +45,7 @@ from .db import DBHandler
 from .error import PathNotFoundError
 from .file.file import File
 from .item import Item
-from .log import LogLevel, log_system
+from .log import log_system
 from .migration_report import MigrationReport
 from .patch import Patch
 from .request_decorators import check_content_type, error_to_http_handler

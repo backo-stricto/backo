@@ -3,7 +3,7 @@ backoffice : The main application
 """
 
 # linter is lost with different modules with the same name
-# pylint: disable=logging-fstring-interpolation,duplicate-code,no-name-in-module
+# pylint: disable=duplicate-code,no-name-in-module
 
 import sys
 import argparse

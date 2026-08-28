@@ -18,6 +18,10 @@ from .generic.interface import SelectResponse
 
 from ..error import NotFoundError, DBError
 
+from ..log import log_system
+
+log = log_system.get_or_create_logger("DBYmlConnector")
+
 KPARSE_MODEL = {
     "db_path": {"type": list[str], "default": []},
     "by_id": {"type": bool, "default": True},

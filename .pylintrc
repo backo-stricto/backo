@@ -35,6 +35,7 @@ disable =
     import-error,
     cyclic-import,  # due to Ref and RefsList mutual import
     wrong-import-position,
+    logging-fstring-interpolation,
     dangerous-default-value,
     super-init-not-called, # Bug ?
     raising-format-tuple,

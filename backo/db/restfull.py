@@ -18,6 +18,7 @@ from .generic.interface import SelectResponse
 from ..error import NotFoundError, DBError
 
 from ..log import log_system
+
 log = log_system.get_or_create_logger("DBRestFullConnector")
 
 KPARSE_MODEL = {
@@ -156,8 +157,7 @@ class DBRestFullConnector(DBHandler):
         if self._auth_token is not None:
             headers["Authorization"] = f"Bearer {self._auth_token}"
 
-        # log.debug(f"{method.upper()} {uri}?{query_options}")
-        print(f"{method.upper()} {uri}?{query_options}")
+        log.debug(f"{method.upper()} {uri}?{query_options}")
         try:
             response = self._session.request(
                 method=method.upper(),
@@ -280,13 +280,13 @@ class DBRestFullConnector(DBHandler):
         url_parameters = options.get("url_parameters")
         query_options = options.get("query_options")
 
-        # log.debug(
-        #     "Update %r from endpoint %r with url_parameters %r and query_options %r",
-        #     _id,
-        #     endpoint,
-        #     url_parameters,
-        #     query_options,
-        # )
+        log.debug(
+            "Update %r from endpoint %r with url_parameters %r and query_options %r",
+            _id,
+            endpoint,
+            url_parameters,
+            query_options,
+        )
 
         status_code, _data, error = self._request(
             endpoint=endpoint,
@@ -341,13 +341,13 @@ class DBRestFullConnector(DBHandler):
         url_parameters = options.get("url_parameters")
         query_options = options.get("query_options")
 
-        # log.debug(
-        #     "Delete %r from endpoint %r with url_parameters %r and query_options %r",
-        #     _id,
-        #     endpoint,
-        #     url_parameters,
-        #     query_options,
-        # )
+        log.debug(
+            "Delete %r from endpoint %r with url_parameters %r and query_options %r",
+            _id,
+            endpoint,
+            url_parameters,
+            query_options,
+        )
 
         status_code, _data, error = self._request(
             endpoint=endpoint,
@@ -401,9 +401,9 @@ class DBRestFullConnector(DBHandler):
         url_parameters = options.get("url_parameters")
         query_options = options.get("query_options")
 
-        # log.debug(
-        #     f"Get {_id} from endpoint {endpoint} with url_parameters {url_parameters} and query_options {query_options}"
-        # )
+        log.debug(
+            f"Get {_id} from endpoint {endpoint} with url_parameters {url_parameters} and query_options {query_options}"
+        )
         status_code, data, error = self._request(
             endpoint=endpoint,
             url_parameters=url_parameters or [_id],

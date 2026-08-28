@@ -1,6 +1,6 @@
 """REST API Connector example using Backoffice."""
 
-# pylint: disable=logging-fstring-interpolation,duplicate-code
+# pylint: disable=duplicate-code
 
 import sys
 import logging
@@ -14,7 +14,7 @@ sys.path.insert(1, "../../../../stricto")
 sys.path.insert(1, "../../../../backo")
 
 import constants
-from backo import Backoffice, log_system
+from backo import Backoffice, log_system, LogLevel
 
 log = log_system.get_or_create_logger("bubbles")
 

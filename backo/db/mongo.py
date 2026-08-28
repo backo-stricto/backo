@@ -18,6 +18,9 @@ from .generic.interface import SelectResponse
 from .generic.filter import Filter
 
 from ..error import NotFoundError, DBError
+from ..log import log_system
+
+log = log_system.get_or_create_logger("DBMongoConnector")
 
 
 class MongoFilter(Filter):

@@ -58,8 +58,6 @@ pip install -r requirements.txt
 # As a real API server
 python ./backoffice.py
 
-# As test
-python -m unittest ./tests.py
 ```
 
 It contains the login procedure and the auth procedure with jwt

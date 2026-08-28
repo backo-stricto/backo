@@ -4,7 +4,7 @@ Module using DBRestfullConnector to connect to the Hypervisor REST API
 Note: we assume that the signature of some inherited methods differ from the mother class
 """
 
-# pylint: disable=logging-fstring-interpolation,arguments-differ
+# pylint: disable=arguments-differ
 from backo import log_system, DBError, SFilter
 from backo.db import DBRestFullConnector
 

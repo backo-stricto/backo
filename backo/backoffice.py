@@ -2,8 +2,6 @@
 The Backoffice module
 """
 
-# pylint: disable=logging-fstring-interpolation
-
 import json
 import sys
 from typing import Any, Callable
@@ -18,12 +16,12 @@ from stricto import Kparse, SSyntaxError, validation_parameters
 from .collection import Collection
 from .item import Item
 from .migration_report import MigrationReport
-from .log import log_system, LogLevel
+from .log import log_system
 from .openapi import BACKO_FILTER_SCHEMA, BACKO_META_SCHEMA, JSON_PATCH_SCHEMA
 from .request_decorators import error_to_http_handler
 from .transaction import OperatorType, Transaction
 
-log = log_system.get_or_create_logger("backoffice", LogLevel.INFO)
+log = log_system.get_or_create_logger("backoffice")
 
 KPARSE_MIGRATION_MODEL = {
     "_id": str,

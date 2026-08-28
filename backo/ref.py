@@ -2,7 +2,7 @@
 Ref and RefsLink class definition
 """
 
-# pylint: disable=wrong-import-position, no-member, import-error, protected-access, wrong-import-order, duplicate-code, logging-fstring-interpolation
+# pylint: disable=wrong-import-position, no-member, import-error, protected-access, wrong-import-order, duplicate-code
 
 import sys
 import copy
@@ -206,6 +206,7 @@ class Ref(String):  # pylint: disable=too-many-instance-attributes
         :return: list of Items
         :rtype: list
         """
+
         # No reverse => nothing to do.
         if not self._reverse:
             return []
