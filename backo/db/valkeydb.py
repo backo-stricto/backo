@@ -5,9 +5,9 @@ Valkey ( Redis ) DB Connector
 
 import uuid
 import copy
-import redis
 import json
-from stricto import SFilter, Kparse
+import redis
+from stricto import SFilter
 from .generic.db_handler import DBHandler
 from .generic.interface import SelectResponse
 from ..error import NotFoundError, DBError
@@ -39,7 +39,6 @@ class DBValkeyConnector(DBHandler):
         self._connection_string = connection_string
         self._db = redis.Redis.from_url(self._connection_string, **kwargs)
 
-
         super().__init__(db_name, **kwargs)
 
     def close(self) -> None:
@@ -55,7 +54,6 @@ class DBValkeyConnector(DBHandler):
             self._db.ping()
         except (redis.ConnectionError, redis.TimeoutError) as e:
             raise DBError('Error while connect() in "{1}"', self._name) from e
-
 
     def drop(self) -> None:
         """
@@ -88,12 +86,12 @@ class DBValkeyConnector(DBHandler):
             d_as_string = self._db.get(_id)
         except Exception as e:
             raise DBError('Error while get {0} in "{1}"', _id, self._name) from e
-        
+
         if not d_as_string:
             raise NotFoundError('_id "{0}" not found in "{1}"', _id, self._name)
 
         d = json.loads(d_as_string)
-        d['_id'] = _id
+        d["_id"] = _id
         # Do all transformations on the object
         self._transform_on_load(d)
 
@@ -131,7 +129,6 @@ class DBValkeyConnector(DBHandler):
         log.debug("Save {_id}")
         self._db.set(_id, json.dumps(d))
 
-
     def select(  # pylint: disable=unused-argument
         self,
         select_filter: SFilter,
@@ -157,14 +154,12 @@ class DBValkeyConnector(DBHandler):
         """
         response = SelectResponse(page_size, num_of_element_to_skip)
 
-
         _ids = list(self._db.scan_iter("*"))
         response.total = len(_ids)
 
-
         pipe = self._db.pipeline()
 
-        retrieved_ids=[]
+        retrieved_ids = []
         for idx, _id in enumerate(_ids):
             # Get by page
             if idx < num_of_element_to_skip or (
@@ -179,11 +174,11 @@ class DBValkeyConnector(DBHandler):
         for idx, _id in enumerate(retrieved_ids):
 
             d = json.loads(values_as_string[idx])
-            d['_id'] = _id
+            d["_id"] = _id
             # Do all transformations on the object
             self._transform_on_load(d)
 
-            response.items.append( d )
+            response.items.append(d)
 
         log.debug("Select return {response}")
 
@@ -196,7 +191,6 @@ class DBValkeyConnector(DBHandler):
 
         # Do all transformations on the object
         self._transform_on_create(d)
-
 
         log.debug("Save {_id}")
         self._db.set(_id, json.dumps(d))

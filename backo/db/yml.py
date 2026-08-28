@@ -125,10 +125,9 @@ class DBYmlConnector(DBHandler):
             f = open(  # pylint: disable=consider-using-with
                 self._filename, mode="r", encoding="utf-8"
             )
-            f.close() 
+            f.close()
         except Exception as e:
             raise DBError('Yaml file error "{0}"', self._filename) from e
-
 
     def close(self) -> None:
         """No close"""
