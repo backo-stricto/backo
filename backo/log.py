@@ -140,7 +140,7 @@ class Logger:
         self.loggers: dict[str, Logger] = {}
         self.handlers_for_all = []
 
-    def get_or_create_logger(self, name, level=LogLevel.ERROR) -> Logger:
+    def get_or_create_logger(self, name, level=LogLevel.ERROR) -> logging.Logger:
         """
         Create a logger
         """
