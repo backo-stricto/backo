@@ -16,14 +16,23 @@ jobs:
       uses: actions/setup-python@v3
       with:
         python-version: ${{ matrix.python-version }}
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v1
+      with:
+        version: "latest"        
+
+    - name: Install Python
+      run: uv python install
+
     - name: Install dependencies
       run: |
         sudo apt-get install libmagic1
-        python -m pip install --upgrade pip
-        python3 -m pip install --upgrade build
-        python3 -m pip install --upgrade twine
-        python -m pip install -r requirements.txt
+        uv sync --all-groups --all-extras
+        uv pip install build
+        uv pip install twine
+
     - name: uploading package
       run: |
-        python3 -m build
-        python3 -m twine upload --username ${{ secrets.PYPI_LOGIN }} --password ${{ secrets.PYPI_PASSWORD }} dist/*
+        uv run -m build
+        uv run -m twine upload --username ${{ secrets.PYPI_LOGIN }} --password ${{ secrets.PYPI_PASSWORD }} dist/*
