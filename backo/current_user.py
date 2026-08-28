@@ -144,6 +144,14 @@ class CurrentUserWrapper:
         session["current_user_id"] = u._id.get_value()
         self.users[u._id.get_value()] = u
 
+    def reinit(self) -> None:
+        """
+        Re set anonymous as ANONYMOUS_DATA
+        (because for tests it can be changed)
+        """
+        self.anonymous.set(ANONYMOUS_DATA)
+        self.user_without_session.set(ANONYMOUS_DATA)
+
     def __getattr__(self, k):
         """
         replicate all atributes from value, but prefere self attribute first.

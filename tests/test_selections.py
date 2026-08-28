@@ -59,6 +59,10 @@ class TestSelections(unittest.TestCase):
         self.yml_users.drop()
         current_user.standalone = True
 
+    def tearDown(self):
+        current_user.reinit()
+        return super().tearDown()
+
     def test__all_selection(self):
         """
         creating an backoffice with ref one to many

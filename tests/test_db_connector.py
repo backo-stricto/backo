@@ -494,3 +494,6 @@ class TestDBConnector(unittest.TestCase):
 
         with self.subTest(con=con_users):
             self.sub_test_crud_connector(con_users, f"{SQLITE3_DB}(users)")
+
+        con_users.close()
+        con_sites.close()

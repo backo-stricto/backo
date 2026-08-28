@@ -21,11 +21,16 @@ dependencies = [
   "deepdiff",
   "questionary",
   "python-magic",
-  "pymongo",
-  "redis",
+  "redis>=8.1.0",
   "python-jsonpath",
   "stricto>=0.2.4"
 ]
+
+[project.optional-dependencies]
+mongo = [
+    "pymongo>=4.17.0",
+]
+
 
 [dependency-groups]
 dev = [

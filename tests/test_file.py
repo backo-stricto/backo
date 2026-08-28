@@ -85,6 +85,10 @@ class TestFile(unittest.TestCase):
         cls.clean(cls, TEST_PATH)
         cls.clean(cls, TEST_PATH2)
 
+    def tearDown(self):
+        current_user.reinit()
+        return super().tearDown()
+
     def test_error_dir_not_exists(self):
         """
         Test error type

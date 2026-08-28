@@ -101,6 +101,10 @@ class TestMeta(unittest.TestCase):
         s = self.backoffice.sites.create({"name": "jupiter", "address": "bad idea"})
         current_user.standalone = False
 
+    def tearDown(self):
+        current_user.reinit()
+        return super().tearDown()
+
     def test_get_meta(self):
         """
         get meta informations

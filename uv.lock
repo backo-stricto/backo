@@ -19,7 +19,6 @@ dependencies = [
     { name = "deepdiff" },
     { name = "flask" },
     { name = "pyjwt" },
-    { name = "pymongo" },
     { name = "python-jsonpath" },
     { name = "python-magic" },
     { name = "pyyaml" },
@@ -27,6 +26,11 @@ dependencies = [
     { name = "redis" },
     { name = "requests" },
     { name = "stricto" },
+]
+
+[package.optional-dependencies]
+mongo = [
+    { name = "pymongo" },
 ]
 
 [package.dev-dependencies]
@@ -41,15 +45,16 @@ requires-dist = [
     { name = "deepdiff" },
     { name = "flask" },
     { name = "pyjwt" },
-    { name = "pymongo" },
+    { name = "pymongo", marker = "extra == 'mongo'", specifier = ">=4.17.0" },
     { name = "python-jsonpath" },
     { name = "python-magic" },
     { name = "pyyaml" },
     { name = "questionary" },
-    { name = "redis" },
+    { name = "redis", specifier = ">=8.1.0" },
     { name = "requests" },
     { name = "stricto", specifier = ">=0.2.4" },
 ]
+provides-extras = ["mongo"]
 
 [package.metadata.requires-dev]
 dev = [

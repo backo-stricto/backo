@@ -95,6 +95,10 @@ class TestRoutes(unittest.TestCase):
         self.ctx.push()
         self.client = self.flask.test_client()
 
+    def tearDown(self):
+        current_user.reinit()
+        return super().tearDown()
+
     def test_get_by_id(self):
         """
         get by id

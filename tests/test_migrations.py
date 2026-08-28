@@ -71,6 +71,10 @@ class TestMigrations(unittest.TestCase):
                 {"name": f"al{x}", "surname": f"al{x}", "male": True}
             )
 
+    def tearDown(self):
+        current_user.reinit()
+        return super().tearDown()
+
     def test__migration_errors(self):
         """
         migration collection error

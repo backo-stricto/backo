@@ -3,7 +3,6 @@ test for CRUD()
 """
 
 # pylint: disable=wrong-import-position, no-member, import-error, protected-access, wrong-import-order, duplicate-code
-
 import unittest
 import time
 from datetime import datetime, timedelta
@@ -21,6 +20,10 @@ class TestCRUD(unittest.TestCase):
     """
     DB sample crud
     """
+
+    @classmethod
+    def tearDownClass(cls):
+        current_user.reinit()
 
     def __init__(self, *args, **kwargs):
         """
@@ -44,7 +47,6 @@ class TestCRUD(unittest.TestCase):
         create
         and delete errors
         """
-
         backoffice = Backoffice("myApp")
 
         backoffice.register_collection(
@@ -89,7 +91,6 @@ class TestCRUD(unittest.TestCase):
         create
         and delete
         """
-
         backoffice = Backoffice("myApp")
 
         backoffice.register_collection(
@@ -160,7 +161,6 @@ class TestCRUD(unittest.TestCase):
         create
         and delete
         """
-
         backoffice = Backoffice("myApp")
 
         backoffice.register_collection(
@@ -207,7 +207,6 @@ class TestCRUD(unittest.TestCase):
         create
         and delete
         """
-
         backoffice = Backoffice("myApp")
         coll = Collection(
             "users",
@@ -276,7 +275,6 @@ class TestCRUD(unittest.TestCase):
         create
         and delete
         """
-
         backoffice = Backoffice("myApp")
 
         backoffice.register_collection(

@@ -59,6 +59,10 @@ class TestReferences(unittest.TestCase):
         self.yml_animals = DBYmlDirConnector(os.path.join(YML_DIR, "Animals"))
         self.yml_animals.generate_id = lambda o: f"Animal_{o["desc"]}"
 
+    def tearDown(self):
+        current_user.reinit()
+        return super().tearDown()
+
     def test_references_one_to_many_fill(self):
         """
         creating an backoffice with ref one to many

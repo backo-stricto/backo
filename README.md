@@ -1590,7 +1590,7 @@ make html
 uv workflow:
 
 ```bash
-uv sync --group dev
+uv sync --all-groups --all-extras
 
 # all tests
 uv run python -m unittest tests

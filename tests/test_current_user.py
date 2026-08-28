@@ -140,6 +140,10 @@ class TestCurrentUser(unittest.TestCase):
         self.ctx.push()
         self.client = self.flask.test_client()
 
+    def tearDown(self):
+        current_user.reinit()
+        return super().tearDown()
+
     def test_wrong_login(self):
         """
         Test wrong login / password

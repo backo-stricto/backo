@@ -40,6 +40,10 @@ class TestAction(unittest.TestCase):
         self.yml_sites.generate_id = lambda o: f"Site_{o["name"]}"
         self.yml_sites.drop()
 
+    def tearDown(self):
+        current_user.reinit()
+        return super().tearDown()
+
     def is_available(self, right_name, o):  # pylint: disable=unused-argument
         """
         return available

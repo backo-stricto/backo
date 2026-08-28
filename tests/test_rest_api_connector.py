@@ -3,7 +3,6 @@ test for Flask and routes
 """
 
 # pylint: disable=wrong-import-position, no-member, import-error, protected-access, wrong-import-order, duplicate-code, too-many-public-methods
-
 import unittest
 import json
 import multiprocessing
@@ -18,7 +17,7 @@ from backo import Backoffice, current_user, Action, Selection
 
 from backo import String, Bool, SFilter, Operator
 
-YML_DIR = "/tmp/backo_tests_routes_2"
+YML_DIR = "/tmp/backo_tests_routes_23"
 
 
 def launch_backoffice2():
@@ -30,10 +29,13 @@ def launch_backoffice2():
     # ignore sessions for this campaign of tests.
     current_user.standalone = True
 
-    # yml_users2 = DBYmlConnector(path=YML_DIR)
-    # yml_users2.generate_id = lambda o: f"User_{o.name}_{o.surname}"
     yml_users2 = DBYmlDirConnector(YML_DIR)
     yml_users2.generate_id = lambda o: f"User_{o["name"]}_{o["surname"]}"
+
+    yml_users2.drop()
+    yml_users2.create({"name": "bebert", "surname": "bebert"})
+    yml_users2.create({"name": "bert1", "surname": "bert1"})
+    yml_users2.create({"name": "bert2", "surname": "bert2"})
 
     users2_coll = Collection(
         "users2",
@@ -56,6 +58,26 @@ def launch_backoffice2():
     flask2.run(host="0.0.0.0", port=5050)
 
 
+process_backo_2 = multiprocessing.Process(target=launch_backoffice2, args=())
+
+
+def start_backo2():
+    """
+    Start the second backo server
+    """
+    if not process_backo_2.is_alive():
+        process_backo_2.start()
+        time.sleep(1)
+
+
+def stop_backo2():
+    """
+    Stop the second backo server
+    """
+    if process_backo_2.is_alive():
+        process_backo_2.terminate()
+
+
 class TestRestApiConnector(unittest.TestCase):
     """
     Flask tests
@@ -68,7 +90,7 @@ class TestRestApiConnector(unittest.TestCase):
         super().__init__(*args, **kwargs)
 
         # ignore sessions for this campaign of tests.
-        current_user.standalone = True
+        # current_user.standalone = True
 
         self.backo = Backoffice("myApp")
 
@@ -123,32 +145,23 @@ class TestRestApiConnector(unittest.TestCase):
         self.ctx.push()
         self.client = self.flask.test_client()
 
-    @classmethod
-    def setUpClass(cls):
-        cls.PROC = multiprocessing.Process(target=launch_backoffice2, args=())
-        cls.PROC.start()
-        time.sleep(1)
-
     def setUp(self):
-        # yml_users2 = DBYmlConnector(path=YML_DIR)
-        yml_users2 = DBYmlDirConnector(YML_DIR)
-        yml_users2.generate_id = lambda o: f"User_{o["name"]}_{o["surname"]}"
-
-        yml_users2.drop()
-        yml_users2.create({"name": "bebert", "surname": "bebert"})
-        yml_users2.create({"name": "bert1", "surname": "bert1"})
-        yml_users2.create({"name": "bert2", "surname": "bert2"})
-        # time.sleep(1)
+        current_user.standalone = True
         return super().setUp()
 
     @classmethod
+    def setUpClass(cls):
+        start_backo2()
+
+    @classmethod
     def tearDownClass(cls):
-        cls.PROC.terminate()
+        stop_backo2()
 
     def test_get_by_id(self):
         """
         get by id
         """
+        self.assertTrue(current_user.standalone)
         response = self.client.get("/myApp/users/User_bebert_bebert")
         self.assertEqual(response.status_code, 200)
 
@@ -160,6 +173,7 @@ class TestRestApiConnector(unittest.TestCase):
         """
         create an object with a post, modify with a put and delete it
         """
+        self.assertTrue(current_user.standalone)
         # post error
         response = self.client.post(
             "/myApp/users", json={"name": 23, "surname": "bert3"}
@@ -219,6 +233,8 @@ class TestRestApiConnector(unittest.TestCase):
         create an object with a post, then patch it
         """
         # post error
+        self.assertTrue(current_user.standalone)
+
         response = self.client.post(
             "/myApp/users", json={"name": "bert5", "surname": "bert5"}
         )
@@ -234,6 +250,7 @@ class TestRestApiConnector(unittest.TestCase):
             json={"op": "replace", "path": "$.name", "value": "toto"},
         )
         self.assertEqual(response.status_code, 200)
+
         u = self.backo.users.new_item()
         u.set(json.loads(response.data))
         self.assertIsNotNone(u._id)
@@ -258,6 +275,7 @@ class TestRestApiConnector(unittest.TestCase):
         """
         wrong url
         """
+        self.assertTrue(current_user.standalone)
 
         response = self.client.get("/myApp/usnotexistcollers/User_bebert_bebert")
         self.assertEqual(response.status_code, 404)
@@ -291,6 +309,7 @@ class TestRestApiConnector(unittest.TestCase):
         """
         do a select
         """
+        self.assertTrue(current_user.standalone)
         response = self.client.get("/myApp/users?name=bert1")
         self.assertEqual(response.status_code, 200)
         results = json.loads(response.data)
@@ -333,10 +352,12 @@ class TestRestApiConnector(unittest.TestCase):
         """
         do a select on a selection
         """
+        self.assertTrue(current_user.standalone)
         response = self.client.get("/myApp/users/_selections/bert_only")
         self.assertEqual(response.status_code, 200)
         results = json.loads(response.data)
         self.assertEqual(results["total"], None)
+
         self.assertEqual(len(results["result"]), 2)
 
         response = self.client.get("/myApp/users/_selections/bert_only?name.$reg=.*1")
@@ -366,6 +387,7 @@ class TestRestApiConnector(unittest.TestCase):
         """
         do a check
         """
+        self.assertTrue(current_user.standalone)
         response = self.client.post(
             "/myApp/users/_check",
             json={"item": {"name": "bert3", "surname": "hector"}, "path": "$.surname"},
@@ -378,6 +400,7 @@ class TestRestApiConnector(unittest.TestCase):
         """
         do a check with error
         """
+        self.assertTrue(current_user.standalone)
         response = self.client.post(
             "/myApp/users/_check",
             json={"item": {"name": "bert3", "surname": 21}, "path": "$.surname"},
@@ -390,6 +413,7 @@ class TestRestApiConnector(unittest.TestCase):
         """
         get current_meta for an object
         """
+        self.assertTrue(current_user.standalone)
         response = self.client.post(
             "/myApp/users/_meta",
             json={"name": "bert3", "surname": "toto"},
@@ -402,6 +426,7 @@ class TestRestApiConnector(unittest.TestCase):
         """
         test an arror on actions route
         """
+        self.assertTrue(current_user.standalone)
         response = self.client.post(
             "/myApp/users/_actions/false_action_name/123",
             json={"new_surname": "bert_new"},
@@ -412,6 +437,7 @@ class TestRestApiConnector(unittest.TestCase):
         """
         test an arror on actions route
         """
+        self.assertTrue(current_user.standalone)
         response = self.client.post(
             "/myApp/users/_actions/change_surname/123",
             json={"new_surname": "bert_new"},
@@ -422,6 +448,7 @@ class TestRestApiConnector(unittest.TestCase):
         """
         test an arror on actions route
         """
+        self.assertTrue(current_user.standalone)
         response = self.client.post(
             "/myApp/users/_actions/change_surname/123",
             json={"new_surname_error": "bert_new"},
@@ -432,6 +459,7 @@ class TestRestApiConnector(unittest.TestCase):
         """
         test an arror on actions route
         """
+        self.assertTrue(current_user.standalone)
 
         response = self.client.post(
             "/myApp/users",

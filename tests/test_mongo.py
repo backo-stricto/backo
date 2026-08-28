@@ -35,6 +35,7 @@ class TestMongo(unittest.TestCase):
     def tearDown(self):
         self.db_site.close()
         self.db_users.close()
+        current_user.reinit()
         return super().tearDown()
 
     def test_error_db_connect(self):

@@ -517,7 +517,6 @@ class DBRestFullConnector(DBHandler):
 
                 response.items.append(d)
 
-            print(f"response filled {response}")
             return response
 
         raise DBError('select endpoint "{0}" return non understandable dict', endpoint)
