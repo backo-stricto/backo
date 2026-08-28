@@ -5,10 +5,7 @@ Note: we assume that the signature of some inherited methods differ from the mot
 """
 
 # pylint: disable=logging-fstring-interpolation,arguments-differ
-from backo import (
-    log_system,
-    DBError,
-)
+from backo import log_system, DBError, SFilter
 from backo.db import DBRestFullConnector
 
 log = log_system.get_or_create_logger("wget")
@@ -49,7 +46,6 @@ class MyDBRestfullConnector(
         :type o: dict
         """
 
-        print(f"o={o}")
         n = {}
         n["_id"] = self.generate_id(o)
         n["name"] = o["name"]
@@ -80,12 +76,11 @@ class MyDBRestfullConnector(
 
     def select(
         self,
-        select_filter,
-        projection={},
-        page_size=0,
-        num_of_element_to_skip=0,
-        sort_object={"_id": 1},
-        **kwargs,
+        select_filter: SFilter,
+        projection=list[str],
+        page_size: int = 0,
+        num_of_element_to_skip: int = 0,
+        sort_object: list[str] = None,
     ) -> list:
         """See :func:`DBConnector.select`
 
@@ -101,11 +96,16 @@ class MyDBRestfullConnector(
             page_size,
         )
 
+        query_options = {}
+
+        query_options["offset"] = num_of_element_to_skip
+        query_options["limit"] = page_size
+
         return self._internal_select(
             select_filter,
             projection,
             page_size,
             num_of_element_to_skip,
             sort_object,
-            **kwargs,
+            query_options=query_options,
         )

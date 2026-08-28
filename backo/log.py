@@ -137,10 +137,10 @@ class Logger:
         """
         Initialisation
         """
-        self.loggers = {}
+        self.loggers: dict[str, Logger] = {}
         self.handlers_for_all = []
 
-    def get_or_create_logger(self, name, level=LogLevel.ERROR):
+    def get_or_create_logger(self, name, level=LogLevel.ERROR) -> Logger:
         """
         Create a logger
         """
@@ -160,14 +160,14 @@ class Logger:
         l.get_last_message = types.MethodType(get_last_message_for_a_logger, l)
         return l
 
-    def setLevel(self, level):  # pylint: disable=invalid-name
+    def setLevel(self, level) -> None:  # pylint: disable=invalid-name
         """
         change the level for all loggers
         """
         for logger in self.loggers.values():
             logger.setLevel(level)
 
-    def add_handler(self, handler, name="all"):
+    def add_handler(self, handler, name="all") -> None:
         """
         Add an handler to a specific logger, or add
         to all handlers (by default)
@@ -184,7 +184,7 @@ class Logger:
         for logger in self.loggers.values():
             logger.addHandler(handler)
 
-    def set_streamhandler(self, **kwargs):
+    def set_streamhandler(self, **kwargs) -> logging.StreamHandler:
         """
         Build an handler for stream (STDERR)
         """
@@ -194,7 +194,7 @@ class Logger:
         streamhandler.setFormatter(f)
         return streamhandler
 
-    def set_filehandler(self, filename, **kwargs):
+    def set_filehandler(self, filename, **kwargs) -> logging.FileHandler:
         """
         Build an handler for file
         """
@@ -204,7 +204,7 @@ class Logger:
         filehandler.setFormatter(f)
         return filehandler
 
-    def set_memoryhandler(self, target, **kwargs):
+    def set_memoryhandler(self, target, **kwargs) -> logging.handlers.MemoryHandler:
         """
         Build an memory handler (only used by test)
         """

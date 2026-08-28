@@ -5,10 +5,7 @@ Note: we assume that the signature of some inherited methods differ from the mot
 """
 
 # pylint: disable=logging-fstring-interpolation,arguments-differ
-from backo import (
-    log_system,
-    DBError,
-)
+from backo import log_system, DBError, SFilter
 from backo.db import DBRestFullConnector
 
 log = log_system.get_or_create_logger("vms-connector")
@@ -72,11 +69,11 @@ class VMsConnector(DBRestFullConnector):  # pylint: disable=too-many-instance-at
 
     def select(
         self,
-        select_filter,
-        projection={},
-        page_size=0,
-        num_of_element_to_skip=0,
-        sort_object={"_id": 1},
+        select_filter: SFilter,
+        projection: list[str] = None,
+        page_size: int = 0,
+        num_of_element_to_skip: int = 0,
+        sort_object: list[str] = None,
     ) -> list:
         """See :func:`DBHandler.select`
 

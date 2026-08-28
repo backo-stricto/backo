@@ -32,6 +32,8 @@ log = log_system.get_or_create_logger("{{ name }}", LogLevel.INFO)
 flask = Flask("{{ name }}")
 flask.secret_key = "super secret key" # Not a bad idea to change it.
 
+JWTOKEN_SECRET_KEY = 'my_fabulous_secret_super_long_long'
+
 # Avoid CORS issues 
 # --------------------------
 # CORS( self.flask, origins=["*"])
@@ -59,7 +61,7 @@ def log_in():
                 "roles": [ 'administrator' ],
             },
         },
-        "myappsecretkey",
+        JWTOKEN_SECRET_KEY,
         algorithm="HS256",
     )
     response = make_response(json.dumps({"login": "ok"}))
@@ -78,7 +80,7 @@ def check_user_token() -> None | Response:
     if not token:
         return jsonify({"message": "Token is missing!"}), 401
     try:
-        data = jwt.decode(token, "myappsecretkey", algorithms=["HS256"])
+        data = jwt.decode(token, JWTOKEN_SECRET_KEY, algorithms=["HS256"])
     except:  # pylint: disable=bare-except
         return jsonify({"message": "Token is invalid!"}), 401
     current_user.set(data["user"])

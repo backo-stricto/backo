@@ -699,7 +699,7 @@ class DBSqlite3Connector(DBHandler):
 
         where_conditions, values = self.filter.build_db_filter(select_filter)
         select = f"SELECT * FROM {self._table_name} WHERE {where_conditions}"
-        values_without_pagination = values
+
         if page_size:
             values += (page_size,)
             values += (num_of_element_to_skip,)
@@ -710,13 +710,7 @@ class DBSqlite3Connector(DBHandler):
         cursor_desc_copy = copy.deepcopy(self._cursor.description)
 
         # Get the total
-        if page_size:
-            self._cursor.execute(
-                f"SELECT COUNT(*) FROM {self._table_name} WHERE {where_conditions}",
-                values_without_pagination,
-            ).fetchall()
-            response.total = self._cursor.fetchone()[0]
-        else:
+        if not page_size:
             response.total = len(list_of_items)
 
         # None or empty

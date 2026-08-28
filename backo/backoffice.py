@@ -278,6 +278,17 @@ class Backoffice:  # pylint: disable=too-many-instance-attributes
         this event is catch by Ref and RefsList wich display warning if needed
         """
         log.debug("Check syntax start")
+
+        # Check Structure
+        for collection in self.collections.values():
+            db_compliant, alter_db_message = collection.db_handler.check_structure()
+            if db_compliant is False:
+                log.warning(f"Inconsistent database structure for {collection.name}")
+                log.warning("To change, you must do something like :")
+                log.warning(alter_db_message)
+
+        # Check syntax mistakes
         for collection in self.collections.values():
             collection.model.trigg("check_syntax")
+
         log.debug("Check syntax end")

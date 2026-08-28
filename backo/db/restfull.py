@@ -426,7 +426,7 @@ class DBRestFullConnector(DBHandler):
             )
 
         if hasattr(self, "_clean_data"):
-            return self._clean_data(data)
+            data = self._clean_data(data)
 
         return data
 
@@ -476,9 +476,6 @@ class DBRestFullConnector(DBHandler):
         endpoint = options.get("endpoint")
         query_options = options.get("query_options")
 
-        query_options["_skip"] = num_of_element_to_skip
-        query_options["_page"] = page_size
-
         status_code, data, error = self._request(
             endpoint=endpoint,
             url_parameters=options.get("url_parameters"),
@@ -512,7 +509,7 @@ class DBRestFullConnector(DBHandler):
         if isinstance(list_items, list):
             for d in list_items:
                 if hasattr(self, "_clean_data"):
-                    self._clean_data(d)
+                    d = self._clean_data(d)
 
                 # Do all transformations on the object
                 self._transform_on_load(d)

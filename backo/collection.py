@@ -169,6 +169,8 @@ class Collection:
 
         self._selections = {}
 
+        db_handler.set_model(self.get_meta())
+
         # Adding the "_all" selection
         can_read = self._permissions.get("read", True)
         self.register_selection("_all", Selection(None, can_read=can_read))
@@ -371,9 +373,17 @@ class Collection:
         :type dry_run: bool
         """
         report = MigrationReport()
+
+        # Check the structure first
+        db_compliant, alter_db_message = self.db_handler.check_structure()
+        report.add_check_model(db_compliant, alter_db_message)
+
         log_migration.info(f"{self.name} start migration (dry_run={dry_run}) ")
         if _ids is None:
+
             # Do the DB selection without pagination
+            # TODO: By Batch
+
             response: SelectResponse = self.db_handler.select(None, None, 0, 0, None)
             for obj in response.items:
                 changes = self._migrate_obj(migration_function, obj, dry_run)
@@ -467,6 +477,17 @@ class Collection:
         :rtype: list[Item]
         """
         result = self._selections["_all"].select(filter_for_selection, 0, 0)
+        return result["result"]
+
+    def admin_select(self, filter_for_selection: SFilter) -> list[Item]:
+        """Do a selection directly with a filter withou rigths
+
+        :param filter_for_selection: a filter
+        :type filter_for_selection: dict
+        :return: a list of Items
+        :rtype: list[Item]
+        """
+        result = self._selections["_all"].admin_select(filter_for_selection)
         return result["result"]
 
     def select_one(self, filter_for_selection: SFilter) -> Item:

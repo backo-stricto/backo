@@ -52,7 +52,8 @@ class TestBackoffice(unittest.TestCase):
         response = self.client.get("/nationality/countries?name=France")
         self.assertEqual(response.status_code, 200)
         results = json.loads(response.data)
-        self.assertEqual(results["total"], 1)
+        self.assertEqual(results["total"], None)
+        self.assertEqual(len(results["result"]), 1)
 
     def test_create_person(self):
         """

@@ -103,16 +103,6 @@ class TestBackoffice(unittest.TestCase):
         # self.login('emp1')
         response = self.client.delete(f"/media_library/books/{book_id}")
         self.assertEqual(response.status_code, 200)
-        response = self.client.post(
-            "/media_library/books",
-            json={"title": "martine a la plage 2", "pages": 22},
-        )
-        self.assertEqual(response.status_code, 200)
-        response = self.client.post(
-            "/media_library/books",
-            json={"title": "martine a la plage 3", "pages": 23},
-        )
-        self.assertEqual(response.status_code, 200)
         self.logout()
 
     def test_emp1_borrow_a_book(self):
@@ -121,13 +111,23 @@ class TestBackoffice(unittest.TestCase):
         """
         self.logout()
         response = self.login("emp1")
-        response = self.client.get("/media_library/users?login=toto1")
+        response = self.client.get("/media_library/users?login=client1")
         results = json.loads(response.data)
-        self.assertEqual(results["total"], 1)
+        self.assertEqual(results["total"], None)
+        self.assertEqual(len(results["result"]), 1)
         user = results["result"][0]
+
+        # create a book
+        response = self.client.post(
+            "/media_library/books",
+            json={"title": "martine a la plage 3", "pages": 23},
+        )
+        self.assertEqual(response.status_code, 200)
+
         response = self.client.get("/media_library/books?title.$reg=martine.*3")
         results = json.loads(response.data)
-        self.assertEqual(results["total"], 1)
+        self.assertEqual(results["total"], None)
+        self.assertEqual(len(results["result"]), 1)
         book = results["result"][0]
         # response = self.client.post(
         #     f"/media_library/books/_actions/borrow/{book['_id']}",
@@ -153,5 +153,6 @@ class TestBackoffice(unittest.TestCase):
         response = self.client.get("/media_library/books/_selections/borrowed")
         self.assertEqual(response.status_code, 200)
         results = json.loads(response.data)
-        self.assertEqual(results["total"], 1)
-        self.assertEqual(results["result"][0][2], "toto1")
+        self.assertEqual(results["total"], None)
+        self.assertEqual(len(results["result"]), 1)
+        self.assertEqual(results["result"][0][2], "client1")

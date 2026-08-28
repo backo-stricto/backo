@@ -16,6 +16,7 @@ from stricto import (
     String,
     Int,
     List,
+    Bool,
     FreeDict,
 )
 
@@ -31,6 +32,9 @@ class MigrationReport(Dict):  # pylint: disable=too-many-instance-attributes
 
         super().__init__(
             {
+                "db_compliant": Bool(),
+                "alter_db_message": String(),
+                "": Dict({"_ids": List(String(), default=[]), "total": Int(default=0)}),
                 "no_changes": Dict(
                     {"_ids": List(String(), default=[]), "total": Int(default=0)}
                 ),
@@ -44,6 +48,18 @@ class MigrationReport(Dict):  # pylint: disable=too-many-instance-attributes
             },
             **kwargs,
         )
+
+    def add_check_model(self, db_compliant: bool, alter_db_message: str) -> None:
+        """
+        Add the message from DBHandler.check_structure()
+
+        :param db_compliant: True if the DB is OK, or False if you must alter tables or similar
+        :type db_compliant: bool
+        :param alter_db_message: the commands to run
+        :type alter_db_message: str
+        """
+        self.db_compliant = db_compliant
+        self.alter_db_message = alter_db_message
 
     def add_change(self, _id: str, diff: dict) -> None:
         """Add a changement into the report

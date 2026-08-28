@@ -224,7 +224,7 @@ class Ref(String):  # pylint: disable=too-many-instance-attributes
             match_filter = SFilter(
                 self._reverse, Operator.CONTAINS, SFilter("@", Operator.EQ, root_id)
             )
-        return self._coll_ref.select(match_filter)
+        return self._coll_ref.admin_select(match_filter)
 
     def on_loaded(
         self, event_name, root, me, **kwargs

@@ -324,14 +324,13 @@ class DBMongoConnector(DBHandler):
         """
 
         mongo_filter = self.filter.build_db_filter(select_filter)
-
-        # print(f'filter = {mongo_filter}')
+        mongo_projection = self.filter.build_db_projection(projection)
 
         response = SelectResponse(page_size, num_of_element_to_skip)
 
         try:
             result_list = list(
-                self._collection.find(mongo_filter, projection)
+                self._collection.find(mongo_filter, mongo_projection)
                 .sort({"_id": 1})
                 .skip(num_of_element_to_skip)
                 .limit(page_size)

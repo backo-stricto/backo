@@ -6,6 +6,10 @@ backoffice : The main application
 # pylint: disable=no-name-in-module
 
 import json
+
+from random import choice
+from string import ascii_uppercase
+
 import sys
 from functools import wraps
 from datetime import datetime, timezone, timedelta
@@ -26,6 +30,8 @@ log_system.setLevel(LogLevel.ERROR)
 # set the flask application route
 flask = Flask("my_media_library")
 flask.secret_key = "super secret key"
+
+JWTOKEN_SECRET_KEY = "".join(choice(ascii_uppercase) for i in range(64))
 
 
 # --- Set the login route -----
@@ -58,7 +64,7 @@ def log_in():
                 "roles": user.roles.get_value(),
             },
         },
-        "myappsecretkey",
+        JWTOKEN_SECRET_KEY,
         algorithm="HS256",
     )
     response = make_response(json.dumps({"login": "ok"}))
@@ -74,7 +80,7 @@ def check_user_token() -> None | Response:
     if not token:
         return jsonify({"message": "Token is missing!"}), 401
     try:
-        data = jwt.decode(token, "myappsecretkey", algorithms=["HS256"])
+        data = jwt.decode(token, JWTOKEN_SECRET_KEY, algorithms=["HS256"])
     except:  # pylint: disable=bare-except
         return jsonify({"message": "Token is invalid!"}), 401
     current_user.set(data["user"])
@@ -139,9 +145,14 @@ books.drop()
 admin_user = users.select_one(SFilter("$.login", Operator.EQ, "admin"))
 if admin_user is None:
     users.create({"login": "admin", "roles": ["ADMIN", "USER"]})
+
 emp1_user = users.select_one(SFilter("$.login", Operator.EQ, "emp1"))
 if emp1_user is None:
     users.create({"login": "emp1", "roles": ["EMPLOYEE", "USER"]})
+
+client1_user = users.select_one(SFilter("$.login", Operator.EQ, "client1"))
+if emp1_user is None:
+    users.create({"login": "client1", "roles": ["USER"]})
 
 first_book = books.select_one(
     SFilter("$.title", Operator.EQ, "martine mange des yaourth")

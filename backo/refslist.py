@@ -210,7 +210,7 @@ class RefsList(List):
             match_filter = SFilter(
                 self._reverse, Operator.CONTAINS, SFilter("@", Operator.EQ, root_id)
             )
-        return self._coll_ref.select(match_filter)
+        return self._coll_ref.admin_select(match_filter)
 
     def on_delete_must_by_empty(
         self, event_name: str, root: Dict, me: Self, **kwargs

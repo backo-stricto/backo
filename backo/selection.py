@@ -26,6 +26,7 @@ from .db.generic.interface import SelectResponse
 from .collection_addon import CollectionAddon
 from .log import log_system, LogLevel
 from .error import DBError
+from .item import Item
 
 log = log_system.get_or_create_logger("select", LogLevel.INFO)
 
@@ -155,8 +156,33 @@ class Selection(CollectionAddon):
 
         return f
 
+    def _set_object(self, obj: dict, with_rights: bool = True) -> Item:
+        """
+        Set the object as a Item
+
+        :param obj: the object as a dict
+        :type obj: dict
+        :param with_rights: if we want rights, defaults to True
+        :type with_rights: bool, optional
+        :return: the object as Item
+        :rtype: Item
+        """
+        o: Item = self.collection.new_item()
+        if with_rights:
+            o.set(obj)
+            o.enable_permissions()
+        else:
+            o.set_value(obj)
+
+        o.set_status_saved()
+        return o
+
     def _fill_response(
-        self, response: SelectResponse, filter_object: SFilter, sort_object: list[str]
+        self,
+        response: SelectResponse,
+        filter_object: SFilter,
+        sort_object: list[str],
+        with_right: bool = True,
     ) -> None:
         """
         Do some select into the DD by batch (size self.batch_size)
@@ -193,17 +219,14 @@ class Selection(CollectionAddon):
                 break
 
             for obj in resp.items:
-                o = self.collection.new_item()
-                o.set(obj)
-                o.enable_permissions()
-                o.set_status_saved()
+                o = self._set_object(obj, with_right)
 
                 # Ignore all elements matched by the refuse filter
                 if self.collection._permissions.is_allowed_to("read", o) is not True:
                     continue
 
                 # The DBHandler did not all the selection. Do it by hand
-                if response.more_than_filter is True and filter_object.check(o) is False:
+                if resp.more_than_filter is True and filter_object.check(o) is False:
                     continue
 
                 idx_of_available_item += 1
@@ -221,6 +244,10 @@ class Selection(CollectionAddon):
                 if response.page_size and len(response.items) >= response.page_size:
                     break
 
+            # get less elements than asked
+            if len(resp.items) < self.batch_size:
+                break
+
             # read the next group of elements
             num_of_element_to_skip += self.batch_size
 
@@ -229,13 +256,28 @@ class Selection(CollectionAddon):
         if not response.page_size:
             response.total = idx_of_available_item
 
+    def _merge_filters(self, select_filter: SFilter) -> SFilter:
+        """
+        build the filter with filter given and self._filter
+
+        :param select_filter: the given filter
+        :type select_filter: SFilter
+        :rtype: SFilter
+        """
+        f = self._filter() if callable(self._filter) else self._filter
+        if not isinstance(f, SFilter):
+            raise SSyntaxError(
+                'select "{0}" filter "{1}" is not type SFilter', self.name, f
+            )
+        return select_filter.merge_and(f) if select_filter else f
+
     def select(
         self,
         select_filter: SFilter = None,
         page_size: int = 0,
         num_of_element_to_skip: int = 0,
         sort_object: list[str] = [],
-    ):
+    ) -> dict:
         """
         Do the selection
         """
@@ -249,16 +291,78 @@ class Selection(CollectionAddon):
             raise SRightError("Execute {0} selection is forbidden", self.name)
 
         # build the filter with filter given and self._filter
-        # --------------------------------------------------
-        f = self._filter() if callable(self._filter) else self._filter
-        if not isinstance(f, SFilter):
-            raise SSyntaxError(
-                'select "{0}" filter "{1}" is not type SFilter', self.name, f
-            )
-
-        filter_object: SFilter = select_filter.merge_and(f) if select_filter else f
+        filter_object: SFilter = self._merge_filters(select_filter)
 
         response = SelectResponse(page_size, num_of_element_to_skip)
         self._fill_response(response, filter_object, sort_object)
 
         return response.get_as_dict()
+
+    def admin_select(self, select_filter: SFilter = None) -> dict:
+        """
+        Make a select without pagination and without rights on objects.
+        Used by ref and reflists to find reflective datas
+
+        :param select_filter: the filter, defaults to None
+        :type select_filter: SFilter, optional
+        :return: a dict with response inside
+        :rtype: dict
+        """
+        if self.collection is None:
+            raise SSyntaxError(
+                'The selection "{0}" is not registered into a collection. (miss register_selection ?)',
+                self.name,
+            )
+        response = SelectResponse(0, 0)
+        self._fill_response(response, select_filter, None, False)
+
+        return response.get_as_dict()
+
+    def count(self, select_filter: SFilter = None) -> int:
+        """
+        Return the total number of items matching the selection
+
+        :param select_filter: the filter, defaults to None
+        :type select_filter: SFilter, optional
+        :return: _description_
+        :rtype: int
+        """
+
+        # build the filter with filter given and self._filter
+
+        filter_object: SFilter = self._merge_filters(select_filter)
+
+        num_of_element_to_skip = 0
+        idx_of_available_item = 0
+
+        while True:
+            # Do the DB selection without pagination
+            resp: SelectResponse = self.collection.db_handler.select(
+                filter_object,
+            )
+            if not isinstance(resp, SelectResponse):
+                raise DBError(
+                    'DBHandler does nor return a SelectResponse "{0}"', self.name
+                )
+
+            # At the end of elements in the DB
+            if not resp.items:
+                break
+
+            for obj in resp.items:
+                o = self._set_object(obj)
+
+                # Ignore all elements matched by the refuse filter
+                if self.collection._permissions.is_allowed_to("read", o) is not True:
+                    continue
+
+                # The DBHandler did not all the selection. Do it by hand
+                if resp.more_than_filter is True and filter_object.check(o) is False:
+                    continue
+
+                idx_of_available_item += 1
+
+            # read the next group of elements
+            num_of_element_to_skip += self.batch_size
+
+        return idx_of_available_item

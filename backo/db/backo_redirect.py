@@ -64,6 +64,12 @@ class DBBackoRedirectConnector(
         Params ``select_filter`` and ``projection`` are not used
 
         """
+
+        query_options = {}
+
+        query_options["_skip"] = num_of_element_to_skip
+        query_options["_page"] = page_size
+
         return self._internal_select(
             select_filter,
             projection,
@@ -71,4 +77,5 @@ class DBBackoRedirectConnector(
             num_of_element_to_skip,
             sort_object,
             endpoint=self._remote_collection,
+            query_options=query_options,
         )
