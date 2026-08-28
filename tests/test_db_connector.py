@@ -30,6 +30,7 @@ from backo.db import (
     DBMongoConnector,
     DBSqlite3Connector,
     DBYmlConnector,
+    DBValkeyConnector,
     RenameTransformer,
     IgnoreTransformer,
 )
@@ -57,6 +58,8 @@ class TestDBConnector(unittest.TestCase):
         """
         rep, _mess = con.check_structure()
         self.assertEqual(rep, True)
+
+        con.connect()
 
         con.drop()
         _id = con.create({"name": "toto", "age": 22})
@@ -135,6 +138,25 @@ class TestDBConnector(unittest.TestCase):
 
         with self.subTest(con=con):
             self.sub_test_crud_connector(con, "Memory")
+
+        con.close()
+
+    def test_valkey_db_connector(self):
+        """
+        KeyDB connector
+        """
+
+        con = DBValkeyConnector("Redis", "redis://localhost:6379/0")
+        # con.item_mapper.add_attribute_transformer("$.name", RenameTransformer("$.nom"))
+
+        with self.subTest(con=con):
+            self.sub_test_crud_connector(con, "Redis")
+
+        con.register_transformer(RenameTransformer(["age"], ["age_in_db"]))
+        con.register_transformer(IgnoreTransformer(["not", "exists"]))
+
+        with self.subTest(con=con):
+            self.sub_test_crud_connector(con, "Redis")
 
         con.close()
 

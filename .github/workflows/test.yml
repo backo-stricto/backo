@@ -17,6 +17,10 @@ jobs:
           MONGO_INITDB_DATABASE: testMongo
         ports:
           - 27017:27017
+      valkey:
+        image: valkey/valkey:latest
+        ports:
+          - "6379:6379"
     steps:
     - uses: actions/checkout@v3
     - name: Set up Python ${{ matrix.python-version }}

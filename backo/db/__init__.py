@@ -13,3 +13,4 @@ from .sqlite3 import DBSqlite3Connector
 from .yml import DBYmlConnector
 from .restfull import DBRestFullConnector
 from .backo_redirect import DBBackoRedirectConnector
+from .valkeydb import DBValkeyConnector

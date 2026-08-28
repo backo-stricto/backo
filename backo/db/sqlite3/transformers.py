@@ -63,7 +63,6 @@ class IdTransformer(Transformer):
         Delete the _id field if exists
 
         """
-        print(f"on create _id {obj}")
         del obj["_id"]
 
     def on_save(self, obj: dict, _key_path: list[str]):
