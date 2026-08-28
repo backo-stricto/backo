@@ -131,7 +131,6 @@ class TestRestApiConnector(unittest.TestCase):
 
     def setUp(self):
         # yml_users2 = DBYmlConnector(path=YML_DIR)
-        print("In setup2")
         yml_users2 = DBYmlDirConnector(YML_DIR)
         yml_users2.generate_id = lambda o: f"User_{o["name"]}_{o["surname"]}"
 
