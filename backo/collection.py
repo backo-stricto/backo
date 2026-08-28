@@ -52,7 +52,7 @@ from .request_decorators import check_content_type, error_to_http_handler
 from .selection import Selection
 from .db.generic.interface import SelectResponse
 
-log = log_system.get_or_create_logger("collection", LogLevel.INFO)
+log = log_system.get_or_create_logger("collection")
 log_migration = log_system.get_or_create_logger("migration")
 
 

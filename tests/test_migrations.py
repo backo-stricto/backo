@@ -13,7 +13,6 @@ from backo import (
     String,
     Bool,
     log_system,
-    LogLevel,
     SSyntaxError,
     Int,
     SConstraintError,
@@ -31,7 +30,6 @@ from backo import (
 YML_DIR = "/tmp/backo_tests_migrations"
 
 log_migration = log_system.get_or_create_logger("migration")
-log_migration.setLevel(LogLevel.DEBUG)
 
 
 class TestMigrations(unittest.TestCase):

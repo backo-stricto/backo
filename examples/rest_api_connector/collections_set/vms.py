@@ -8,12 +8,11 @@ from backo import (
     Item,
     GenericMetaDataHandler,
     log_system,
-    LogLevel,
 )
 
 from .vms_connector import VMsConnector
 
-log = log_system.get_or_create_logger("vms", LogLevel.INFO)
+log = log_system.get_or_create_logger("vms")
 
 
 # ------------------------------------------------

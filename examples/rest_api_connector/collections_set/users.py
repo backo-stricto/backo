@@ -9,12 +9,11 @@ from backo import (
     Item,
     GenericMetaDataHandler,
     log_system,
-    LogLevel,
     RefsList,
 )
 from backo.db import DBYmlDirConnector
 
-log = log_system.get_or_create_logger("users", LogLevel.INFO)
+log = log_system.get_or_create_logger("users")
 
 
 # ------------------------------------------------

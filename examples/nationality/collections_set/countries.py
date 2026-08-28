@@ -9,12 +9,11 @@ from backo import (
     Item,
     GenericMetaDataHandler,
     log_system,
-    LogLevel,
 )
 
 from .db_country_connector import MyDBRestfullConnector
 
-log = log_system.get_or_create_logger("countries", LogLevel.INFO)
+log = log_system.get_or_create_logger("countries")
 
 
 # ------------------------------------------------

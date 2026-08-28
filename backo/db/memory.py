@@ -10,7 +10,9 @@ from .generic.db_handler import DBHandler
 from .generic.interface import SelectResponse
 from ..error import NotFoundError
 
-# from ..request import SearchRequest, SelectRequest, Response
+from ..log import log_system, LogLevel
+
+log = log_system.get_or_create_logger("DBMemoryConnector")
 
 
 class DBMemoryConnector(DBHandler):
@@ -67,12 +69,17 @@ class DBMemoryConnector(DBHandler):
         # Do all transformations on the object
         self._transform_on_load(d)
 
+        log.debug('Get {_id}')
+
+
         return d
 
     def delete_by_id(self, _id: str) -> None:
         """delete"""
         if _id not in self._datas:
             raise NotFoundError('_id "{0}" not found in "{1}"', _id, self._name)
+
+        log.debug('Delete {_id}')
 
         del self._datas[_id]
 
@@ -86,6 +93,8 @@ class DBMemoryConnector(DBHandler):
 
         # Do all transformations on the object
         self._transform_on_save(d)
+
+        log.debug('Save {_id}')
 
         self._datas[_id] = d
 
@@ -127,6 +136,8 @@ class DBMemoryConnector(DBHandler):
 
             response.items.append(d)
 
+        log.debug('Select return {response}')
+
         return response
 
     def create(self, o: dict) -> str:  # pylint: disable=unused-argument
@@ -137,6 +148,8 @@ class DBMemoryConnector(DBHandler):
 
         # Do all transformations on the object
         self._transform_on_create(d)
+
+        log.debug('Create {_id}')
 
         self._datas[_id] = d
         return _id

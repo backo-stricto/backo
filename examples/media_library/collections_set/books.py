@@ -13,7 +13,6 @@ from backo import (
     Item,
     current_user,
     log_system,
-    LogLevel,
     Ref,
     Action,
     Selection,
@@ -22,7 +21,7 @@ from backo import (
 )
 from backo.db import DBMongoConnector
 
-log = log_system.get_or_create_logger("books", LogLevel.INFO)
+log = log_system.get_or_create_logger("books")
 
 
 # ------------------------------------------------

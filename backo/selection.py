@@ -24,11 +24,11 @@ from stricto import (
 from .db.generic.interface import SelectResponse
 
 from .collection_addon import CollectionAddon
-from .log import log_system, LogLevel
+from .log import log_system
 from .error import DBError
 from .item import Item
 
-log = log_system.get_or_create_logger("select", LogLevel.INFO)
+log = log_system.get_or_create_logger("select")
 
 KPARSE_MODEL = {
     "can_read|read": {"type": bool | Callable, "default": True},

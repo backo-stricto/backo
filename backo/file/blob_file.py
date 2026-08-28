@@ -15,7 +15,7 @@ from .file import File, MIME
 from ..error import FileError
 from ..log import log_system, LogLevel
 
-log = log_system.get_or_create_logger("file", LogLevel.INFO)
+log = log_system.get_or_create_logger("file")
 
 
 class BlobFile(File):

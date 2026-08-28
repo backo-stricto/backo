@@ -8,13 +8,12 @@ from backo import (
     Item,
     GenericMetaDataHandler,
     log_system,
-    LogLevel,
     Ref,
     RefsList,
 )
 from backo.db import DBMongoConnector
 
-log = log_system.get_or_create_logger("user", LogLevel.INFO)
+log = log_system.get_or_create_logger("user")
 
 
 # ------------------------------------------------

@@ -14,9 +14,8 @@ sys.path.insert(1, "../../../../stricto")
 sys.path.insert(1, "../../../../backo")
 
 import constants
-from backo import Backoffice, log_system, LogLevel
+from backo import Backoffice, log_system
 
-log_system.add_handler(log_system.set_streamhandler())
 log = log_system.get_or_create_logger("bubbles")
 
 

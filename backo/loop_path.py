@@ -6,9 +6,9 @@ from .error import BackoError
 
 DEFAULT_MAX_LOOP = 40
 
-from .log import log_system, LogLevel
+from .log import log_system
 
-log = log_system.get_or_create_logger("loop", LogLevel.INFO)
+log = log_system.get_or_create_logger("loop")
 
 
 class LoopPath:

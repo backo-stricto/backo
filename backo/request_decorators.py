@@ -23,9 +23,9 @@ from stricto import (
     SRightError,
 )
 from .error import NotFoundError, PathNotFoundError, DBError
-from .log import log_system, LogLevel
+from .log import log_system
 
-log = log_system.get_or_create_logger("http", LogLevel.ERROR)
+log = log_system.get_or_create_logger("http")
 
 
 def return_http_error(code, message):

@@ -19,6 +19,8 @@ from .transformer import Transformer
 from .filter import Filter
 from .interface import SelectResponse
 
+from ...error import DBError
+
 KPARSE_MODEL = {"restriction": Callable}
 
 
@@ -89,21 +91,30 @@ class DBHandler(ABC):  # pylint: disable=too-many-instance-attributes
     def _transform_on_load(self, loaded_object: dict):
         for transformers in self.transformers.values():
             for transformer in transformers.values():
-                db_path = transformer.get_db_path()
-                if transformer.path_exists_in_object(db_path, loaded_object):
-                    transformer.on_load(loaded_object, db_path)
+                try:
+                    db_path = transformer.get_db_path()
+                    if transformer.path_exists_in_object(db_path, loaded_object):
+                        transformer.on_load(loaded_object, db_path)
+                except Exception as e:
+                    raise DBError('Transformer on load error') from e
 
     def _transform_on_create(self, obj: dict):
         for transformers in self.transformers.values():
             for transformer in transformers.values():
-                if transformer.path_exists_in_object(transformer.key_path, obj):
-                    transformer.on_create(obj, transformer.key_path)
+                try:
+                    if transformer.path_exists_in_object(transformer.key_path, obj):
+                        transformer.on_create(obj, transformer.key_path)
+                except Exception as e:
+                    raise DBError('Transformer on create error') from e
 
     def _transform_on_save(self, obj: dict):
         for transformers in self.transformers.values():
             for transformer in transformers.values():
-                if transformer.path_exists_in_object(transformer.key_path, obj):
-                    transformer.on_save(obj, transformer.key_path)
+                try:
+                    if transformer.path_exists_in_object(transformer.key_path, obj):
+                        transformer.on_save(obj, transformer.key_path)
+                except Exception as e:
+                    raise DBError('Transformer on save error') from e
 
     def get_transformer(
         self, key_path: list[str], table_name: str = None, backo_types: list[str] = None

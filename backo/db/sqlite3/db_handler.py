@@ -19,6 +19,10 @@ from ..generic.interface import SelectResponse
 from .pragma import TablePragma, SqlFieldDescription
 from .filter import SQlite3Filter
 
+from ...log import log_system,
+log = log_system.get_or_create_logger("DBSqlite3Connector")
+
+
 
 class DBSqlite3Connector(DBHandler):
     """
@@ -384,7 +388,7 @@ class DBSqlite3Connector(DBHandler):
         :return: _descThe list of deleted _ids
         :rtype: list[ int ]
         """
-        print(f"DELETE FROM {table_name} WHERE {id_name} == {sqlite3_id} RETURNING id")
+        log.debug(f"DELETE FROM {table_name} WHERE {id_name} == {sqlite3_id} RETURNING id")
         list_of_results = self._cursor.execute(
             f"DELETE FROM {table_name} WHERE {id_name} == ? RETURNING id", (sqlite3_id,)
         ).fetchall()
@@ -460,7 +464,7 @@ class DBSqlite3Connector(DBHandler):
         """
         r = tuple(map(tuple, zip(*keys_values)))
         t = ("?",) * len(r[0])
-        print(f"INSERT INTO {table_name} {r[0]} VALUES ({', '.join(t) })", r[1])
+        log.debug(f"INSERT INTO {table_name} {r[0]} VALUES ({', '.join(t) })", r[1])
         self._cursor.execute(
             f"INSERT INTO {table_name} {r[0]} VALUES ({', '.join(t) })", r[1]
         )
@@ -572,7 +576,7 @@ class DBSqlite3Connector(DBHandler):
             v.append(value)
 
         v.append(_id)
-        print(f'UPDATE {table_name} SET {", ".join(l)} WHERE id == ?, {tuple(v)}')
+        log.debug(f'UPDATE {table_name} SET {", ".join(l)} WHERE id == ?, {tuple(v)}')
         self._cursor.execute(
             f'UPDATE {table_name} SET {", ".join(l)} WHERE id == ?', tuple(v)
         )
@@ -704,7 +708,8 @@ class DBSqlite3Connector(DBHandler):
             values += (page_size,)
             values += (num_of_element_to_skip,)
             select += "LIMIT ? OFFSET ?"
-        print(f"{select} {values}")
+
+        log.debug(f"{select} {values}")
         list_of_items = self._cursor.execute(select, values).fetchall()
 
         cursor_desc_copy = copy.deepcopy(self._cursor.description)

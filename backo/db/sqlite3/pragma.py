@@ -154,18 +154,12 @@ class SqlFieldDescription:
         :rtype: bool
         """
         if self._not_null != other._not_null:
-            # print(f"not equal for {self.db_path} not_null")
             return False
         if self._sql_type != other._sql_type:
-            # print(
-            #     f"not equal for {self.db_path} _sql_type {self._sql_type} != {other._sql_type}"
-            # )
             return False
         if self._ref_table != other._ref_table:
-            # print(f"not equal for {self.db_path} _ref_table")
             return False
         if self._ref_field != other._ref_field:
-            # print(f"not equal for {self.db_path} _ref_field")
             return False
         return True
 
