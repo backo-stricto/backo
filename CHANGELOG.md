@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [0.3.0] 2026-09-01
     * Feat
-      * BREAKING CHANGE : DBHandler refactoring (import and definition of DBConnector)
+      * BREAKING CHANGE : DBHandler refactoring (import and definition of DBConnector, use from backo.db import ...)
       * BREAKING CHANGE : In DBHandler select the field 'total' in response is actually set to 'None'
       * DBValKeyConnector (for Redis)
       * DBSqlite3Connector (for SQLite3)
