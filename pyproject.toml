@@ -1,6 +1,6 @@
 [project]
 name = "backo"
-version = "0.2.1"
+version = "0.3.0"
 authors = [
   { name="Bertrand Wallrich", email="Bertrand.Wallrich@inria.fr" },
 ]
@@ -23,7 +23,7 @@ dependencies = [
   "python-magic",
   "redis>=8.1.0",
   "python-jsonpath",
-  "stricto>=0.2.4"
+  "stricto>=0.2.5"
 ]
 
 [project.optional-dependencies]
