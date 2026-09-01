@@ -25,11 +25,20 @@ class Transformer:
     """
     Transform attributes
 
-    used to rewrite the path for filtering, projection...
+    used to make some transformations on the object before save into the DB, after load, ignore
+    element, etc.
 
     """
 
     def __init__(self, key_path: list[str], backo_type: str = None):
+        """
+
+
+        :param key_path: path as list (like ['address', 'street']) on the backo side
+        :type key_path: list[str]
+        :param backo_type: If this transformer is "attached" to a type (like Int, Ref, Float...) rather than a key_path, defaults to None
+        :type backo_type: str, optional
+        """
         self.key_path = key_path
         self.backo_type = backo_type
 
@@ -109,7 +118,12 @@ class RenameTransformer(Transformer):
     A transformer to rename a path into another.
     Usage :
 
-    you have $.name in backo and $.firstname in the DB
+    .. code-block:: python
+
+        mydb_handler.register_transformer(RenameTransformer(["age"], ["age_in_db"]))
+        # Will rename $.age into $.age_in_db, for everything (filtering, etc...)
+
+
 
     """
 
@@ -194,6 +208,14 @@ class IgnoreTransformer(Transformer):
         """
         :param db_path: the path in the DB to ignore
         :type db_path: list[ str ]
+
+
+        .. code-block:: python
+
+            my_dbhandler.register_transformer(IgnoreTransformer(["address"]))
+            # Will ignore $.address from the DB
+
+
         """
         fake_key_path = ["_" + str(uuid.uuid4().int >> 64)]
         self.db_path = db_path

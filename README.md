@@ -92,13 +92,14 @@ It translates into Python code using Backo like following:
 
 ```python
 from flask import Flask
-from backo import Item, DBYmlConnector, Backoffice, Collection, Item
+from backo import Item, Backoffice, Collection, Item
+from backo.db import DBYmlConnector
 from backo import Ref, RefsList, DeleteStrategy
 
 # --- Storage for user
-yml_users = DBYmlConnector(path="/path_to_users")
+yml_users = DBYmlConnector("/tmp/users.yml")
 # --- Storage for addresses
-yml_addr = DBYmlConnector(path="/path_to_addresses")
+yml_addr = DBYmlConnector("/tmp/addresses.yml")
 
 # -- Description of the backoffice
 my_backoffice = Backoffice("myApp")
@@ -167,7 +168,7 @@ cat_item = Item(
 
 # --- Storage for cats
 db_for_cats = DBMongoConnector(
-    connection_string="mongodb://localhost:27017/my_database", collection="Cate"
+    "mongodb://localhost:27017/my_database", "Cats_collection"
 )
 
 
@@ -388,7 +389,7 @@ See [routes](#routes-1) for more details
 
 A collection is composed by :
 1. an [Item](#item)
-2. a connector to a DB (DBConnector)
+2. a connector to a DB (DBHandler)
 3. Some rights
 
 > [!IMPORTANT]  
@@ -405,10 +406,11 @@ See [routes](#routes) for resulting RESTful API routes.
 ### example
 
 ```python
-from backo import Collection, DBMongoConnector, current
+from backo import Collection, current
+from backo.db import DBMongoConnector
 
 connector = DBMongoConnector(
-    connection_string="mongodb://localhost:27017/media_library", collection="Books"
+    "mongodb://localhost:27017/media_library", "Books"
 )
 def can_delete(right_name: str, book: Item) -> bool:
     """Check if can delete a book"""
@@ -1581,8 +1583,9 @@ coverage html # report under htmlcov/index.html
 firefox htmlcov/index.html
 
 # docs
+uv sync --all-extras --all-groups
 cd docs
-make html
+uv run make html
 
 ```
 

@@ -1,5 +1,5 @@
 .. toctree::
-   :maxdepth: 3
+   :maxdepth: 5
    :caption: api reference
 
 
@@ -84,7 +84,19 @@ Files storage
 Database
 -----------
 
-.. autoclass:: DBConnector
+
+.. automodule:: backo.db
+   :show-inheritance: 
+
+.. autoclass:: DBHandler
+   :members:
+   :show-inheritance: 
+
+.. autoclass:: DBBackoRedirectConnector
+   :members:
+   :show-inheritance: 
+
+.. autoclass:: DBMemoryConnector
    :members:
    :show-inheritance: 
 
@@ -92,10 +104,37 @@ Database
    :members:
    :show-inheritance: 
 
+.. autoclass:: DBRestFullConnector
+   :members:
+   :show-inheritance: 
+
+.. autoclass:: DBSqlite3Connector
+   :members:
+   :show-inheritance: 
+
+.. autoclass:: DBValkeyConnector
+   :members:
+   :show-inheritance: 
+
 .. autoclass:: DBYmlConnector
    :members:
    :show-inheritance: 
 
-.. autoclass:: DBRestfullConnector
+.. autoclass:: DBYmlDirConnector
+   :members:
+   :show-inheritance: 
+
+Transformers
+^^^^^^^^^^^^
+
+.. autoclass:: Transformer
+   :members:
+   :show-inheritance: 
+
+.. autoclass:: IgnoreTransformer
+   :members:
+   :show-inheritance: 
+
+.. autoclass:: RenameTransformer
    :members:
    :show-inheritance: 

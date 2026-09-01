@@ -30,14 +30,21 @@ class DBValkeyConnector(DBHandler):
     A memory storage for Valkey (redis)
     """
 
-    def __init__(self, db_name: str, connection_string: str, **kwargs):
+    def __init__(self, db_name: str, connection_url: str, **kwargs):
         """
 
-        :param db_name: Name of th DB
+        :param db_name: The name of the database (just a name)
         :type db_name: str
+        :param connection_url: the redis url
+        :type connection_url: str
+
+
+        :param ``**kwargs``:
+            See :py:class:`DBHandler`
+
         """
-        self._connection_string = connection_string
-        self._db = redis.Redis.from_url(self._connection_string, **kwargs)
+        self._connection_url = connection_url
+        self._db = redis.Redis.from_url(self._connection_url, **kwargs)
 
         super().__init__(db_name, **kwargs)
 

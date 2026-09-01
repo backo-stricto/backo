@@ -1,6 +1,6 @@
 # IT department VMs management
 
-This is an example for a backoffice using a Rest API with a `DBRestfullConnector` connector.
+This is an example for a backoffice using a Rest API with a `DBRestFullConnector` connector.
 
 We simulate VMs management for an IT department:
 * `users` :

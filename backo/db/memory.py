@@ -23,8 +23,9 @@ class DBMemoryConnector(DBHandler):
     def __init__(self, db_name: str, **kwargs):
         """
 
-        :param db_name: Name of th DB
-        :type db_name: str
+        :param ``**kwargs``:
+            See :py:class:`DBHandler`
+
         """
 
         self._datas: dict[str, dict] = {}

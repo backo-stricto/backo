@@ -11,7 +11,7 @@ from ...error import DBError
 
 class Filter:
     """
-    Filter transformation for sqlite3
+    Filter transformation to transform a SFilter into a filter for the Database
 
     """
 

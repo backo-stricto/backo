@@ -44,14 +44,6 @@ class Selection(CollectionAddon):
 
     A collection must by registered into a :py:class:`Collection` with :func:`Collection.register_selection`
 
-    :param selectors: The list of paths we went to see in the selection
-    :type selectors: list[str]
-
-    :param ``**kwargs``:
-        - *filter=* ``dict|tuple`` --
-          the filter whe want. See stricto for details
-
-
 
     .. code-block:: python
 
@@ -64,7 +56,7 @@ class Selection(CollectionAddon):
             "author": Ref(collection="authors", field="$.books", required=True),
         })
 
-        database_for_books = DBMongoConnector( connection_string="mongodb://localhost:27017/bookcase" )
+        database_for_books = DBMongoConnector( "mongodb://localhost:27017/bookcase" , "books" )
         books = Collection( "books", book_item, database_for_books )
 
         fb = Selection( [ "$.title", "$.subtitle" ], filter={ "$.author.nationality.a2" : "FR" } )
@@ -74,6 +66,8 @@ class Selection(CollectionAddon):
         books.register_selection("non_french_book", nfb )
 
         # ...
+
+
     """
 
     batch_size: int = 100
@@ -82,13 +76,9 @@ class Selection(CollectionAddon):
     @validation_parameters
     def __init__(self, selectors: list[str] | None = None, **kwargs):
         """
-        Selection constructor
-
         :param ``**kwargs``:
-        - *filter=* ``dict|tuple`` --
-          the filter whe want. See stricto for details
-        - *db_filter=* ``dict`` --
-          The filter to pass to the :py:class:`DBConnector`
+        - *filter=* ``SFilter|Callable`` -- the filter whe want to apply for this selection, or a function wich return a SFilter. See stricto for details
+        - *can_read=* ``bool|Callable`` -- Wo can do the selection.
 
         """
         options = Kparse(kwargs, KPARSE_MODEL)
@@ -300,7 +290,7 @@ class Selection(CollectionAddon):
     def admin_select(self, select_filter: SFilter = None) -> dict:
         """
         Make a select without pagination and without rights on objects.
-        Used by ref and reflists to find reflective datas
+        Used by :py:class:`Ref` and :py:class:`RefsList` to find reflective datas
 
         :param select_filter: the filter, defaults to None
         :type select_filter: SFilter, optional

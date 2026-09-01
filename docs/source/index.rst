@@ -11,6 +11,7 @@ backo (Back Office Low Code) documentation
    :caption: Table of Contents
       
    readme 
+   DB_management
    api_reference
    errors
 

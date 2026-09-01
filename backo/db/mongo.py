@@ -1,6 +1,6 @@
 # pylint: disable=relative-beyond-top-level, too-few-public-methods
 """
-Attribut mapper for mongo db connector
+db connector for Mongodb
 """
 
 from typing import Any
@@ -157,7 +157,7 @@ class IdTransformer(Transformer):
 
 class DBMongoConnector(DBHandler):
     """
-    DBConnector for mongoDB
+    DBConnector for mongoDB databases
 
     """
 
@@ -169,11 +169,15 @@ class DBMongoConnector(DBHandler):
     ):
         """
 
-
         :param connection_string: the connection string to pass to MongoClient()
         :type connection_string: str
         :param collection: The name of the mongo collection
         :type collection: str
+
+
+        :param ``**kwargs``:
+            See :py:class:`DBHandler`
+
         """
 
         self._connection_string = connection_string

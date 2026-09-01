@@ -52,7 +52,12 @@ class DBRestFullConnector(DBHandler):
 
         :param db_name: Name of th DB (only user in messages)
         :type db_name: str
+
+
         :param ``**kwargs``:
+            See :py:class:`DBHandler`
+
+        :Specifics Arguments:
             - *host=* ``str`` -- The API host
             - *port=* ``int`` -- The API port
             - *tls=* ``bool`` -- Whether to use TLS (HTTPS) for API requests
@@ -62,6 +67,7 @@ class DBRestFullConnector(DBHandler):
             - *password=* ``str`` -- Password for basic authentication (optional)
             - *auth_token=* ``str`` -- Bearer token for authentication (optional)
             - *restriction=* ``Callable`` -- Restriction filter function (not implemented)
+
 
         """
         options = Kparse(kwargs, KPARSE_MODEL)

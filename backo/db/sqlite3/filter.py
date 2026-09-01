@@ -16,11 +16,18 @@ from .pragma import get_sqlite3_type_from_backo
 
 class SQlite3Filter(Filter):
     """
-    Filter transformation for sqlite3
+    Filtering for sqlite3
 
     """
 
     def __init__(self, main_table_name: str, get_transformer: Callable):
+        """
+
+        :param main_table_name: The main table
+        :type main_table_name: str
+        :param get_transformer: the function to retrieve :py:class:`Transformer`
+        :type get_transformer: Callable
+        """
 
         self._main_table_name = main_table_name
         self.values = []

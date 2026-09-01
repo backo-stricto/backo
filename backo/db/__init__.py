@@ -1,5 +1,9 @@
 """
-all imports
+Database Management.
+
+This is the way to connect backo to databases.
+It use :py:class:`DBHandler` for that.
+
 """
 
 from .generic.db_handler import DBHandler

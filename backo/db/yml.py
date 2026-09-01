@@ -1,6 +1,6 @@
 # pylint: disable=relative-beyond-top-level
 """
-Yaml connector as a directory
+Yaml connector
 (each item is in one file)
 """
 
@@ -31,7 +31,7 @@ KPARSE_MODEL = {
 class DBYmlConnector(DBHandler):
     """
     Yaml connector in a file
-    (each item in the yaml file, in a sub element)
+    (each item in the yaml file, in a sub element or array)
     """
 
     def __init__(self, filename: str, **kwargs):
@@ -39,6 +39,14 @@ class DBYmlConnector(DBHandler):
 
         :param filename: The yml file
         :type filename: str
+
+        :param ``**kwargs``:
+            See :py:class:`DBHandler`
+
+        :Specifics Arguments:
+            * *db_path* (``list[ str ]``) -- the sub path in the yaml file to store items. by default `[]`
+            * *by_id* (``bool``) -- if the store is a dict by id (or a list). By default `True`
+
         """
         self._filename = filename
 

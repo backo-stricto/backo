@@ -1,6 +1,6 @@
 # pylint: disable=relative-beyond-top-level, too-few-public-methods
 """
-Attribut mapper for mongo db connector
+DBHandler for Sqlite3
 """
 
 from typing import Any
@@ -41,8 +41,6 @@ class DBSqlite3Connector(DBHandler):
 
         :param db_file: the filename where the DB is stored
         :type db_file: str
-        :param item_mapper: a specific ItemMapper, defaults to Sqlite3ItemMapper( default_attribute_mapper=Sqlite3AttributeMapper() )
-        :type item_mapper: Sqlite3ItemMapper, optional
         """
 
         self._db_file = db_file

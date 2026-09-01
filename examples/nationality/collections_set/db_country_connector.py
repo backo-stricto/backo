@@ -1,5 +1,5 @@
 """
-Module using DBRestfullConnector to connect to restcountries.com API and retrieve country data.
+Module using DBRestFullConnector to connect to restcountries.com API and retrieve country data.
 
 Note: we assume that the signature of some inherited methods differ from the mother class
 """

@@ -27,15 +27,14 @@ KPARSE_MODEL = {"restriction": Callable}
 class DBHandler(ABC):  # pylint: disable=too-many-instance-attributes
     """Database Connector
 
-    This is the way to save / store / retrieve objects
-
+    This is the way to save / store / retrieve objects in different databases
+    Eache Collection can be in a separate database. The connector is for each
+    :py:class:`backo.Collection`
 
     """
 
     def __init__(self, db_name: str, **kwargs):
         """
-
-
         :param db_name: The name of the database (it is just a name)
         :type db_name: str
         """
@@ -66,10 +65,10 @@ class DBHandler(ABC):  # pylint: disable=too-many-instance-attributes
         self, transformer: Transformer, table_name: str = None
     ) -> None:
         """
-        Register a transformer
+        Register a :py:class:`Transformer`
 
         :param transformer: the transformer to register
-        :type transformer: Transformer
+        :type transformer: :py:class:`Transformer`
         :param table_name: The table_name, defaults to None
         :type table_name: str, optional
         """
@@ -81,7 +80,7 @@ class DBHandler(ABC):  # pylint: disable=too-many-instance-attributes
 
     def register_type_transformer(self, transformer: Transformer) -> None:
         """
-        Register a transformer for type (backo type, like String, Int...)
+        Register a :py:class:`Transformer` for type (backo type, like String, Int...)
 
         :param transformer: the transformer
         :type transformer: Transformer

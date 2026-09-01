@@ -23,7 +23,7 @@ log = log_system.get_or_create_logger("DBYmlDirConnector")
 class DBYmlDirConnector(DBHandler):
     """
     Yaml connector as a directory
-    (each item is in one file)
+    (each item is in one file in the directory)
     """
 
     def __init__(self, directory: str, **kwargs):
@@ -31,9 +31,10 @@ class DBYmlDirConnector(DBHandler):
 
         :param directory: the directory to store items
         :type directory: str
-        :param item_handler: an ItemMapper, defaults to ItemMapper()
-        :type item_handler: ItemMapper, optional
-        :raises DBError: If the directory doesnt exist or is not writable
+
+        :param ``**kwargs``:
+            See :py:class:`DBHandler`
+
         """
 
         self._dir = directory

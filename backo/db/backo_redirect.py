@@ -12,12 +12,18 @@ from .generic.interface import SelectResponse
 class DBBackoRedirectConnector(
     DBRestFullConnector
 ):  # pylint: disable=too-many-instance-attributes
-    """An example of a rest API connector"""
+    """
+    Redirection of this collection into another backo server (with same API route structure)
+    """
 
     _remote_collection: str = None
 
     def __init__(self, remote_collection: str, **kwargs):
-        """constructor"""
+        """
+
+        :param remote_collection: The name of the remote collection
+        :type remote_collection: str
+        """
         self._remote_collection = remote_collection
         DBRestFullConnector.__init__(self, f"redirect_{remote_collection}", **kwargs)
 

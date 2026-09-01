@@ -78,7 +78,7 @@ class Collection:
 
     A collection is the main object in backo. It contains
         - an :py:class:`Item` = the description of the object structure
-        - an :py:class:`DBHandler` = the database connector to say how and where to save the object
+        - an :py:class:`db.DBHandler` = the database connector to say how and where to save the object
         - some :py:class:`Selection` = some preset *select* for this collection
         - some :py:class:`Action` = a list of actions to do on this collection
 
@@ -106,7 +106,8 @@ class Collection:
 
     .. code-block:: python
 
-        from backo import Item, Collection, Backoffice, , DBMongoConnector
+        from backo import Item, Collection, Backoffice
+        from backo.db import DBMongoConnector
 
         # example
         book_item = Item({
@@ -116,7 +117,7 @@ class Collection:
         })
 
 
-        database_for_books = DBMongoConnector( connection_string="mongodb://localhost:27017/bookcase" )
+        database_for_books = DBMongoConnector( "mongodb://localhost:27017/bookcase", "books" )
         books = Collection( "books", book_item, database_for_books )
 
         my_bookstore = Backoffice("bookstore")

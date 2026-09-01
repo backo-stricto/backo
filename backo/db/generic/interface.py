@@ -1,5 +1,5 @@
 """
-Interface between backo and DBHandlers
+Interface between backo and py:class:`db.DBHandler`
 """
 
 
@@ -9,6 +9,13 @@ class SelectResponse:
     """
 
     def __init__(self, page_size: int, num_of_element_to_skip: int):
+        """
+
+        :param page_size: The page size used in the response
+        :type page_size: int
+        :param num_of_element_to_skip: the offset in the DB
+        :type num_of_element_to_skip: int
+        """
 
         self.items: list[dict] = []
         self.total: int = None
