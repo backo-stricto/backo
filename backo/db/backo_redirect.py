@@ -59,7 +59,7 @@ class DBBackoRedirectConnector(
 
     def select(
         self,
-        select_filter: SFilter,
+        select_filter: SFilter = None,
         projection: list[str] = None,
         page_size=0,
         num_of_element_to_skip=0,

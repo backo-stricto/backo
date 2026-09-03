@@ -20,15 +20,15 @@ class Filter:
         self.model = None
         self.get_transformer = get_transformer
 
-    def set_model(self, scheme: dict) -> None:
+    def set_model(self, model: dict) -> None:
         """
         Set the model (meta() to the filter), to adapt
         the filtering on types of objects
 
-        :param scheme: scheme
-        :type scheme: dict
+        :param model: scheme
+        :type model: dict
         """
-        self.model = scheme["item"]
+        self.model = model
 
     def _get_model_by_path(self, path: str, key_path: list[str], model: dict) -> dict:
         """

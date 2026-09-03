@@ -64,6 +64,10 @@ class SQlite3Filter(Filter):
         if sf._operator == Operator.NOT:
             return f"( NOT ( {self._sfilter_to_db_filter(sf._value)} ) )"
 
+        if sf._operator == Operator.TRUE:
+            self.values.append(1)
+            return "( 1 == ? )"
+
         if not sf._path:
             raise DBError("Cannot interpret empty filter {0}", repr(sf))
 
@@ -137,6 +141,9 @@ class SQlite3Filter(Filter):
         :return: the mongo query
         :rtype: dict
         """
+        if not backo_filter:
+            return (None, ())
+
         self.values = []
         where_conditions = self._sfilter_to_db_filter(backo_filter)
         return (where_conditions, tuple(self.values))

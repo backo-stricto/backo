@@ -129,13 +129,6 @@ class DBYmlConnector(DBHandler):
 
         :raises DBError: if the file is not available
         """
-        try:
-            f = open(  # pylint: disable=consider-using-with
-                self._filename, mode="r", encoding="utf-8"
-            )
-            f.close()
-        except Exception as e:
-            raise DBError('Yaml file error "{0}"', self._filename) from e
 
     def close(self) -> None:
         """No close"""
@@ -377,7 +370,7 @@ class DBYmlConnector(DBHandler):
 
     def select(  # pylint: disable=unused-argument
         self,
-        select_filter: SFilter,
+        select_filter: SFilter = None,
         projection: list[str] = [],
         page_size: int = 0,
         num_of_element_to_skip: int = 0,
@@ -408,7 +401,7 @@ class DBYmlConnector(DBHandler):
                     )
                 idx = 0
                 for _id, o in db.items():
-                    o[_id] = _id
+                    o["_id"] = _id
                     idx += 1
                     # keep only elements in the windows [ num_of_element_to_skip, page_size + num_of_element_to_skip ]
                     if idx < num_of_element_to_skip or (

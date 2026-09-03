@@ -43,40 +43,100 @@ class DBHandler(ABC):  # pylint: disable=too-many-instance-attributes
         self._table_name = None
         self.model = None
         self.filter: Filter = None
-        self.transformers: dict[str, dict[str, Transformer]] = {}
-        self.type_transformers: dict[str, Transformer] = {}
+
+        self.transformers_per_db_path: dict[str, tuple[list[str], Transformer]] = {}
+        self.transformers_per_key_path: dict[str, tuple[list[str], Transformer]] = {}
+
+        self._temp_transformers: list[Transformer] = []
+        self._temp_type_transformers: list[Transformer] = []
 
         options = Kparse(kwargs, KPARSE_MODEL)
 
         self.restriction_filter = options.get("restriction")
 
-    def set_model(self, scheme: dict) -> None:
+    def set_model(self, model: dict) -> None:
         """
         Register the model (backo meta() into the connector)
 
-        :param scheme: backo meta data
-        :type scheme: dict
+        :param model: Item model
+        :type model: dict
         """
-        self.model = scheme["item"]
+        self.model = model
         if self.filter:
-            self.filter.set_model(scheme)
+            self.filter.set_model(model)
 
-    def register_transformer(
-        self, transformer: Transformer, table_name: str = None
+        # Re-arange transformer according to the model
+        for transformer in self._temp_transformers:
+            self._reorder_transformers_per_key(transformer)
+        self._temp_transformers.clear()
+
+        # Re-arange type transformer according to the model
+        for transformer in self._temp_type_transformers:
+            self._reorder_type_transformers_per_key(transformer, [], model)
+        self._temp_type_transformers.clear()
+
+    def _reorder_transformers_per_key(self, transformer: Transformer) -> None:
+        # Add the transformer indexed by key_path
+        key_path_string = None
+        if transformer.key_path:
+            key_path_string = "_".join(transformer.key_path)
+        if key_path_string:
+            self.transformers_per_key_path[key_path_string] = (
+                transformer.key_path,
+                transformer,
+            )
+
+        # Add the transformer indexed by db_path
+        db_path_string = transformer.get_db_path()
+        if db_path_string:
+            self.transformers_per_db_path["_".join(db_path_string)] = (
+                db_path_string,
+                transformer,
+            )
+
+    def _reorder_type_transformers_per_key(
+        self, transformer: Transformer, key_path: list[str], model: dict
     ) -> None:
+
+        if key_path and transformer.backo_type in model["types"]:
+            self.transformers_per_key_path["_".join(key_path)] = (key_path, transformer)
+            db_path = transformer.get_db_path(key_path)
+            if db_path:
+                self.transformers_per_db_path["_".join(db_path)] = (
+                    db_path,
+                    transformer,
+                )
+
+        if "sub_scheme" in model:
+            for k, v in model["sub_scheme"].items():
+                new_key_path = key_path.copy()
+                new_key_path.append(k)
+                self._reorder_type_transformers_per_key(transformer, new_key_path, v)
+            return
+
+        # A list
+        if "sub_type" in model:
+            sub_model = model["sub_type"]
+            new_key_path = key_path.copy()
+            new_key_path.append("_")
+            self._reorder_type_transformers_per_key(
+                transformer, new_key_path, sub_model
+            )
+            return
+
+    def register_transformer(self, transformer: Transformer) -> None:
         """
         Register a :py:class:`Transformer`
 
         :param transformer: the transformer to register
         :type transformer: :py:class:`Transformer`
-        :param table_name: The table_name, defaults to None
-        :type table_name: str, optional
         """
-        t_name = self._table_name if table_name is None else table_name
-
-        if t_name not in self.transformers:
-            self.transformers[t_name] = {}
-        self.transformers[t_name]["_".join(transformer.key_path)] = transformer
+        # Already a model : store the transformer by key
+        if self.model:
+            self._reorder_transformers_per_key(transformer)
+            return
+        # Keep it temporary waiting for model to store transformer
+        self._temp_transformers.append(transformer)
 
     def register_type_transformer(self, transformer: Transformer) -> None:
         """
@@ -85,66 +145,65 @@ class DBHandler(ABC):  # pylint: disable=too-many-instance-attributes
         :param transformer: the transformer
         :type transformer: Transformer
         """
-        self.type_transformers[transformer.backo_type] = transformer
+
+        if self.model:
+            self._reorder_type_transformers_per_key(transformer, [], self.model)
+            return
+        # Keep it temporary waiting for model to store transformer
+        self._temp_type_transformers.append(transformer)
 
     def _transform_on_load(self, loaded_object: dict):
-        for transformers in self.transformers.values():
-            for transformer in transformers.values():
+
+        for db_path, transformer in self.transformers_per_db_path.values():
+            if transformer.path_exists_in_object(db_path, loaded_object):
                 try:
-                    db_path = transformer.get_db_path()
-                    if transformer.path_exists_in_object(db_path, loaded_object):
-                        transformer.on_load(loaded_object, db_path)
+                    transformer.on_load(loaded_object, db_path)
                 except Exception as e:
                     raise DBError("Transformer on load error") from e
 
     def _transform_on_create(self, obj: dict):
-        for transformers in self.transformers.values():
-            for transformer in transformers.values():
+
+        for key_path, transformer in self.transformers_per_key_path.values():
+            if transformer.path_exists_in_object(key_path, obj):
                 try:
-                    if transformer.path_exists_in_object(transformer.key_path, obj):
-                        transformer.on_create(obj, transformer.key_path)
+                    transformer.on_create(obj, key_path)
                 except Exception as e:
-                    raise DBError("Transformer on create error") from e
+                    raise DBError("Transformer on_create error") from e
 
     def _transform_on_save(self, obj: dict):
-        for transformers in self.transformers.values():
-            for transformer in transformers.values():
-                try:
-                    if transformer.path_exists_in_object(transformer.key_path, obj):
-                        transformer.on_save(obj, transformer.key_path)
-                except Exception as e:
-                    raise DBError("Transformer on save error") from e
 
-    def get_transformer(
-        self, key_path: list[str], table_name: str = None, backo_types: list[str] = None
+        for key_path, transformer in self.transformers_per_key_path.values():
+            if transformer.path_exists_in_object(key_path, obj):
+                try:
+                    transformer.on_save(obj, key_path)
+                except Exception as e:
+                    raise DBError("Transformer on_save error") from e
+
+    def get_transformer_by_key(
+        self, key_path: list[str] = None, db_path: list[str] = None
     ) -> Transformer:
         """
-        Get a transformer for this key_path and the table or type
+        Get a transformer by key_path or by _db_path
 
-        :param key_path: the key in the object (like [ 'address', 'street' ])
-        :type key_path: list[str]
-        :param table_name: the table_name, defaults to None
-        :type table_name: str, optional
-        :param backo_types: types of the key, defaults to None
-        :type backo_types: list[str], optional
-        :return: _description_A transformer or None
+        :param key_path: _description_, defaults to None
+        :type key_path: list[str], optional
+        :param db_path: _description_, defaults to None
+        :type db_path: list[str], optional
+        :return: _description_
         :rtype: Transformer
         """
-
-        if backo_types:
-            for backo_type in backo_types:
-                if backo_type in self.type_transformers:
-                    return self.type_transformers[backo_type]
-
-        t_name = self._table_name if table_name is None else table_name
-        if t_name not in self.transformers:
+        # print(f'get_trans_by_key {key_path} {db_path} {self.transformers_per_key_path}')
+        if key_path:
+            key_path_string = "_".join(key_path)
+            if key_path_string in self.transformers_per_key_path:
+                return self.transformers_per_key_path[key_path_string][1]
             return None
-        t_path = self.transformers[t_name]
+        if db_path:
+            db_path_string = "_".join(db_path)
+            if db_path_string in self.transformers_per_db_path:
+                return self.transformers_per_db_path[db_path_string][1]
 
-        key = "_".join(key_path)
-        if key not in t_path:
-            return None
-        return t_path[key]
+        return None
 
     def check_structure(self, _update_directly=False) -> tuple[bool, str]:
         """
@@ -253,7 +312,7 @@ class DBHandler(ABC):  # pylint: disable=too-many-instance-attributes
     @abstractmethod
     def select(  # pylint: disable=unused-argument
         self,
-        select_filter: SFilter,
+        select_filter: SFilter = None,
         projection: list[str] = None,
         page_size: int = 0,
         num_of_element_to_skip: int = 0,

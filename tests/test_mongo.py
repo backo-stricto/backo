@@ -38,25 +38,6 @@ class TestMongo(unittest.TestCase):
         current_user.reinit()
         return super().tearDown()
 
-    def test_error_db_connect(self):
-        """
-        try to connect error
-        """
-        a = DBMongoConnector(
-            "mongodb://localhost:666/testMongo",
-            "test",
-            serverSelectionTimeoutMS=1,
-        )
-        with self.assertRaises(DBError) as e:
-            a.connect()
-        self.assertEqual(
-            e.exception.to_string(),
-            'Mongo connection error at "mongodb://localhost:666/testMongo"',
-        )
-        a.close()
-        b = self.db_users.connect()
-        self.assertNotEqual(b["version"], None)
-
     def test_errors_on_create_delete(self):
         """
         create

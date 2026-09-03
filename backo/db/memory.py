@@ -89,7 +89,7 @@ class DBMemoryConnector(DBHandler):
             raise NotFoundError('_id "{0}" not found in "{1}"', _id, self._name)
 
         d = copy.deepcopy(o)
-        d[_id] = _id
+        d["_id"] = _id
 
         # Do all transformations on the object
         self._transform_on_save(d)
@@ -100,7 +100,7 @@ class DBMemoryConnector(DBHandler):
 
     def select(  # pylint: disable=unused-argument
         self,
-        select_filter: SFilter,
+        select_filter: SFilter = None,
         projection: list[str] = None,
         page_size: int = 0,
         num_of_element_to_skip: int = 0,

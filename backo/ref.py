@@ -361,6 +361,7 @@ class Ref(String):  # pylint: disable=too-many-instance-attributes
         # try to load the coresponding field
         other = me._coll_ref.new()
         other.load(target_id)
+
         # try:
         # except Exception as e:
         #     log.warning(f'{self.path_name()} : load {target_id} in collection {me._collection} return an error ({e})')

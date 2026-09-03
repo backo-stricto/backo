@@ -6,6 +6,10 @@ Attribut mapper for mongo db connector
 from typing import Self
 from ...error import DBError
 
+from ...log import log_system
+
+log = log_system.get_or_create_logger("DBSqlite3Connector")
+
 SQL_TYPE_MAPPER = {
     "String": "TEXT",
     "Int": "INTEGER",
@@ -114,6 +118,8 @@ class SqlFieldDescription:
             f += " NOT NULL"
         if self._pk:
             f += " PRIMARY KEY AUTOINCREMENT"
+        if self._dflt_value:
+            f += f" DEFAULT {self._dflt_value}"
         if self._ref_table:
             f += f",\r\n  FOREIGN KEY {self.db_path} REFERENCES {self._ref_table}({self._ref_field})"
 
@@ -129,6 +135,8 @@ class SqlFieldDescription:
         f = f"{self.db_path} {self._sql_type}"
         if self._not_null:
             f += " NOT NULL"
+        if self._dflt_value:
+            f += f" DEFAULT {self._dflt_value}"
         if self._pk:
             f += " PRIMARY KEY AUTOINCREMENT"
         return f
@@ -160,6 +168,8 @@ class SqlFieldDescription:
         if self._ref_table != other._ref_table:
             return False
         if self._ref_field != other._ref_field:
+            return False
+        if self._dflt_value != other._dflt_value:
             return False
         return True
 
@@ -202,6 +212,8 @@ class SqlFieldDescription:
             self._sql_type = get_sqlite3_type_from_backo(shema["types"])
             if shema["required"] is True:
                 self._not_null = True
+            if "default" in shema:
+                self._dflt_value = str(shema["default"])
 
 
 class TablePragma:

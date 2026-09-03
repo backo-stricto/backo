@@ -3,6 +3,7 @@
 Attribut mapper for sql db connector
 """
 
+import copy
 from ..generic.transformer import Transformer
 
 
@@ -27,6 +28,21 @@ class BooleanTransformer(Transformer):
         """
         db_path = "_".join(_key_path)
         _loaded_object[db_path] = bool(_loaded_object[db_path])
+
+    def get_db_model(self, model: dict, _key_path: list[str] = None) -> list[str]:
+        """
+        Return an adaptation of the model to the Ddatabase
+
+        :return: A modified
+        :rtype: dict
+        """
+        db_model = copy.deepcopy(model)
+        if "default" in db_model:
+            if db_model["default"] is True:
+                db_model["default"] = 1
+            else:
+                db_model["default"] = 0
+        return db_model
 
 
 class IdTransformer(Transformer):

@@ -170,7 +170,7 @@ class Collection:
 
         self._selections = {}
 
-        db_handler.set_model(self.get_meta())
+        db_handler.set_model(self.model.get_schema())
 
         # Adding the "_all" selection
         can_read = self._permissions.get("read", True)

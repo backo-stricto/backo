@@ -3,7 +3,7 @@ Attribut transformer
 """
 
 import uuid
-
+from typing import Any
 from jsonpath import patch, findall
 
 
@@ -58,15 +58,15 @@ class Transformer:
         jpath = f"$.{'.'.join(searching_path)}"
         return bool(findall(jpath, obj))
 
-    def on_load(self, _loaded_object: dict, _key_path: list[str]):
+    def on_load(self, _loaded_object: dict, _db_path: list[str]):
         """
         Called when the object is read from the DB.
         You can do some changement into the object (delete keys, modifications, ...)
 
         :param _loaded_object: the lodaded object
         :type _loaded_object: dict
-        :param _key_path: a key path as list
-        :type _key_path: list[str]
+        :param _db_path: a key path as list
+        :type _db_path: list[str]
         """
         return
 
@@ -94,14 +94,37 @@ class Transformer:
         """
         return
 
-    def get_db_path(self) -> list[str]:
+    def get_db_path(self, _key_path: list[str] = None) -> list[str]:
         """
-        Return the db_path (by default = sekf.key_path )
+        Return the db_path (by default = sekf.key_path or the _key_path given in case of a Type Transformer )
 
         :return: the key path associated to this transformer
         :rtype: list[str]
         """
-        return self.key_path
+        return self.key_path if self.key_path else _key_path
+
+    def get_db_model(self, model: dict, _key_path: list[str] = None) -> list[str]:
+        """
+        Return an adaptation of the model to the Ddatabase
+
+        :return: A modified
+        :rtype: dict
+        """
+        return model
+
+    def transform_value_to_db(self, v: Any) -> Any:
+        """
+        Transform its value on save, create, filter
+
+        """
+        return v
+
+    def transform_value_from_db(self, v: Any) -> Any:
+        """
+        Transform its value on load
+
+        """
+        return v
 
     def must_be_store_in_db(self) -> bool:
         """
@@ -188,7 +211,7 @@ class RenameTransformer(Transformer):
             obj,
         )
 
-    def get_db_path(self) -> list[str]:
+    def get_db_path(self, _key_path: list[str] = None) -> list[str]:
         """
         Return the key_path
 
@@ -236,7 +259,7 @@ class IgnoreTransformer(Transformer):
         """
         patch.apply([{"op": "remove", "path": self.db_path_string}], loaded_object)
 
-    def get_db_path(self) -> list[str]:
+    def get_db_path(self, _key_path: list[str] = None) -> list[str]:
         """
         Return the key_path
 

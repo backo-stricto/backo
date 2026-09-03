@@ -44,7 +44,9 @@ class DBValkeyConnector(DBHandler):
 
         """
         self._connection_url = connection_url
-        self._db = redis.Redis.from_url(self._connection_url, **kwargs)
+        self._db = redis.Redis.from_url(
+            self._connection_url, decode_responses=True, **kwargs
+        )
 
         super().__init__(db_name, **kwargs)
 
@@ -98,7 +100,7 @@ class DBValkeyConnector(DBHandler):
             raise NotFoundError('_id "{0}" not found in "{1}"', _id, self._name)
 
         d = json.loads(d_as_string)
-        d["_id"] = _id
+        d["_id"] = str(_id)
         # Do all transformations on the object
         self._transform_on_load(d)
 
@@ -138,7 +140,7 @@ class DBValkeyConnector(DBHandler):
 
     def select(  # pylint: disable=unused-argument
         self,
-        select_filter: SFilter,
+        select_filter: SFilter = None,
         projection: list[str] = None,
         page_size: int = 0,
         num_of_element_to_skip: int = 0,
@@ -173,7 +175,7 @@ class DBValkeyConnector(DBHandler):
                 num_of_element_to_skip and idx > (page_size + num_of_element_to_skip)
             ):
                 continue
-            retrieved_ids.append(_id)
+            retrieved_ids.append(str(_id))
             pipe.get(_id)
 
         values_as_string = pipe.execute()
@@ -187,7 +189,7 @@ class DBValkeyConnector(DBHandler):
 
             response.items.append(d)
 
-        log.debug("Select return {response}")
+        log.debug(f"Select return {response}")
 
         return response
 
@@ -195,10 +197,11 @@ class DBValkeyConnector(DBHandler):
         """create"""
         _id = self.generate_id(o)
         d = copy.deepcopy(o)
-
+        if "_id" in d:
+            del d["_id"]
         # Do all transformations on the object
         self._transform_on_create(d)
 
-        log.debug("Save {_id}")
+        log.debug("Create {_id} = {d}")
         self._db.set(_id, json.dumps(d))
         return _id
