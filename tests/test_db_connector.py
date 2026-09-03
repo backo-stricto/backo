@@ -23,8 +23,8 @@ from backo import (
     RefsList,
     DeleteStrategy,
     current_user,
-    log_system,
-    LogLevel,
+    #log_system,
+    #LogLevel,
 )
 from backo import SFilter, Operator
 from backo.db import (
@@ -120,7 +120,7 @@ class TestDBConnector(unittest.TestCase):
         """
         init this tests
         """
-        log = log_system.get_or_create_logger("DBSqlite3Connector")
+        # log = log_system.get_or_create_logger("DBSqlite3Connector")
         # log.setLevel(LogLevel.DEBUG)
 
         super().__init__(*args, **kwargs)
