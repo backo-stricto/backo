@@ -21,7 +21,13 @@ It aims at providing a simple and efficient way to create a backend application 
 ## Installation
 
 ```bash
+
+# basic
 pip install backo
+
+# With mongo
+pip install backo[mongo]
+
 ```
 
 ## Quickstart
