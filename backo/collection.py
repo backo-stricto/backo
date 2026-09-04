@@ -347,7 +347,7 @@ class Collection:
 
         """
 
-        if selection_name in self._actions:
+        if selection_name in self._selections:
             raise SSyntaxError(
                 'Collection {0} register_selection : selection "{1}" already registered',
                 self.name,
@@ -714,6 +714,15 @@ class Collection:
             collection_blueprint.view_functions[f"{self.name}.do_selection"] = (
                 self.do_selection
             )
+            log.info(
+                "Add route GET selections count /_selections_count/<string:_selection_name>"
+            )
+            collection_blueprint.add_url_rule(
+                "/_selections_total/<string:_selection_name>",
+                "do_count",
+                methods=["GET"],
+            )
+            collection_blueprint.view_functions[f"{self.name}.do_count"] = self.do_count
             log.info("Add route POST selections /_selections/<string:_selection_name>")
             collection_blueprint.add_url_rule(
                 "/_selections/<string:_selection_name>",
@@ -722,6 +731,17 @@ class Collection:
             )
             collection_blueprint.view_functions[f"{self.name}.do_post_selection"] = (
                 self.do_post_selection
+            )
+            log.info(
+                "Add route POST selections count /_selections_count/<string:_selection_name>"
+            )
+            collection_blueprint.add_url_rule(
+                "/_selections_total/<string:_selection_name>",
+                "do_post_count",
+                methods=["POST"],
+            )
+            collection_blueprint.view_functions[f"{self.name}.do_post_count"] = (
+                self.do_post_count
             )
             self._openapi.add_selections(
                 f"/{self.name}/_selections",
@@ -892,6 +912,30 @@ class Collection:
 
         return (json.dumps(result, cls=StrictoEncoder), 200)
 
+    @error_to_http_handler
+    def do_count(self, _selection_name: str):
+        """
+        Do a count of total objects on a SFilter
+        This route works with the selection route
+
+        :param _selection_name: The name of the selection
+        :type _selection_name: str
+        :raises Error: _description_
+        :return: _description_
+        :rtype: _type_
+        """
+
+        if _selection_name not in self._selections:
+            raise SSyntaxError(
+                "Collection {0} has no selection {0}", self.name, _selection_name
+            )
+
+        match_filter: SFilter = multidict_to_sfilter(request.args)
+        count = self._selections[_selection_name].count(match_filter)
+
+        log.debug(f"count in {self.name}/{_selection_name} {match_filter} -> {count}")
+        return (count, 200)
+
     @check_content_type
     @error_to_http_handler
     def do_post_selection(self, _selection_name: str):
@@ -924,6 +968,33 @@ class Collection:
         )
 
         return (json.dumps(result, cls=StrictoEncoder), 200)
+
+    @check_content_type
+    @error_to_http_handler
+    def do_post_count(self, _selection_name: str):
+        """Do a count on a selection with filter given in post
+
+        :param _selection_name: The name of the selection
+        :type _selection_name: str
+        :raises Error: _description_
+        :return: _description_
+        :rtype: _type_
+        """
+
+        if _selection_name not in self._selections:
+            raise SSyntaxError(
+                "Collection {0} has no selection {0}", self.name, _selection_name
+            )
+
+        request_content = request_to_object(request)
+        log.debug(f"http post selection {_selection_name} content {request_content}")
+
+        match_filter: SFilter = dict_to_sfilter(request_content)
+        count = self._selections[_selection_name].select(match_filter)
+
+        log.debug(f"count in {self.name}/{_selection_name} {match_filter} -> {count}")
+
+        return (count, 200)
 
     @check_content_type
     @error_to_http_handler

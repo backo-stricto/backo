@@ -318,16 +318,18 @@ class Selection(CollectionAddon):
         """
 
         # build the filter with filter given and self._filter
-
         filter_object: SFilter = self._merge_filters(select_filter)
+
+        response = SelectResponse(0, 0)
 
         num_of_element_to_skip = 0
         idx_of_available_item = 0
 
         while True:
             # Do the DB selection without pagination
+
             resp: SelectResponse = self.collection.db_handler.select(
-                filter_object,
+                filter_object, self._selectors, self.batch_size, num_of_element_to_skip
             )
             if not isinstance(resp, SelectResponse):
                 raise DBError(
@@ -350,6 +352,15 @@ class Selection(CollectionAddon):
                     continue
 
                 idx_of_available_item += 1
+                if idx_of_available_item <= response.num_of_element_to_skip:
+                    continue
+
+                if response.page_size and len(response.items) >= response.page_size:
+                    break
+
+            # get less elements than asked
+            if len(resp.items) < self.batch_size:
+                break
 
             # read the next group of elements
             num_of_element_to_skip += self.batch_size

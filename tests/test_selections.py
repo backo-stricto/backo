@@ -36,10 +36,6 @@ class TestSelections(unittest.TestCase):
         # --- DB for user
         self.yml_users = DBYmlDirConnector(YML_DIR)
         self.yml_users.generate_id = lambda o: f"User_{o["name"]}_{o["surname"]}"
-        # self.yml_users = DBYmlConnector(path=YML_DIR)
-        # self.yml_users.generate_id = (
-        #     lambda o: "User_" + o.name.get_value() + "_" + o.surname.get_value()
-        # )
 
         self.backo = Backoffice("myApp")
         self.users = Collection(
@@ -81,6 +77,9 @@ class TestSelections(unittest.TestCase):
 
         rep = self.users._selections["_all"].select()
         self.assertEqual(rep["total"], 3)
+
+        count = self.users._selections["_all"].count()
+        self.assertEqual(count, 3)
 
         rep = self.users._selections["_all"].select(
             SFilter("$.name", Operator.EQ, "bert2")
@@ -151,3 +150,60 @@ class TestSelections(unittest.TestCase):
         )
         self.assertEqual(rep["total"], 1)
         self.assertEqual(rep["result"][0], ["User_bert2_bert2", "bert2", True])
+
+    def test_pagination_selection_with_filters(self):
+        """
+        test selection with multi projections
+        """
+
+        self.yml_users.drop()
+        for i in range(0, 55):
+            u = self.backo.users.create(
+                {
+                    "name": f"paul_{i:03d}",
+                    "surname": f"bebert_{i:03d}",
+                    "male": bool(i % 2),
+                }
+            )
+            self.assertEqual(u._id, f"User_paul_{i:03d}_bebert_{i:03d}")
+
+        my_selection = Selection(
+            ["$.name", "$.male"], filter=SFilter("$.name", Operator.REG, r"paul")
+        )
+
+        self.users.register_selection("ms", my_selection)
+
+        rep = self.users._selections["ms"].select()
+        self.assertEqual(rep["total"], 55)
+        count = self.users._selections["ms"].count()
+        self.assertEqual(count, 55)
+
+        rep = self.users._selections["ms"].select(None, 10, 0)
+        self.assertEqual(rep["total"], None)
+        self.assertEqual(len(rep["result"]), 10)
+
+        self.assertEqual(rep["result"][0][0], "User_paul_000_bebert_000")
+        self.assertEqual(rep["result"][9][0], "User_paul_009_bebert_009")
+
+        rep = self.users._selections["ms"].select(None, 10, 10)
+        self.assertEqual(rep["total"], None)
+        self.assertEqual(len(rep["result"]), 10)
+        self.assertEqual(rep["result"][0][0], "User_paul_010_bebert_010")
+        self.assertEqual(rep["result"][9][0], "User_paul_019_bebert_019")
+
+        rep = self.users._selections["ms"].select(None, 10, 50)
+        self.assertEqual(rep["total"], None)
+        self.assertEqual(len(rep["result"]), 5)
+        self.assertEqual(rep["result"][0][0], "User_paul_050_bebert_050")
+        self.assertEqual(rep["result"][4][0], "User_paul_054_bebert_054")
+
+        rep = self.users._selections["ms"].select(
+            SFilter("$.male", Operator.EQ, True), 10, 0
+        )
+        self.assertEqual(rep["total"], None)
+        self.assertEqual(len(rep["result"]), 10)
+        count = self.users._selections["ms"].count(SFilter("$.male", Operator.EQ, True))
+        self.assertEqual(count, 27)
+
+        self.assertEqual(rep["result"][0][0], "User_paul_001_bebert_001")
+        self.assertEqual(rep["result"][9][0], "User_paul_019_bebert_019")

@@ -966,6 +966,13 @@ is used to call an action.
 | <kbd>GET</kbd>  | \<my-app-name\>/\<collection name\>/_selections/\<selection_name\> | do the selection                     |
 | <kbd>POST</kbd> | \<my-app-name\>/\<collection name\>/_selections/\<selection_name\> | do the selection with complex filter |
 
+And for counting the total of objects
+
+| Method          | Route                                                              | Description                          |
+| --------------- | ------------------------------------------------------------------ | ------------------------------------ |
+| <kbd>GET</kbd>  | \<my-app-name\>/\<collection name\>/_selections_total/\<selection_name\> | get the total for the selection |
+| <kbd>POST</kbd> | \<my-app-name\>/\<collection name\>/_selections_total/\<selection_name\> | get the total for the selection with complex filter |
+
 #### example
 
 ```bash
@@ -974,8 +981,12 @@ curl -X GET 'http://localhost/media_library/coll/books/_selections/borrowed'
      ["666", "Docker as BDSM toy", "Wallrich"], 
      ["1234", "Milf forever", "Epstein"]
     ],
-    "total": 2, "_skip": 0, "_page": 10}'
-curl -X GET 'http://localhost/media_library/coll/books/_selections/borrowed?title.$reg=Dock'
+    "total": None, "_skip": 0, "_page": 10}'
+curl -X GET 'http://localhost/media_library/coll/books/_selections_total/borrowed' 
+  '2'
+
+curl -X GET 'http://localhost/media_library/coll/books/_selections_total/borrowed?title.$reg=Dock'
+  '1'
 ```
 
 

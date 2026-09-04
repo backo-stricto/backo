@@ -23,8 +23,8 @@ from backo import (
     RefsList,
     DeleteStrategy,
     current_user,
-    #log_system,
-    #LogLevel,
+    # log_system,
+    # LogLevel,
 )
 from backo import SFilter, Operator
 from backo.db import (
@@ -433,7 +433,6 @@ class TestDBConnector(unittest.TestCase):
                 self.sub_test_select_connector(con, con_name, handle_sfilter)
 
             con.close()
-
 
     def test_connector_backo(self):
         """

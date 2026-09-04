@@ -169,6 +169,7 @@ class DBYmlDirConnector(DBHandler):
 
         try:
             dirs = os.listdir(self._dir)
+            dirs.sort()
             idx = 0
             for file in dirs:
                 if not re.match(r".*\.yml$", file):
