@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.3.1] 2026-09-04
+    * Feat
+      * Adding routes for Total computation in selections (/_selections_total/ path)
+    * Internal
+      * Cross database references
+    * Fix
+      * datetime was stored in DBMongoConnector as a string. -> fixed but need probably a migration
+    * Doc
+      * Minor documentation fix
+  
 ## [0.3.0] 2026-09-01
     * Feat
       * BREAKING CHANGE : DBHandler refactoring (import and definition of DBConnector, use from backo.db import ...)
@@ -21,7 +31,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
       * fix current_user anonymous bug overlap between tests
     * Doc
       * Adding DBHandlers documentation
-    * 
+  
 ## [0.2.1] 2026-06-18
     * Feat
       * openapi information
