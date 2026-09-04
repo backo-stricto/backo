@@ -1,6 +1,6 @@
 [project]
 name = "backo"
-version = "0.3.1"
+version = "0.3.3"
 authors = [
   { name="Bertrand Wallrich", email="Bertrand.Wallrich@inria.fr" },
 ]
