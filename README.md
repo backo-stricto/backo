@@ -566,11 +566,17 @@ And to call the selection...
 ```bash
 curl -X GET 'http://localhost/media_library/coll/books/_selections/borrowed' 
   '{"result": [
-     ["666", "Docker et plaisir", "Wallrich"], 
+     ["666", "Docker as BDSM toy", "Wallrich"], 
      ["1234", "Martine chez Epstein", "Lang"]
     ],
-    "total": 2, "_skip": 0, "_page": 10}'
+    "total": None, "_skip": 0, "_page": 10}'
 curl -X GET 'http://localhost/media_library/coll/books/_selections/borrowed?title.$reg=Martine'
+
+curl -X GET 'http://localhost/media_library/coll/books/_selections/borrowed?_total=1' 
+   '{ "total" : 2 }'
+# or
+curl -X GET 'http://localhost/media_library/coll/books/_selections_total/borrowed' 
+   '{ "total" : 2 }'
 ```
 
 
@@ -824,6 +830,7 @@ Get a list of objects matching the query string. The query string can be with th
 | \_view | string | "client" | selects the view ([stricto views](https://github.com/backo-stricto/stricto?tab=readme-ov-file#views))  |
 | \_page | int | - | sets the desired number of items per page in paginated data presentation |
 | \_skip | int | - | skips the n-first items of the result list in paginated data presentation. |
+| \_total | whatyouwant | None | Just compute the total of object and return { 'total' : x } without taking pagination in account |
 
 
 The request returns a HTTP status `200` with that JSON object:
@@ -831,7 +838,6 @@ The request returns a HTTP status `200` with that JSON object:
 ```python
 {
     "result": # list of dict containing objects matched
-    "total": # (int) total number of object matched
     "_view": # the _view given in the request
     "_skip": # the _skip given in the request
     "_page": # the _page given in the request
@@ -989,10 +995,15 @@ curl -X GET 'http://localhost/media_library/coll/books/_selections/borrowed'
     ],
     "total": None, "_skip": 0, "_page": 10}'
 curl -X GET 'http://localhost/media_library/coll/books/_selections_total/borrowed' 
-  '2'
+  '{ "total" : 2 }'
+# or
+curl -X GET 'http://localhost/media_library/coll/books/_selections/borrowed?_total=1' 
+  '{ "total" : 2 }'
 
 curl -X GET 'http://localhost/media_library/coll/books/_selections_total/borrowed?title.$reg=Dock'
-  '1'
+  '{ "total" : 1 }'
+# or 
+curl -X GET 'http://localhost/media_library/coll/books/_selections/borrowed?title.$reg=Dock&_total=1'
 ```
 
 

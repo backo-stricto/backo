@@ -869,6 +869,10 @@ class Collection:
         query = request.args
         _page = int(query.get("_page", 10))
         _skip = int(query.get("_skip", 0))
+        _total = query.get("_total")
+
+        if _total:
+            return self.do_count("_all")
 
         match_filter: SFilter = multidict_to_sfilter(query)
 
@@ -901,6 +905,10 @@ class Collection:
         query = request.args
         _page = int(query.get("_page", 10))
         _skip = int(query.get("_skip", 0))
+        _total = query.get("_total")
+
+        if _total:
+            return self.do_count(_selection_name)
 
         match_filter: SFilter = multidict_to_sfilter(query)
 
@@ -934,7 +942,7 @@ class Collection:
         count = self._selections[_selection_name].count(match_filter)
 
         log.debug(f"count in {self.name}/{_selection_name} {match_filter} -> {count}")
-        return (count, 200)
+        return ({"total": count}, 200)
 
     @check_content_type
     @error_to_http_handler
@@ -959,6 +967,11 @@ class Collection:
         query = request.args
         _page = int(query.get("_page", 10))
         _skip = int(query.get("_skip", 0))
+
+        _total = query.get("_total")
+
+        if _total:
+            return self.do_post_count(_selection_name)
 
         match_filter: SFilter = dict_to_sfilter(request_content)
         result = self._selections[_selection_name].select(match_filter, _page, _skip)
@@ -990,11 +1003,11 @@ class Collection:
         log.debug(f"http post selection {_selection_name} content {request_content}")
 
         match_filter: SFilter = dict_to_sfilter(request_content)
-        count = self._selections[_selection_name].select(match_filter)
+        count = self._selections[_selection_name].count(match_filter)
 
         log.debug(f"count in {self.name}/{_selection_name} {match_filter} -> {count}")
 
-        return (count, 200)
+        return ({"total": count}, 200)
 
     @check_content_type
     @error_to_http_handler
