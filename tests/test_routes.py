@@ -17,6 +17,8 @@ from backo import Backoffice, current_user, Action, Selection
 from backo import String, Bool, SFilter, Operator
 
 YML_DIR = "/tmp/backo_tests_routes"
+my_db_connector = DBYmlDirConnector(YML_DIR)
+my_db_connector.generate_id = lambda o: f"User_{o["name"]}_{o["surname"]}"
 
 
 class TestRoutes(unittest.TestCase):
@@ -24,18 +26,18 @@ class TestRoutes(unittest.TestCase):
     Flask tests
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *arg, **kwargs):
         """
         init this tests
         """
-        super().__init__(*args, **kwargs)
+        super().__init__(*arg, **kwargs)
 
         # ignore sessions for this campaign of tests.
         current_user.standalone = True
 
         # --- DB for user
-        self.yml_users = DBYmlDirConnector(YML_DIR)
-        self.yml_users.generate_id = lambda o: f"User_{o["name"]}_{o["surname"]}"
+        self.yml_users = my_db_connector
+        # self.yml_users.generate_id = lambda o: f"User_{o["name"]}_{o["surname"]}"
 
         self.backo = Backoffice("myApp")
 

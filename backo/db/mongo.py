@@ -391,7 +391,7 @@ class DBMongoConnector(DBHandler):
 
         try:
             self._collection.find_one_and_replace(
-                {"_id": oid}, copied_object, {"upsert": True}
+                {"_id": oid}, copied_object, {"upsert": False}
             )
         except Exception as e:
             raise DBError(
