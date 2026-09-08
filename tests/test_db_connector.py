@@ -47,7 +47,7 @@ FULL_USER = Item(
         "age": Int(),
         "date": Datetime(),
         "nicknames": List(String()),
-        "nationalities": List(Dict({"country": String()})),
+        "nationalities": List(Dict({"country": String(), "weather" : Float()})),
         "site": Ref(coll="sites", field="$.users", ofs=FillStrategy.NOT_FILL),
         "male": Bool(default=True),
     }

@@ -8,7 +8,7 @@ import copy
 from stricto import SFilter
 from .generic.db_handler import DBHandler
 from .generic.interface import SelectResponse
-from ..error import NotFoundError
+from ..error import NotFoundError, ExpiredError
 
 from ..log import log_system
 
@@ -63,6 +63,7 @@ class DBMemoryConnector(DBHandler):
 
     def get_by_id(self, _id: str) -> dict:
         """Get by id"""
+
         d = copy.deepcopy(self._datas.get(_id))
         if not d:
             raise NotFoundError('_id "{0}" not found in "{1}"', _id, self._name)

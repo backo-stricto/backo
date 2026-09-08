@@ -20,6 +20,7 @@ from .error import (
     BackoError,
     SessionError,
     FileError,
+    ExpiredError,
 )
 from .backoffice import Backoffice
 from .collection import Collection

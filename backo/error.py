@@ -67,6 +67,44 @@ class NotFoundError(Exception, StrictoError):
     def __str__(self):
         return repr(self)
 
+class ExpiredError(Exception, StrictoError):
+    """
+    Extented :py:class:`StrictoError` with ``Error``
+    Used to say "object expired"
+    """
+
+    def __init__(self, message: str, *args: object, **kwargs: object):
+        """
+        init with all params
+        """
+        StrictoError.__init__(self, message, *args, **kwargs)
+        super().__init__(message, *args)
+
+    def __repr__(self):
+        return f'{self.__class__.__bases__[0].__name__}("{self.to_string()}")'
+
+    def __str__(self):
+        return repr(self)
+    
+class TemporaryNotFound(Exception, StrictoError):
+    """
+    Extented :py:class:`StrictoError` with ``Error``
+    Used to say "i cannot get this object" dut to some error, but it is probably still available
+    """
+
+    def __init__(self, message: str, *args: object, **kwargs: object):
+        """
+        init with all params
+        """
+        StrictoError.__init__(self, message, *args, **kwargs)
+        super().__init__(message, *args)
+
+    def __repr__(self):
+        return f'{self.__class__.__bases__[0].__name__}("{self.to_string()}")'
+
+    def __str__(self):
+        return repr(self)
+
 
 class PathNotFoundError(Exception, StrictoError):
     """
@@ -126,3 +164,4 @@ class SessionError(Exception, StrictoError):
 
     def __str__(self):
         return repr(self)
+

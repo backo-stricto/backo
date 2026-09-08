@@ -24,7 +24,7 @@ from stricto import (
 )
 
 from .loop_path import LoopPath
-from .error import PathNotFoundError, BackoError
+from .error import PathNotFoundError, BackoError, NotFoundError, TemporaryNotFound
 from .log import log_system
 
 from .refs_strategies import DeleteStrategy, FillStrategy
@@ -210,8 +210,25 @@ class RefsList(List):
             match_filter = SFilter(
                 self._reverse, Operator.CONTAINS, SFilter("@", Operator.EQ, root_id)
             )
-        return self._coll_ref.admin_select(match_filter)
 
+        try:
+            return self._coll_ref.admin_select(match_filter)
+        except TemporaryNotFound as e:
+            log.warning(f'{self.path_name()} : select {match_filter} in collection {self._collection} actually not available ({e})')
+            return []
+        except NotFoundError as e:
+            log.info(f'{self.path_name()} : select {match_filter} in collection {self._collection} not found ({e})')
+            return []
+        except Exception as e:  # pylint: disable=broad-exception-caught
+            log.warning(
+                f"{self.path_name()} : select {match_filter} in collection {self._collection} return an error ({e})"
+            )
+            return []
+
+
+    def _check_db_completeness( self ):
+        pass
+    
     def on_delete_must_by_empty(
         self, event_name: str, root: Dict, me: Self, **kwargs
     ):  # pylint: disable=unused-argument
@@ -307,18 +324,48 @@ class RefsList(List):
         me.set_collection_reference()
 
         looper.append(root._collection.name, root._id.get_value(), me.path_name())
+
+        other_list = []
+
         # With FillStrategy.FILL, try to delete the corresponding field
         if self._fill_strategy == FillStrategy.FILL:
             # try to load the coresponding field
             for reference in me:
                 other = me._coll_ref.new()
-                other.load(reference.get_value(), **kwargs)
-                other.delete(**kwargs)
+                try:
+                    other.load(reference.get_value(), **kwargs)
+                except TemporaryNotFound as e:
+                    log.warning(f'{self.path_name()} : load {me.get_value()} in collection {me._collection} actually not available ({e})')
+                    continue
+                except NotFoundError as e:
+                    log.info(f'{self.path_name()} : load {me.get_value()} in collection {me._collection} not found ({e})')
+                    continue
+                except Exception as e:  # pylint: disable=broad-exception-caught
+                    log.warning(
+                        f"{self.path_name()} : load {me.get_value()} in collection {me._collection} return an error ({e})"
+                    )
+                    continue
+                other_list.append( other )
         else:
             # with FillStrategy.NO_FILL select all for deletion
             other_list = me._get_others_with_a_select(root._id.get_value())
-            for other in other_list:
+
+        for other in other_list:
+
+            try:
                 other.delete(**kwargs)
+            except TemporaryNotFound as e:
+                log.warning(f'{self.path_name()} : delete {other._id.get_value()} in collection {me._collection} actually not available ({e})')
+                continue
+            except NotFoundError as e:
+                log.info(f'{self.path_name()} : delete {other._id.get_value()} in collection {me._collection} not found ({e})')
+                continue
+            except Exception as e:  # pylint: disable=broad-exception-caught
+                log.warning(
+                    f"{self.path_name()} : delete {other._id.get_value()} in collection {me._collection} return an error ({e})"
+                )
+                continue
+
 
     def on_delete_clean_reverse(
         self, event_name: str, root: Dict, me: Self, **kwargs

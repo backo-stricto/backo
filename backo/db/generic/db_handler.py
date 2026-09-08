@@ -7,7 +7,7 @@ Module providing the Generic() Class for connection on DB
 
 import uuid
 import sys
-from typing import Callable
+from typing import Callable, Self
 from abc import ABC, abstractmethod
 
 # used for developpement
@@ -19,7 +19,7 @@ from .transformer import Transformer
 from .filter import Filter
 from .interface import SelectResponse
 
-from ...error import DBError
+from ...error import DBError, ExpiredError
 
 KPARSE_MODEL = {"restriction": Callable}
 
@@ -47,9 +47,7 @@ class DBHandler(ABC):  # pylint: disable=too-many-instance-attributes
         self.transformers_per_db_path: dict[str, tuple[list[str], Transformer]] = {}
         self.transformers_per_key_path: dict[str, tuple[list[str], Transformer]] = {}
 
-        self._temp_transformers: list[Transformer] = []
         self._temp_type_transformers: list[Transformer] = []
-
         options = Kparse(kwargs, KPARSE_MODEL)
 
         self.restriction_filter = options.get("restriction")
@@ -64,11 +62,6 @@ class DBHandler(ABC):  # pylint: disable=too-many-instance-attributes
         self.model = model
         if self.filter:
             self.filter.set_model(model)
-
-        # Re-arange transformer according to the model
-        for transformer in self._temp_transformers:
-            self._reorder_transformers_per_key(transformer)
-        self._temp_transformers.clear()
 
         # Re-arange type transformer according to the model
         for transformer in self._temp_type_transformers:
@@ -131,12 +124,7 @@ class DBHandler(ABC):  # pylint: disable=too-many-instance-attributes
         :param transformer: the transformer to register
         :type transformer: :py:class:`Transformer`
         """
-        # Already a model : store the transformer by key
-        if self.model:
-            self._reorder_transformers_per_key(transformer)
-            return
-        # Keep it temporary waiting for model to store transformer
-        self._temp_transformers.append(transformer)
+        self._reorder_transformers_per_key(transformer)
 
     def register_type_transformer(self, transformer: Transformer) -> None:
         """
@@ -158,6 +146,8 @@ class DBHandler(ABC):  # pylint: disable=too-many-instance-attributes
             if transformer.path_exists_in_object(db_path, loaded_object):
                 try:
                     transformer.on_load(loaded_object, db_path)
+                except ExpiredError as e:
+                    raise(e) from e
                 except Exception as e:
                     raise DBError("Transformer on load error") from e
 

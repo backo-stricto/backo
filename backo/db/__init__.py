@@ -8,6 +8,7 @@ It use :py:class:`DBHandler` for that.
 
 from .generic.db_handler import DBHandler
 from .generic.transformer import Transformer, RenameTransformer, IgnoreTransformer
+from .generic.transformer_cache import CacheTransformer
 from .generic.interface import SelectResponse
 
 from .memory import DBMemoryConnector

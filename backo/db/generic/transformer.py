@@ -3,6 +3,7 @@ Attribut transformer
 """
 
 import uuid
+from datetime import timedelta
 from typing import Any
 from jsonpath import patch, findall
 
@@ -247,6 +248,7 @@ class IgnoreTransformer(Transformer):
         self.key_path_string = path_to_json_path(self.key_path)
         self.db_path_string = path_to_json_path(self.db_path)
 
+
     def on_load(self, loaded_object: dict, _key_path: list[str]):
         """
         Called when the object is read from the DB.
@@ -256,6 +258,73 @@ class IgnoreTransformer(Transformer):
         :type _loaded_object: dict
         :param _key_path: a key path as list
         :type _key_path: list[str]
+        """
+        patch.apply([{"op": "remove", "path": self.db_path_string}], loaded_object)
+
+    def get_db_path(self, _key_path: list[str] = None) -> list[str]:
+        """
+        Return the key_path
+
+        :return: the key path associated to this transformer
+        :rtype: list[str]
+        """
+        return self.db_path
+
+    def must_be_store_in_db(self) -> bool:
+        """
+        Return if this key path must be saved into the DB.
+
+        :return: True if must be saved,
+        :rtype: bool
+        """
+        return True
+
+
+class CacheTransformer(Transformer):
+    """
+    A transformer to manage cachin effect
+
+    """
+
+    def __init__(self, db_path: list[str], ):
+        """
+        :param db_path: the path in the DB to ignore
+        :type db_path: list[ str ]
+
+
+        .. code-block:: python
+
+            my_dbhandler.register_transformer(IgnoreTransformer(["address"]))
+            # Will ignore $.address from the DB
+
+
+        """
+        fake_key_path = ["_" + str(uuid.uuid4().int >> 64)]
+        self.db_path = db_path
+        super().__init__(fake_key_path)
+
+        self.key_path_string = path_to_json_path(self.key_path)
+        self.db_path_string = path_to_json_path(self.db_path)
+
+
+    def on_save(self, obj: dict, _key_path: list[str]):
+        """
+        update t
+        :param _loaded_object: the lodaded object
+        :type _loaded_object: dict
+        :param _key_path: a key path as list
+        :type _key_path: list[str]
+        """
+        patch.apply(
+            [{"op": "add", "path": self.db_path_string, "value" : 1234 }],
+            obj,
+        )
+
+
+    def on_load(self, loaded_object: dict, _key_path: list[str]):
+        """
+        Called when the object is read from the DB.
+        Drop cache attribute
         """
         patch.apply([{"op": "remove", "path": self.db_path_string}], loaded_object)
 

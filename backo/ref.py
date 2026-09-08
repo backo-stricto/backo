@@ -21,7 +21,7 @@ from stricto import (
 )
 
 from .loop_path import LoopPath
-from .error import PathNotFoundError, BackoError
+from .error import PathNotFoundError, BackoError, TemporaryNotFound, NotFoundError
 from .log import log_system
 
 
@@ -54,6 +54,273 @@ REF_KPARSE_MODEL = {
     "on_fill|ofs": {"type": FillStrategy, "default": FillStrategy.FILL},
     "on": {"type": list[tuple], "default": []},
 }
+
+
+def check_syntax(
+    event_name: str, root, me, **kwargs
+):  # pylint: disable=unused-argument
+    """
+    Check if everything is correct log some warnings
+    """
+    log.debug(f"Check the syntax {me.path_name()}")
+    try:
+        me.set_collection_reference()
+    except Exception:  # pylint: disable=broad-exception-caught
+        pass
+    if not me._coll_ref:
+        log.error(
+            f'{root._collection.name}/{me.path_name()}: Collection "{me._collection}" not found'
+        )
+        return
+    if not me._reverse:
+        log.warning(
+            f'{root._collection.name}/{me.path_name()}: Collection "{me._collection}". No reverse defined. Are you sure ?'
+        )
+    else:
+        # fill the field
+        other = me._coll_ref.new_item()
+        reverse_field = other.select(me._reverse)
+        # Must check == None rather
+        if not isinstance(
+            reverse_field, (refslist.RefsList, Ref)
+        ):  # pylint: disable=singleton-comparison
+            log.error(
+                f'{root._collection.name}/{me.path_name()}: Collection "{me._collection}", "{me._reverse}" is not a Ref or a RefsList'
+            )
+            return
+        if (
+            me._fill_strategy == FillStrategy.NOT_FILL
+            and reverse_field._fill_strategy == FillStrategy.NOT_FILL
+        ):
+            log.error(
+                f'{root._collection.name}/{me.path_name()} and Collection "{me._collection}", "{me._reverse}" are with no_fill strategies !'
+            )
+            return
+
+
+
+
+def on_loaded(
+    event_name, root, me, **kwargs
+):  # pylint: disable=unused-argument
+    """Trigged when the Item is loaded from the DB.
+    if the fill_strategy is "NO_FILL", do the select from the reverse to fill it
+    Args:
+        event_name (_type_): _description_
+        root (_type_): _description_
+        me (_type_): _description_
+    """
+    if me._fill_strategy == FillStrategy.FILL:
+        return
+    # The destination _id is already filled by the DBConnector
+    if me.get_value() != None:
+        return
+    # No reverse => nothing to do.
+    if not me._reverse:
+        return
+    log.debug(
+        f"{root._collection.name}//{me.path_name()} for id={root._id} loaded. Search _id from the reverse"
+    )
+    other_list = me._get_others_with_a_select(root._id.get_value())
+    if len(other_list) > 1:
+        raise BackoError(
+            "{0}.{1} has more reverse in {2} {3}",
+            root._collection.name,
+            me.path_name(),
+            me._collection,
+            me._reverse,
+        )
+    me.set(other_list[0])
+
+
+
+def on_before_save(
+    event_name, root, me, **kwargs
+):  # pylint: disable=unused-argument
+    """
+    Before saving, check if the reference
+    as changed from an old value
+    :meta private:
+    """
+    # No reverse => nothing to do.
+    if not me._reverse:
+        return
+    # get the old object. If not, the object is currently creating
+    old = kwargs.get("old_object")
+    if old is None:
+        return
+    # get the previous version of "me" and check if there is a version
+    # and different from the new one
+    old_me = old.select(me.path_name())
+    if old_me == me:
+        return
+    # Get looper or create it
+    if "looper" not in kwargs:
+        kwargs["looper"] = LoopPath()
+    looper: LoopPath = kwargs.get("looper")
+    log.debug(
+        "%r/%r save. Check for changes in Ref %r",
+        root._collection.name,
+        root._id,
+        me.path_name(),
+    )
+    if looper.is_loop(root._collection.name, root._id.get_value(), me.path_name()):
+        log.debug(
+            f"Stop following ref due to loop ( {root._collection.name}, {root._id.get_value()}, {me.path_name()})"
+        )
+        return
+    looper.append(root._collection.name, root._id.get_value(), me.path_name())
+    log.debug(
+        "%r/%r %r change %r->%r",
+        root._collection.name,
+        root._id,
+        me.path_name(),
+        old_me,
+        me,
+    )
+    if old_me.get_value() is not None:
+        on_delete(event_name, root, old_me, **kwargs)
+    if me.get_value() is not None:
+        on_created(event_name, root, me, **kwargs)
+
+def on_delete(
+    event_name, root, me, **kwargs
+):  # pylint: disable=unused-argument, too-many-return-statements
+    """
+    The object will be deleted
+    clean structure
+    :meta private:
+    """
+    # No reverse => nothing to do.
+    if not me._reverse:
+        return
+    # Get looper or create it
+    if "looper" not in kwargs:
+        kwargs["looper"] = LoopPath()
+    looper: LoopPath = kwargs.get("looper")
+    if me == DEFAULT_ID:
+        return
+    # if me.get_value() == None:
+    if me.get_value() is None:
+        return
+    # check if in a loop on m_path
+    # if (event_name, me._reverse, me.get_value()) in kwargs.get("m_path", []):
+    #     return
+    log.debug(
+        "Delete %r/%r %r=%r ", root._collection.name, root._id, me.path_name(), me
+    )
+    # set the _coll_ref (in case of)
+    me.set_collection_reference()
+    # try to load the coresponding field
+    other = me._coll_ref.new()
+    try:
+        other.load(me.get_value())
+    except TemporaryNotFound as e:
+        log.warning(f'{me.path_name()} : load {me.get_value()} in collection {me._collection} actually not available ({e})')
+        return
+    except NotFoundError as e:
+        log.info(f'{me.path_name()} : load {me.get_value()} in collection {me._collection} not found ({e})')
+        return
+    except Exception as e:  # pylint: disable=broad-exception-caught
+        log.warning(
+            f"{me.path_name()} : load {me.get_value()} in collection {me._collection} return an error ({e})"
+        )
+        return
+    # fill the field
+    reverse_field = other.select(me._reverse)
+    if reverse_field is None:
+        raise PathNotFoundError(
+            'Path "{0}" not found in collection "{1}"',
+            me._reverse,
+            me._collection,
+        )
+    # The reverse is not a ref ?!!!
+    if not isinstance(reverse_field, (refslist.RefsList, Ref)):
+        raise STypeError(
+            "{0}.{1} is not a Ref or a RefsList", self._collection, me._reverse
+        )
+    looper.append(root._collection.name, root._id.get_value(), me.path_name())
+    # Don't modify the reverse
+    if reverse_field._fill_strategy == FillStrategy.NOT_FILL:
+        return
+    # direct reference
+    if isinstance(reverse_field, Ref):
+        if reverse_field == root._id:
+            reverse_field.set(None)
+            other.save(**kwargs)
+    else:
+        # List of references
+        log.debug(
+            "Ref on_delete clean refList %r %r %r",
+            me._collection,
+            me._reverse,
+            me,
+        )
+        if root._id.get_value() in reverse_field.get_value():
+            reverse_field.remove(root._id.get_value())
+            other.save(**kwargs)
+
+def on_created(
+    event_name, root, me, **kwargs
+):  # pylint: disable=unused-argument
+    """
+    The object as been created
+    check for the reverse field and modify it
+    :meta private:
+    """
+    # No reverse => nothing to do.
+    log.debug(f"Ref on_create {id(me.get_root())} {id(root)} {me.path_name()}")
+    if not me._reverse:
+        return
+    # A created object with no reference set. finish
+    target_id = me.get_value()
+    log.debug(f"Ref on_create {me.path_name()} {target_id}")
+    if target_id is None:
+        return
+    # Get looper or create it
+    if "looper" not in kwargs:
+        kwargs["looper"] = LoopPath()
+    looper: LoopPath = kwargs.get("looper")
+    log.debug(
+        "Creation %r/%r.%r=%r ", root._collection.name, root._id, me.path_name(), me
+    )
+    # set the _coll_ref (in case of)
+    me.set_collection_reference()
+    # try to load the coresponding field
+    other = me._coll_ref.new()
+    try:
+        other.load(target_id)
+    except TemporaryNotFound as e:
+        log.warning(f'{me.path_name()} : load {target_id} in collection {me._collection} actually not available ({e})')
+        return
+    # fill the field
+    reverse_field = other.select(me._reverse)
+    if reverse_field is None:
+        raise PathNotFoundError(
+            'Path "{0}" not found in collection "{1}"',
+            me._reverse,
+            me._collection,
+        )
+    # The reverse is not a ref ?!!!
+    if not isinstance(reverse_field, (refslist.RefsList, Ref)):
+        raise STypeError(
+            "{0}.{1} is not a Ref or a RefsList", me._collection, me._reverse
+        )
+    looper.append(root._collection.name, root._id.get_value(), me.path_name())
+    # Don't modify the reverse
+    if reverse_field._fill_strategy == FillStrategy.NOT_FILL:
+        return
+    # direct reference
+    if isinstance(reverse_field, Ref):
+        reverse_field.set(root._id)
+        other.save(**kwargs)
+    else:
+        if root._id.get_value() not in reverse_field.get_value():
+            # update the reverse
+            log.debug(f"update reverse refList {me._reverse} with {root._id}")
+            reverse_field.append(root._id)
+            log.debug(f"update reverse refList {me._reverse} => {other}")
+            other.save(**kwargs)
 
 
 class Ref(String):  # pylint: disable=too-many-instance-attributes
@@ -106,11 +373,11 @@ class Ref(String):  # pylint: disable=too-many-instance-attributes
 
         # for events
         on = copy.copy(options.get("on"))
-        on.append(("created", self.on_created, "$"))
-        on.append(("before_delete", self.on_delete, "$"))
-        on.append(("before_save", self.on_before_save, "$"))
-        on.append(("check_syntax", self.check_syntax, "$"))
-        on.append(("loaded", self.on_loaded, "$"))
+        on.append(("created", on_created, "$"))
+        on.append(("before_delete", on_delete, "$"))
+        on.append(("before_save", on_before_save, "$"))
+        on.append(("check_syntax", check_syntax, "$"))
+        on.append(("loaded", on_loaded, "$"))
 
         String.__init__(
             self,
@@ -153,51 +420,17 @@ class Ref(String):  # pylint: disable=too-many-instance-attributes
         a["reverse"] = self._reverse
         return a
 
-    def check_syntax(
-        self, event_name: str, root, me, **kwargs
-    ):  # pylint: disable=unused-argument
-        """
-        Check if everything is correct log some warnings
-        """
-        log.debug(f"Check the syntax {me.path_name()}")
 
-        try:
-            me.set_collection_reference()
-        except Exception:  # pylint: disable=broad-exception-caught
-            pass
+    def _check_db_completeness( self, event_name, root, me, **kwargs
+        ):  # pylint: disable=unused-argument
+        log.debug(
+            f"{root._collection.name}//{me.path_name()} for id={root._id} check completeness. Search _id from the reverse"
+        )
+        other_list = me._get_others_with_a_select(root._id.get_value())
+        if len(other_list) > 1:
+                log.error(f'{root._collection.name}//{me.path_name()} for id={root._id} actually not available ({e})')
 
-        if not me._coll_ref:
-            log.error(
-                f'{root._collection.name}/{me.path_name()}: Collection "{me._collection}" not found'
-            )
-            return
 
-        if not me._reverse:
-            log.warning(
-                f'{root._collection.name}/{me.path_name()}: Collection "{me._collection}". No reverse defined. Are you sure ?'
-            )
-        else:
-            # fill the field
-            other = me._coll_ref.new_item()
-            reverse_field = other.select(me._reverse)
-            # Must check == None rather
-
-            if not isinstance(
-                reverse_field, (refslist.RefsList, Ref)
-            ):  # pylint: disable=singleton-comparison
-                log.error(
-                    f'{root._collection.name}/{me.path_name()}: Collection "{me._collection}", "{me._reverse}" is not a Ref or a RefsList'
-                )
-                return
-
-            if (
-                self._fill_strategy == FillStrategy.NOT_FILL
-                and reverse_field._fill_strategy == FillStrategy.NOT_FILL
-            ):
-                log.error(
-                    f'{root._collection.name}/{me.path_name()} and Collection "{me._collection}", "{me._reverse}" are with no_fill strategies !'
-                )
-                return
 
     def _get_others_with_a_select(self, root_id: str) -> list:
         """Get reverse Items with a select
@@ -225,7 +458,22 @@ class Ref(String):  # pylint: disable=too-many-instance-attributes
             match_filter = SFilter(
                 self._reverse, Operator.CONTAINS, SFilter("@", Operator.EQ, root_id)
             )
-        return self._coll_ref.admin_select(match_filter)
+
+        try:
+            return self._coll_ref.admin_select(match_filter)
+        except TemporaryNotFound as e:
+            log.warning(f'{self.path_name()} : select {match_filter} in collection {self._collection} actually not available ({e})')
+            return []
+        except NotFoundError as e:
+            log.info(f'{self.path_name()} : select {match_filter} in collection {self._collection} not found ({e})')
+            return []
+        except Exception as e:  # pylint: disable=broad-exception-caught
+            log.warning(
+                f"{self.path_name()} : select {match_filter} in collection {self._collection} return an error ({e})"
+            )
+            return []
+
+        
 
     def on_loaded(
         self, event_name, root, me, **kwargs
@@ -265,225 +513,6 @@ class Ref(String):  # pylint: disable=too-many-instance-attributes
             )
         me.set(other_list[0])
 
-    def on_before_save(
-        self, event_name, root, me, **kwargs
-    ):  # pylint: disable=unused-argument
-        """
-        Before saving, check if the reference
-        as changed from an old value
-
-        :meta private:
-
-        """
-        # No reverse => nothing to do.
-        if not me._reverse:
-            return
-
-        # get the old object. If not, the object is currently creating
-        old = kwargs.get("old_object")
-        if old is None:
-            return
-
-        # get the previous version of "me" and check if there is a version
-        # and different from the new one
-        old_me = old.select(me.path_name())
-        if old_me == me:
-            return
-
-        # Get looper or create it
-        if "looper" not in kwargs:
-            kwargs["looper"] = LoopPath()
-        looper: LoopPath = kwargs.get("looper")
-
-        log.debug(
-            "%r/%r save. Check for changes in Ref %r",
-            root._collection.name,
-            root._id,
-            me.path_name(),
-        )
-
-        if looper.is_loop(root._collection.name, root._id.get_value(), me.path_name()):
-            log.debug(
-                f"Stop following ref due to loop ( {root._collection.name}, {root._id.get_value()}, {me.path_name()})"
-            )
-            return
-        looper.append(root._collection.name, root._id.get_value(), me.path_name())
-
-        log.debug(
-            "%r/%r %r change %r->%r",
-            root._collection.name,
-            root._id,
-            me.path_name(),
-            old_me,
-            me,
-        )
-
-        if old_me.get_value() is not None:
-            self.on_delete(event_name, root, old_me, **kwargs)
-        if me.get_value() is not None:
-            self.on_created(event_name, root, me, **kwargs)
-
-    def on_created(
-        self, event_name, root, me, **kwargs
-    ):  # pylint: disable=unused-argument
-        """
-        The object as been created
-        check for the reverse field and modify it
-
-        :meta private:
-
-        """
-        # No reverse => nothing to do.
-
-        log.debug(f"Ref on_create {id(me.get_root())} {id(root)} {me.path_name()}")
-
-        if not me._reverse:
-            return
-
-        # A created object with no reference set. finish
-        target_id = me.get_value()
-        log.debug(f"Ref on_create {me.path_name()} {target_id}")
-
-        if target_id is None:
-            return
-
-        # Get looper or create it
-        if "looper" not in kwargs:
-            kwargs["looper"] = LoopPath()
-        looper: LoopPath = kwargs.get("looper")
-
-        log.debug(
-            "Creation %r/%r.%r=%r ", root._collection.name, root._id, me.path_name(), me
-        )
-
-        # set the _coll_ref (in case of)
-        me.set_collection_reference()
-        # try to load the coresponding field
-        other = me._coll_ref.new()
-        other.load(target_id)
-
-        # try:
-        # except Exception as e:
-        #     log.warning(f'{self.path_name()} : load {target_id} in collection {me._collection} return an error ({e})')
-        #     return
-
-        # fill the field
-        reverse_field = other.select(me._reverse)
-
-        if reverse_field is None:
-            raise PathNotFoundError(
-                'Path "{0}" not found in collection "{1}"',
-                me._reverse,
-                self._collection,
-            )
-
-        # The reverse is not a ref ?!!!
-        if not isinstance(reverse_field, (refslist.RefsList, Ref)):
-            raise STypeError(
-                "{0}.{1} is not a Ref or a RefsList", self._collection, me._reverse
-            )
-
-        looper.append(root._collection.name, root._id.get_value(), me.path_name())
-
-        # Don't modify the reverse
-        if reverse_field._fill_strategy == FillStrategy.NOT_FILL:
-            return
-
-        # direct reference
-        if isinstance(reverse_field, Ref):
-            reverse_field.set(root._id)
-            other.save(**kwargs)
-        else:
-            if root._id.get_value() not in reverse_field.get_value():
-                # update the reverse
-                log.debug(f"update reverse refList {me._reverse} with {root._id}")
-                reverse_field.append(root._id)
-                log.debug(f"update reverse refList {me._reverse} => {other}")
-                other.save(**kwargs)
-
-    def on_delete(
-        self, event_name, root, me, **kwargs
-    ):  # pylint: disable=unused-argument, too-many-return-statements
-        """
-        The object will be deleted
-        clean structure
-
-        :meta private:
-
-        """
-        # No reverse => nothing to do.
-        if not me._reverse:
-            return
-
-        # Get looper or create it
-        if "looper" not in kwargs:
-            kwargs["looper"] = LoopPath()
-        looper: LoopPath = kwargs.get("looper")
-
-        if me == DEFAULT_ID:
-            return
-
-        # if me.get_value() == None:
-        if me.get_value() is None:
-            return
-
-        # check if in a loop on m_path
-        # if (event_name, me._reverse, me.get_value()) in kwargs.get("m_path", []):
-        #     return
-
-        log.debug(
-            "Delete %r/%r %r=%r ", root._collection.name, root._id, me.path_name(), me
-        )
-
-        # set the _coll_ref (in case of)
-        me.set_collection_reference()
-        # try to load the coresponding field
-        other = me._coll_ref.new()
-        try:
-            other.load(me.get_value())
-        except Exception as e:  # pylint: disable=broad-exception-caught
-            log.warning(
-                f"{self.path_name()} : load {me.get_value()} in collection {me._collection} return an error ({e})"
-            )
-            return
-
-        # fill the field
-        reverse_field = other.select(me._reverse)
-        if reverse_field is None:
-            raise PathNotFoundError(
-                'Path "{0}" not found in collection "{1}"',
-                me._reverse,
-                self._collection,
-            )
-
-        # The reverse is not a ref ?!!!
-        if not isinstance(reverse_field, (refslist.RefsList, Ref)):
-            raise STypeError(
-                "{0}.{1} is not a Ref or a RefsList", self._collection, me._reverse
-            )
-
-        looper.append(root._collection.name, root._id.get_value(), me.path_name())
-
-        # Don't modify the reverse
-        if reverse_field._fill_strategy == FillStrategy.NOT_FILL:
-            return
-
-        # direct reference
-        if isinstance(reverse_field, Ref):
-            if reverse_field == root._id:
-                reverse_field.set(None)
-                other.save(**kwargs)
-        else:
-            # List of references
-            log.debug(
-                "Ref on_delete clean refList %r %r %r",
-                me._collection,
-                me._reverse,
-                me,
-            )
-            if root._id.get_value() in reverse_field.get_value():
-                reverse_field.remove(root._id.get_value())
-                other.save(**kwargs)
 
     def get_selectors(self, index_or_slice, sel: Selector):
         """
@@ -507,8 +536,10 @@ class Ref(String):  # pylint: disable=too-many-instance-attributes
         other = self._coll_ref.new()
         try:
             other.load(self.get_value())
-        except Exception:  # pylint: disable=broad-exception-caught
-            pass
+        except Exception as e:  # pylint: disable=broad-exception-caught
+            log.warning(
+                f"{self.path_name()} : load {self.get_value()} in collection {self._collection} return an error ({e})"
+            )
 
         # The index_or_slice is actually ignored.
         # (key, sub_index_or_slice) = sel.pop()

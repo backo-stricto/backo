@@ -15,7 +15,7 @@ from stricto import SFilter, Kparse
 from .generic.db_handler import DBHandler
 from .generic.interface import SelectResponse
 
-from ..error import NotFoundError, DBError
+from ..error import NotFoundError, DBError, TemporaryNotFound
 
 from ..log import log_system
 
@@ -80,6 +80,8 @@ class DBRestFullConnector(DBHandler):
         self._username = options.get("username")
         self._password = options.get("password")
         self._auth_token = options.get("auth_token")
+
+        self._local_connector:DBHandler = None
 
         # Store the API base URI for use in endpoint methods
         self._uri = self._build_uri()
@@ -185,7 +187,8 @@ class DBRestFullConnector(DBHandler):
                 return status_code, response.json(), None
             except ValueError:
                 return status_code, response.text, None
-
+        except requests.exceptions.ConnectTimeout as http_error:
+            return 408, None, http_error
         except requests.exceptions.HTTPError as http_error:
             return http_error.response.status_code, None, http_error
         except requests.exceptions.RequestException as request_error:
@@ -236,10 +239,16 @@ class DBRestFullConnector(DBHandler):
                 raise NotFoundError(
                     'Create endpoint "{0}" not found', endpoint
                 ) from error
+            if status_code == 408:
+                raise TemporaryNotFound(
+                    'Create endpoint "{0}" not found', endpoint
+                ) from error
             raise DBError('Endpoint "{0}" error', endpoint) from error
 
         if status_code == 404:
             raise NotFoundError('Create endpoint "{0}" not found', endpoint)
+        if status_code == 408:
+            raise TemporaryNotFound('Create endpoint "{0}" not found', endpoint)
 
         if status_code not in (200, 201, 202):
             raise DBError(
@@ -305,10 +314,16 @@ class DBRestFullConnector(DBHandler):
         if error is not None:
             if status_code == 404:
                 raise NotFoundError('_id "{0}" not found', _id) from error
+            if status_code == 408:
+                raise TemporaryNotFound('_id "{0}" not found', _id) from error
+
+
             raise DBError('Endpoint "{0}" error', endpoint) from error
 
         if status_code == 404:
             raise NotFoundError('_id "{0}" not found', _id)
+        if status_code == 408:
+            raise TemporaryNotFound('_id "{0}" not found', _id)
 
         if status_code not in (200, 201, 202):
             raise DBError(
@@ -365,10 +380,14 @@ class DBRestFullConnector(DBHandler):
         if error is not None:
             if status_code == 404:
                 raise NotFoundError('_id "{0}" not found', _id) from error
+            if status_code == 404:
+                raise TemporaryNotFound('_id "{0}" not found', _id) from error
             raise DBError('Endpoint "{0}" error', endpoint) from error
 
         if status_code == 404:
             raise NotFoundError('_id "{0}" not found', _id)
+        if status_code == 408:
+            raise TemporaryNotFound('_id "{0}" not found', _id)
 
         if status_code not in (200, 202, 204):
             raise DBError(
@@ -420,10 +439,14 @@ class DBRestFullConnector(DBHandler):
         if error is not None:
             if status_code == 404:
                 raise NotFoundError('_id "{0}" not found', _id) from error
+            if status_code == 408:
+                raise TemporaryNotFound('_id "{0}" not found', _id) from error
             raise DBError('Endpoint "{0}" error', endpoint) from error
 
         if status_code == 404:
             raise NotFoundError('_id "{0}" not found', _id)
+        if status_code == 408:
+            raise TemporaryNotFound('_id "{0}" not found', _id)
 
         if status_code != 200:
             raise DBError(
@@ -493,10 +516,14 @@ class DBRestFullConnector(DBHandler):
         if error is not None:
             if status_code == 404:
                 raise NotFoundError('Endpoint "{0}" not found', endpoint) from error
+            if status_code == 408:
+                raise TemporaryNotFound('Endpoint "{0}" not found', endpoint) from error
             raise DBError('Endpoint "{0}" error', endpoint) from error
 
         if status_code == 404:
             raise NotFoundError('selection error "{0}"', status_code)
+        if status_code == 408:
+            raise TemporaryNotFound('Endpoint "{0}" not found', endpoint) from error
 
         if status_code != 200:
             raise DBError('selection error "{0}"', status_code)

@@ -20,12 +20,15 @@ from backo import (
     PathNotFoundError,
     BackoError,
     log_system,
+    LogLevel,
     current_user,
 )
 from backo import String, Bool, SConstraintError
 
 ### --- For development ---
 log_system.add_handler(log_system.set_streamhandler())
+log = log_system.get_or_create_logger("ref")
+log.setLevel(LogLevel.INFO)
 log = log_system.get_or_create_logger("testing")
 
 
