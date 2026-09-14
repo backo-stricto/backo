@@ -38,7 +38,7 @@ from .file.blob_file import BlobFile
 from .meta_data_handler import GenericMetaDataHandler, StandardMetaDataHandler
 from .status import StatusType
 from .action import Action
-from .migration_report import MigrationReport
+from .migration import MigrationReport, MigrationStrategy
 from .request_decorators import (
     check_content_type,
     return_http_error,

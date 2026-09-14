@@ -167,7 +167,7 @@ class Item(Dict):  # pylint: disable=too-many-instance-attributes
 
     def admin_load(self, _id: str, **kwargs) -> None:
         """
-        Load from DB withou computation, rights and trigg messages
+        Load from DB without computation, rights and trigg messages
 
         :param _id: _description_
         :type _id: str

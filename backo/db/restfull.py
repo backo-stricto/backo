@@ -127,7 +127,7 @@ class DBRestFullConnector(DBHandler):
 
         return f"{scheme}://{authentication}{self._host}{port}{prefix}"
 
-    def _request( # pylint: disable=too-many-return-statements
+    def _request(  # pylint: disable=too-many-return-statements
         self,
         endpoint: str,
         url_parameters: list | tuple | None = None,

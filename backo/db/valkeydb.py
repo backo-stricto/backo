@@ -171,9 +171,10 @@ class DBValkeyConnector(DBHandler):
         retrieved_ids = []
         for idx, _id in enumerate(_ids):
             # Get by page
-            if idx < num_of_element_to_skip or (
-                num_of_element_to_skip and idx > (page_size + num_of_element_to_skip)
-            ):
+            if idx < num_of_element_to_skip:
+                continue
+
+            if page_size and idx >= (page_size + num_of_element_to_skip):
                 continue
             retrieved_ids.append(str(_id))
             pipe.get(_id)

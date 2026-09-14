@@ -15,7 +15,7 @@ from stricto import Kparse, SSyntaxError, validation_parameters
 
 from .collection import Collection
 from .item import Item
-from .migration_report import MigrationReport
+from .migration import MigrationReport, MigrationStrategy
 from .log import log_system
 from .openapi import BACKO_FILTER_SCHEMA, BACKO_META_SCHEMA, JSON_PATCH_SCHEMA
 from .request_decorators import error_to_http_handler
@@ -27,6 +27,7 @@ KPARSE_MIGRATION_MODEL = {
     "_id": str,
     "_ids": list[str],
     "dry_run": {"type": bool, "default": True},
+    "strategy": {"type": MigrationStrategy, "default": MigrationStrategy.DRY_RUN},
 }
 
 
@@ -169,8 +170,15 @@ class Backoffice:  # pylint: disable=too-many-instance-attributes
         if _ids is None and options.get("_id") is not None:
             _ids = [options.get("_id")]
 
+        strategy: MigrationStrategy = options.get("strategy")
+        if strategy not in MigrationStrategy:
+            raise SSyntaxError(
+                'Migration Strategy "{0}" not found',
+                strategy,
+            )
+
         coll = self.collections.get(collection_name)
-        return coll.migrate(migration_function, _ids, options.get("dry_run"))
+        return coll.migrate(migration_function, _ids, strategy)
 
     @validation_parameters
     def build_routes(

@@ -12,11 +12,11 @@ from backo import current_user
 from backo import (
     String,
     Bool,
-    log_system,
     SSyntaxError,
     Int,
     SConstraintError,
     SAttributeError,
+    MigrationStrategy,
 )
 
 ### --- For development ---
@@ -24,12 +24,11 @@ from backo import (
 # from backo import log_system
 # log_system.setLevel(logging.DEBUG)
 # log_system.add_handler(log_system.set_streamhandler())
-# log = log_system.get_or_create_logger("testing")
+# log_migration = log_system.get_or_create_logger("migration")
+# log_migration.setLevel(logging.DEBUG)
 
 
 YML_DIR = "/tmp/backo_tests_migrations"
-
-log_migration = log_system.get_or_create_logger("migration")
 
 
 class TestMigrations(unittest.TestCase):
@@ -75,7 +74,7 @@ class TestMigrations(unittest.TestCase):
         current_user.reinit()
         return super().tearDown()
 
-    def test__migration_errors(self):
+    def test_migration_errors(self):
         """
         migration collection error
         """
@@ -91,7 +90,7 @@ class TestMigrations(unittest.TestCase):
             'Backoffice migration : collection "unknown_collection" not registered',
         )
 
-    def test__migration_function_no_change(self):
+    def test_migration_function_no_change(self):
         """
         migration function
         """
@@ -141,7 +140,9 @@ class TestMigrations(unittest.TestCase):
         self.assertEqual(report.changes._ids[0], "User_al0_al0")
 
         # do for real
-        report = self.backo.migrate("users", add_age, dry_run=False)
+        report = self.backo.migrate(
+            "users", add_age, strategy=MigrationStrategy.EXECUTE
+        )
         self.assertEqual(report.changes.total, 10)
 
         self.backo.users.model.remove_model("age")
@@ -150,5 +151,7 @@ class TestMigrations(unittest.TestCase):
         self.assertEqual(
             e.exception.to_string(), '$: Dict object has no attribute "age"'
         )
-        report = self.backo.migrate("users", remove_age, dry_run=False)
+        report = self.backo.migrate(
+            "users", remove_age, strategy=MigrationStrategy.EXECUTE
+        )
         self.assertEqual(report.changes.total, 10)

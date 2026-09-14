@@ -175,12 +175,12 @@ class DBYmlDirConnector(DBHandler):
                 if not re.match(r".*\.yml$", file):
                     continue
 
-                idx += 1
-                # keep only elements in the windows [ num_of_element_to_skip, page_size + num_of_element_to_skip ]
-                if idx < num_of_element_to_skip or (
-                    num_of_element_to_skip
-                    and idx > (page_size + num_of_element_to_skip)
-                ):
+                if idx < num_of_element_to_skip:
+                    idx += 1
+                    continue
+
+                if page_size and idx >= (page_size + num_of_element_to_skip):
+                    idx += 1
                     continue
 
                 with open(
@@ -192,6 +192,8 @@ class DBYmlDirConnector(DBHandler):
                 self._transform_on_load(data_loaded)
 
                 response.items.append(data_loaded)
+                idx += 1
+
                 response.total = idx
 
         except Exception as e:

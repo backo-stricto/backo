@@ -575,7 +575,7 @@ class TestReferences(unittest.TestCase):
 
     def test_crud_m2m(self):
         """
-        wrapper many to many CRUD 
+        wrapper many to many CRUD
         """
         for backoffice in backoffices_m2m.values():
             with self.subTest(backoffice=backoffice):

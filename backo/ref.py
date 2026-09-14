@@ -192,7 +192,7 @@ class Ref(String):  # pylint: disable=too-many-instance-attributes
 
         # try to load the coresponding field
         other = self._coll_ref.new()
-        other.load(_id, **kwargs)
+        other.admin_load(_id, **kwargs)
 
         if not self._reverse:
             return (other, None)
@@ -364,7 +364,7 @@ def on_loaded(
     return
 
 
-def on_before_save( # pylint: disable=too-many-return-statements
+def on_before_save(  # pylint: disable=too-many-return-statements
     event_name: str, root: Item, me: Ref, **kwargs
 ):  # pylint: disable=unused-argument
     """

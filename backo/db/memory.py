@@ -126,10 +126,10 @@ class DBMemoryConnector(DBHandler):
         response.total = len(self._datas.keys())
         for idx, d in enumerate(self._datas.values()):
 
-            # keep only elements in the windows [ num_of_element_to_skip, page_size + num_of_element_to_skip ]
-            if idx < num_of_element_to_skip or (
-                num_of_element_to_skip and idx > (page_size + num_of_element_to_skip)
-            ):
+            if idx < num_of_element_to_skip:
+                continue
+
+            if page_size and idx >= (page_size + num_of_element_to_skip):
                 continue
 
             # Do all transformations on the object

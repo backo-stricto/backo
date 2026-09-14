@@ -1506,7 +1506,7 @@ def transform_function( o: dict) -> dict:
 ```
 
 
-By default, the flag ```dry_run``` is ```True```. so you will broke nothing. ```dry_run``` will do all work except saving the object in the DB.
+By default, the strategy for migration is ```MigrationStrategy.DRY_RUN```. So you will broke nothing. ```MigrationStrategy.DRY_RUN``` will do all work except saving the object in the DB.
 
 > [!IMPORTANT]  
 > there is no check of *rights* and *current_user* during migration. metadatas (see [_meta](#_meta)) are not updated.
@@ -1523,7 +1523,7 @@ This is an example for migrating data.
 
 ```python
 from media_library import mybackoffice
-from backo import log_system, LogLevel
+from backo import log_system, LogLevel, MigrationStrategy
 
 # Set migration level to debug
 log_migration = log_system.get_or_create_logger("migration")
@@ -1563,12 +1563,23 @@ report = mybackoffice.migrate("books", update_with_note)  # All ids
 report = mybackoffice.migrate("books", update_with_note, _id="my_book_id", dry_run=False)
 # or
 report = mybackoffice.migrate(
-    "books", update_with_note, _ids=["my_book_id1", "my_book_id2"], dry_run=False
+    "books", update_with_note, _ids=["my_book_id1", "my_book_id2"], strategy=MigrationStrategy.EXECUTE
 )
 # or
-report = mybackoffice.migrate("books", update_with_note, dry_run=False)  # All ids
+report = mybackoffice.migrate("books", update_with_note, strategy=MigrationStrategy.EXECUTE)  # All ids
 
 ```
+
+### MigrationStrategy options
+
+| option | description |
+| - | - |
+| ```MigrationStrategy.DRY_RUN``` | Don't change anything, just display and report diffs | 
+| ```MigrationStrategy.EXECUTE``` | Do changements and save in DB if needed. report diffs | 
+| ```MigrationStrategy.FORCE``` | Do changements and rewrite data in DB. report diffs | 
+
+
+
 
 ### report
 

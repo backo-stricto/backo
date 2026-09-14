@@ -635,7 +635,7 @@ def on_delete_clean_reverse(
             other.save(**kwargs)
 
 
-def on_modify_clean_reverse( # pylint: disable=too-many-branches
+def on_modify_clean_reverse(  # pylint: disable=too-many-branches
     _event_name: str, root: Item, me: RefsList, **kwargs
 ):
     """

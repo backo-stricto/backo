@@ -49,7 +49,7 @@ from .error import PathNotFoundError
 from .file.file import File
 from .item import Item
 from .log import log_system
-from .migration_report import MigrationReport
+from .migration import MigrationReport, MigrationStrategy
 from .patch import Patch
 from .request_decorators import check_content_type, error_to_http_handler
 from .selection import Selection
@@ -367,51 +367,105 @@ class Collection:
         self,
         migration_function: Callable | None,
         _ids: list[str] | None = None,
-        dry_run: bool = True,
+        strategy: MigrationStrategy = MigrationStrategy.DRY_RUN,
     ) -> MigrationReport:
-        """start the migration for a collection
+        """
+        start the migration for a collection
 
-        :param _ids: list of ids to migrate
-        :type _ids: list[str] | None
-        :param dry_run: _description_just check
-        :type dry_run: bool
+        :param migration_function: the transformation function for each object
+        :type migration_function: Callable | None
+        :param _ids: the list of _ids to migrate, defaults to None and mean all _ids of this collection
+        :type _ids: list[str] | None, optional
+        :param strategy: the strategy, defaults to MigrationStrategy.DRY_RUN
+        :type strategy: MigrationStrategy, optional
+        :return: a reportr about the migration
+        :rtype: MigrationReport
         """
         report = MigrationReport()
 
         # Check the structure first
         db_compliant, alter_db_message = self.db_handler.check_structure()
         report.add_check_model(db_compliant, alter_db_message)
+        if db_compliant is False:
+            log_migration.error("-------------------------")
+            log_migration.error(alter_db_message)
+            if strategy != MigrationStrategy.FORCE:
+                return report
 
-        log_migration.info(f"{self.name} start migration (dry_run={dry_run}) ")
+        log_migration.info(
+            f'Collection "{self.name}" start migration (strategy={strategy})'
+        )
         if _ids is None:
-
-            # Do the DB selection without pagination
-            # TODO: By Batch
-
-            response: SelectResponse = self.db_handler.select(None, None, 0, 0, None)
-            for obj in response.items:
-                changes = self._migrate_obj(migration_function, obj, dry_run)
-                if changes is None:
-                    report.add_no_change(obj["_id"])
-                else:
-                    report.add_change(obj["_id"], changes)
-
+            self._migrate_all(migration_function, report, strategy)
         else:
-            for _id in _ids:
-                obj = self.db_handler.get_by_id(_id)
-                changes = self._migrate_obj(migration_function, obj, dry_run)
-                if changes is None:
-                    report.add_no_change(obj["_id"])
-                else:
-                    report.add_change(obj["_id"], changes)
+            self._migrate_some_ids(migration_function, _ids, report, strategy)
 
         return report
 
+    def _migrate_some_ids(
+        self,
+        migration_function: Callable | None,
+        _ids: list[str],
+        report: MigrationReport,
+        strategy: MigrationStrategy,
+    ) -> None:
+
+        for _id in _ids:
+            obj = self.db_handler.get_by_id(_id)
+            changes = self._migrate_obj(migration_function, obj, strategy)
+            if changes is None:
+                report.add_no_change(obj["_id"])
+            else:
+                report.add_change(obj["_id"], changes)
+
+    def _migrate_all(
+        self,
+        migration_function: Callable | None,
+        report: MigrationReport,
+        strategy: MigrationStrategy,
+    ) -> None:
+
+        skip = 0
+        page_size = 3
+
+        while True:
+            response: SelectResponse = self.db_handler.select(
+                None, None, page_size, skip, None
+            )
+
+            if not response.items:
+                break
+            for obj in response.items:
+                changes = self._migrate_obj(migration_function, obj, strategy)
+                if changes is None:
+                    report.add_no_change(obj["_id"])
+                else:
+                    report.add_change(obj["_id"], changes)
+
+            if len(response.items) < page_size:
+                break
+            skip += page_size
+
     def _migrate_obj(
-        self, migration_function: Callable | None, obj: dict, dry_run: bool = True
+        self,
+        migration_function: Callable | None,
+        obj: dict,
+        strategy: MigrationStrategy,
     ) -> dict | None:
+        """
+        Migrate one object
+
+        :param migration_function: _description_
+        :type migration_function: Callable | None
+        :param obj: _description_
+        :type obj: dict
+        :param dry_run: _description_, defaults to True
+        :type dry_run: bool, optional
+        :return: _description_
+        :rtype: dict | None
+        """
         log_migration.debug(
-            f'Migrate "{self.name}/{obj["_id"]}" start (dry_run={dry_run})'
+            f'Migrate "{self.name}/{obj["_id"]}" start (strategy={strategy})'
         )
 
         obj["_id"] = str(obj["_id"])
@@ -419,29 +473,30 @@ class Collection:
         new_obj = migration_function(obj) if migration_function is not None else old_obj
 
         diffs = DeepDiff(old_obj, new_obj)
+
+        # No differences
         if len(list(diffs.keys())) == 0:
             log_migration.debug(f'Migrate "{self.name}/{obj["_id"]}" no changes')
+        else:
+            sdiffs = pprint.pformat(diffs, indent=2)
+            log_migration.debug(
+                f'Migrate "{self.name}/{obj["_id"]}" changes = {sdiffs}'
+            )
 
-            # Check if the object match the model despite the fact there is no change
-            o = self.new_item()
-            o.set(new_obj)
-
-            return None
-
-        sdiffs = pprint.pformat(diffs, indent=2)
-        log_migration.debug(f'Migrate "{self.name}/{obj["_id"]}" changes = {sdiffs}')
-
-        # Check if the object match the model
+        # Check if the object match the model (event if there is no changes)
         o = self.new_item()
         o.set(new_obj)
 
         dict_to_save = o.get_view("save").get_encoded()
 
-        if dry_run is False:
+        # Save if FORCE or EXECUTE and some diff
+        if strategy == MigrationStrategy.FORCE or (
+            strategy == MigrationStrategy.EXECUTE and len(list(diffs.keys())) > 0
+        ):
             self.db_handler.save(o._id.get_value(), dict_to_save)
             log_migration.debug(f'Migrate "{self.name}/{obj["_id"]}" saved')
 
-        return diffs
+        return diffs if len(list(diffs.keys())) > 0 else None
 
     def drop(self):
         """

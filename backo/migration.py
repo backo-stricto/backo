@@ -6,6 +6,7 @@ Module providing the migration
 
 # Importing module
 import sys
+from enum import Enum, auto
 
 # used for developpement
 sys.path.insert(1, "../../stricto")
@@ -19,6 +20,22 @@ from stricto import (
     Bool,
     FreeDict,
 )
+
+
+class MigrationStrategy(Enum):
+    """
+    Specifics strategy for Migration
+    """
+
+    DRY_RUN = auto()
+    """ DRY_RUN don't change anything, just display and report diffs"""
+    EXECUTE = auto()
+    """ Do changements and save in DB if needed. report diffs"""
+    FORCE = auto()
+    """ Do changements and rewrite data in DB. report diffs"""
+
+    def __repr__(self):
+        return self.name
 
 
 class MigrationReport(Dict):  # pylint: disable=too-many-instance-attributes
