@@ -165,6 +165,22 @@ class Item(Dict):  # pylint: disable=too-many-instance-attributes
         """
         self.__dict__["_status"] = StatusType.UNSET
 
+    def admin_load(self, _id: str, **kwargs) -> None:
+        """
+        Load from DB withou computation, rights and trigg messages
+
+        :param _id: _description_
+        :type _id: str
+        """
+        _id_to_load = _id.get_value() if isinstance(_id, String) else str(_id)
+
+        obj = self.db_handler.get_by_id(_id_to_load)
+        self.disable_permissions()
+        self.set_value(obj)
+        self.set_status_saved()
+        self.__dict__["_loaded_object"] = copy.copy(self)
+        self.trigg("loaded", **kwargs)
+
     def load(self, _id: str, **kwargs) -> None:
         """Read in the database by Id and fill the Data
 
@@ -203,12 +219,7 @@ class Item(Dict):  # pylint: disable=too-many-instance-attributes
         self.set_status_saved()
         self.__dict__["_loaded_object"] = copy.copy(self)
 
-        # if kwargs.get("m_path") is None:
-        #     kwargs["m_path"] = []
-
         self.trigg("loaded", **kwargs)
-
-        # print(f"Load {int(datetime.timestamp(datetime.now()))}", self)
 
     def reload(self, **kwargs) -> None:
         """Reload from DB the object (in case of changement)

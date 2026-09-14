@@ -56,9 +56,9 @@ class Backoffice:  # pylint: disable=too-many-instance-attributes
     def __init__(self, name: str):
         """Constructor for backoffice"""
         self.name = name
-        self.collections = {}
+        self.collections: dict[str, Collection] = {}
         self._transaction_id_reference = 1
-        self.transactions = {}
+        self.transactions: dict[int, list[Transaction]] = {}
 
     @validation_parameters
     def register_collection(self, coll: Collection) -> None:

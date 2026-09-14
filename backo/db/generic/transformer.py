@@ -3,7 +3,6 @@ Attribut transformer
 """
 
 import uuid
-from datetime import timedelta
 from typing import Any
 from jsonpath import patch, findall
 
@@ -248,7 +247,6 @@ class IgnoreTransformer(Transformer):
         self.key_path_string = path_to_json_path(self.key_path)
         self.db_path_string = path_to_json_path(self.db_path)
 
-
     def on_load(self, loaded_object: dict, _key_path: list[str]):
         """
         Called when the object is read from the DB.
@@ -286,7 +284,10 @@ class CacheTransformer(Transformer):
 
     """
 
-    def __init__(self, db_path: list[str], ):
+    def __init__(
+        self,
+        db_path: list[str],
+    ):
         """
         :param db_path: the path in the DB to ignore
         :type db_path: list[ str ]
@@ -306,7 +307,6 @@ class CacheTransformer(Transformer):
         self.key_path_string = path_to_json_path(self.key_path)
         self.db_path_string = path_to_json_path(self.db_path)
 
-
     def on_save(self, obj: dict, _key_path: list[str]):
         """
         update t
@@ -316,10 +316,9 @@ class CacheTransformer(Transformer):
         :type _key_path: list[str]
         """
         patch.apply(
-            [{"op": "add", "path": self.db_path_string, "value" : 1234 }],
+            [{"op": "add", "path": self.db_path_string, "value": 1234}],
             obj,
         )
-
 
     def on_load(self, loaded_object: dict, _key_path: list[str]):
         """

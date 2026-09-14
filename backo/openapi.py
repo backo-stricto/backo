@@ -235,7 +235,6 @@ class OpenAPISpec:
                                 "type": "array",
                                 "items": {"$ref": f"#/components/schemas/{item_name}"},
                             },
-                            "total": {"type": "integer"},
                             "_skip": {"type": "integer"},
                             "_page": {"type": "integer"},
                         },
@@ -703,7 +702,6 @@ class OpenAPISpec:
                                         "$ref": f"#/components/schemas/{item_name}"
                                     },
                                 },
-                                "total": {"type": "integer"},
                                 "_skip": {"type": "integer"},
                                 "_page": {"type": "integer"},
                             },

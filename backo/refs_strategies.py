@@ -39,3 +39,19 @@ class FillStrategy(Enum):
 
     def __repr__(self):
         return self.name
+
+
+class ConsistancyeStrategy(Enum):
+    """
+    Specifics strategy on Consistency
+
+    SAFE : Follow reference (Ref or RefsList), verify that the referenced object exists, and fill reverse field if necessary
+    LAZY : Don't Follow reference (Ref or RefsList). Only available
+
+    """
+
+    SAFE = auto()  # The default
+    LAZY = auto()
+
+    def __repr__(self):
+        return self.name

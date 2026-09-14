@@ -7,7 +7,7 @@ Module providing the Generic() Class for connection on DB
 
 import uuid
 import sys
-from typing import Callable, Self
+from typing import Callable
 from abc import ABC, abstractmethod
 
 # used for developpement
@@ -147,7 +147,7 @@ class DBHandler(ABC):  # pylint: disable=too-many-instance-attributes
                 try:
                     transformer.on_load(loaded_object, db_path)
                 except ExpiredError as e:
-                    raise(e) from e
+                    raise (e) from e
                 except Exception as e:
                     raise DBError("Transformer on load error") from e
 

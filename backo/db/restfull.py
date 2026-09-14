@@ -81,7 +81,7 @@ class DBRestFullConnector(DBHandler):
         self._password = options.get("password")
         self._auth_token = options.get("auth_token")
 
-        self._local_connector:DBHandler = None
+        self._local_connector: DBHandler = None
 
         # Store the API base URI for use in endpoint methods
         self._uri = self._build_uri()
@@ -127,7 +127,7 @@ class DBRestFullConnector(DBHandler):
 
         return f"{scheme}://{authentication}{self._host}{port}{prefix}"
 
-    def _request(
+    def _request( # pylint: disable=too-many-return-statements
         self,
         endpoint: str,
         url_parameters: list | tuple | None = None,
@@ -316,7 +316,6 @@ class DBRestFullConnector(DBHandler):
                 raise NotFoundError('_id "{0}" not found', _id) from error
             if status_code == 408:
                 raise TemporaryNotFound('_id "{0}" not found', _id) from error
-
 
             raise DBError('Endpoint "{0}" error', endpoint) from error
 

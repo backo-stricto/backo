@@ -67,6 +67,7 @@ class NotFoundError(Exception, StrictoError):
     def __str__(self):
         return repr(self)
 
+
 class ExpiredError(Exception, StrictoError):
     """
     Extented :py:class:`StrictoError` with ``Error``
@@ -85,7 +86,8 @@ class ExpiredError(Exception, StrictoError):
 
     def __str__(self):
         return repr(self)
-    
+
+
 class TemporaryNotFound(Exception, StrictoError):
     """
     Extented :py:class:`StrictoError` with ``Error``
@@ -164,4 +166,3 @@ class SessionError(Exception, StrictoError):
 
     def __str__(self):
         return repr(self)
-

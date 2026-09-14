@@ -4,11 +4,11 @@ Loop path manipulation
 
 from .error import BackoError
 
-DEFAULT_MAX_LOOP = 40
+DEFAULT_MAX_LOOP = 4
 
 from .log import log_system
 
-log = log_system.get_or_create_logger("loop")
+log = log_system.get_or_create_logger("ref")
 
 
 class LoopPath:
@@ -38,7 +38,7 @@ class LoopPath:
                 return True
         return False
 
-    def append(self, collection_name: str, _id: str, path: str) -> None:
+    def append_or_loop(self, collection_name: str, _id: str, path: str) -> bool:
         """Append to the path a tuple (collection, _id, path )
 
         :param collection_name: the name of the collection
@@ -54,4 +54,11 @@ class LoopPath:
                 "Loop max detected for ( {0}, {1}, {2})", collection_name, _id, path
             )
 
+        if self.is_loop(collection_name, _id, path):
+            log.debug(
+                f"Looper {id(self)} Loop detected {(collection_name, _id, path)} len={len(self._path)}"
+            )
+            return True
+
         self._path.append((collection_name, _id, path))
+        return False

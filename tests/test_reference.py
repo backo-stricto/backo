@@ -2,7 +2,7 @@
 test for References()
 """
 
-# pylint: disable=too-many-lines, wrong-import-position, no-member, import-error, protected-access, wrong-import-order, duplicate-code
+# pylint: disable=too-many-lines, no-member, import-error, protected-access, wrong-import-order, duplicate-code, invalid-name
 
 import os
 import unittest
@@ -15,437 +15,431 @@ from backo import (
     RefsList,
     DeleteStrategy,
     FillStrategy,
-    SSyntaxError,
     NotFoundError,
-    PathNotFoundError,
     BackoError,
-    log_system,
-    LogLevel,
     current_user,
 )
-from backo import String, Bool, SConstraintError
-
-### --- For development ---
-log_system.add_handler(log_system.set_streamhandler())
-log = log_system.get_or_create_logger("ref")
-log.setLevel(LogLevel.INFO)
-log = log_system.get_or_create_logger("testing")
-
+from backo import String, Bool
 
 YML_DIR = "/tmp/backo_tests_references"
+
+yml_users = DBYmlDirConnector(os.path.join(YML_DIR, "Users"))
+yml_users.generate_id = lambda o: f"User_{o["name"]}_{o["surname"]}"
+# --- DB for sites
+yml_sites = DBYmlDirConnector(os.path.join(YML_DIR, "Sites"))
+yml_sites.generate_id = lambda o: f"Site_{o["name"]}"
+# --- DB for humans
+yml_humans = DBYmlDirConnector(os.path.join(YML_DIR, "Humans"))
+yml_humans.generate_id = lambda o: f"Human_{o["name"]}"
+# --- DB for animals
+yml_animals = DBYmlDirConnector(os.path.join(YML_DIR, "Animals"))
+yml_animals.generate_id = lambda o: f"Animal_{o["desc"]}"
+
+
+o2m_ofs_ods_combinations = {
+    "FM": (FillStrategy.FILL, DeleteStrategy.MUST_BE_EMPTY),
+    "FD": (FillStrategy.FILL, DeleteStrategy.DELETE_REFERENCED_ITEMS),
+    "FU": (FillStrategy.FILL, DeleteStrategy.UNLINK_REFERENCED_ITEMS),
+    "NM": (FillStrategy.NOT_FILL, DeleteStrategy.MUST_BE_EMPTY),
+    "ND": (FillStrategy.NOT_FILL, DeleteStrategy.DELETE_REFERENCED_ITEMS),
+    "NU": (FillStrategy.NOT_FILL, DeleteStrategy.UNLINK_REFERENCED_ITEMS),
+}
+
+backoffices_o2m = {}
+
+for st_name, st_values in o2m_ofs_ods_combinations.items():
+    user = Item(
+        {
+            "name": String(),
+            "surname": String(),
+            "site": Ref(coll="sites", field="$.users"),
+            "male": Bool(default=True),
+        }
+    )
+    site = Item(
+        {
+            "name": String(),
+            "address": String(),
+            "users": RefsList(
+                coll="users",
+                field="$.site",
+                ofs=st_values[0],
+                ods=st_values[1],
+            ),
+        }
+    )
+
+    b = Backoffice(st_name)
+    b.register_collection(Collection("users", user, yml_users))
+    b.register_collection(Collection("sites", site, yml_sites))
+    backoffices_o2m[st_name] = b
+
+m2m_ofs_ods_combinations = {
+    "FMFM": (
+        FillStrategy.FILL,
+        DeleteStrategy.MUST_BE_EMPTY,
+        FillStrategy.FILL,
+        DeleteStrategy.MUST_BE_EMPTY,
+    ),
+    "FMFD": (
+        FillStrategy.FILL,
+        DeleteStrategy.MUST_BE_EMPTY,
+        FillStrategy.FILL,
+        DeleteStrategy.DELETE_REFERENCED_ITEMS,
+    ),
+    "FMFU": (
+        FillStrategy.FILL,
+        DeleteStrategy.MUST_BE_EMPTY,
+        FillStrategy.FILL,
+        DeleteStrategy.UNLINK_REFERENCED_ITEMS,
+    ),
+    "FMNM": (
+        FillStrategy.FILL,
+        DeleteStrategy.MUST_BE_EMPTY,
+        FillStrategy.NOT_FILL,
+        DeleteStrategy.MUST_BE_EMPTY,
+    ),
+    "FMND": (
+        FillStrategy.FILL,
+        DeleteStrategy.MUST_BE_EMPTY,
+        FillStrategy.NOT_FILL,
+        DeleteStrategy.DELETE_REFERENCED_ITEMS,
+    ),
+    "FMNU": (
+        FillStrategy.FILL,
+        DeleteStrategy.MUST_BE_EMPTY,
+        FillStrategy.NOT_FILL,
+        DeleteStrategy.UNLINK_REFERENCED_ITEMS,
+    ),
+    "FDFM": (
+        FillStrategy.FILL,
+        DeleteStrategy.DELETE_REFERENCED_ITEMS,
+        FillStrategy.FILL,
+        DeleteStrategy.MUST_BE_EMPTY,
+    ),
+    "FDFD": (
+        FillStrategy.FILL,
+        DeleteStrategy.DELETE_REFERENCED_ITEMS,
+        FillStrategy.FILL,
+        DeleteStrategy.DELETE_REFERENCED_ITEMS,
+    ),
+    "FDFU": (
+        FillStrategy.FILL,
+        DeleteStrategy.DELETE_REFERENCED_ITEMS,
+        FillStrategy.FILL,
+        DeleteStrategy.UNLINK_REFERENCED_ITEMS,
+    ),
+    "FDNM": (
+        FillStrategy.FILL,
+        DeleteStrategy.DELETE_REFERENCED_ITEMS,
+        FillStrategy.NOT_FILL,
+        DeleteStrategy.MUST_BE_EMPTY,
+    ),
+    "FDND": (
+        FillStrategy.FILL,
+        DeleteStrategy.DELETE_REFERENCED_ITEMS,
+        FillStrategy.NOT_FILL,
+        DeleteStrategy.DELETE_REFERENCED_ITEMS,
+    ),
+    "FDNU": (
+        FillStrategy.FILL,
+        DeleteStrategy.DELETE_REFERENCED_ITEMS,
+        FillStrategy.NOT_FILL,
+        DeleteStrategy.UNLINK_REFERENCED_ITEMS,
+    ),
+    "FUFM": (
+        FillStrategy.FILL,
+        DeleteStrategy.UNLINK_REFERENCED_ITEMS,
+        FillStrategy.FILL,
+        DeleteStrategy.MUST_BE_EMPTY,
+    ),
+    "FUFD": (
+        FillStrategy.FILL,
+        DeleteStrategy.UNLINK_REFERENCED_ITEMS,
+        FillStrategy.FILL,
+        DeleteStrategy.DELETE_REFERENCED_ITEMS,
+    ),
+    "FUFU": (
+        FillStrategy.FILL,
+        DeleteStrategy.UNLINK_REFERENCED_ITEMS,
+        FillStrategy.FILL,
+        DeleteStrategy.UNLINK_REFERENCED_ITEMS,
+    ),
+    "FUNM": (
+        FillStrategy.FILL,
+        DeleteStrategy.UNLINK_REFERENCED_ITEMS,
+        FillStrategy.NOT_FILL,
+        DeleteStrategy.MUST_BE_EMPTY,
+    ),
+    "FUND": (
+        FillStrategy.FILL,
+        DeleteStrategy.UNLINK_REFERENCED_ITEMS,
+        FillStrategy.NOT_FILL,
+        DeleteStrategy.DELETE_REFERENCED_ITEMS,
+    ),
+    "FUNU": (
+        FillStrategy.FILL,
+        DeleteStrategy.UNLINK_REFERENCED_ITEMS,
+        FillStrategy.NOT_FILL,
+        DeleteStrategy.UNLINK_REFERENCED_ITEMS,
+    ),
+    "NMFM": (
+        FillStrategy.NOT_FILL,
+        DeleteStrategy.MUST_BE_EMPTY,
+        FillStrategy.FILL,
+        DeleteStrategy.MUST_BE_EMPTY,
+    ),
+    "NMFD": (
+        FillStrategy.NOT_FILL,
+        DeleteStrategy.MUST_BE_EMPTY,
+        FillStrategy.FILL,
+        DeleteStrategy.DELETE_REFERENCED_ITEMS,
+    ),
+    "NMFU": (
+        FillStrategy.NOT_FILL,
+        DeleteStrategy.MUST_BE_EMPTY,
+        FillStrategy.FILL,
+        DeleteStrategy.UNLINK_REFERENCED_ITEMS,
+    ),
+    "NMNM": (
+        FillStrategy.NOT_FILL,
+        DeleteStrategy.MUST_BE_EMPTY,
+        FillStrategy.NOT_FILL,
+        DeleteStrategy.MUST_BE_EMPTY,
+    ),
+    "NMND": (
+        FillStrategy.NOT_FILL,
+        DeleteStrategy.MUST_BE_EMPTY,
+        FillStrategy.NOT_FILL,
+        DeleteStrategy.DELETE_REFERENCED_ITEMS,
+    ),
+    "NMNU": (
+        FillStrategy.NOT_FILL,
+        DeleteStrategy.MUST_BE_EMPTY,
+        FillStrategy.NOT_FILL,
+        DeleteStrategy.UNLINK_REFERENCED_ITEMS,
+    ),
+    "NDFM": (
+        FillStrategy.NOT_FILL,
+        DeleteStrategy.DELETE_REFERENCED_ITEMS,
+        FillStrategy.FILL,
+        DeleteStrategy.MUST_BE_EMPTY,
+    ),
+    "NDFD": (
+        FillStrategy.NOT_FILL,
+        DeleteStrategy.DELETE_REFERENCED_ITEMS,
+        FillStrategy.FILL,
+        DeleteStrategy.DELETE_REFERENCED_ITEMS,
+    ),
+    "NDFU": (
+        FillStrategy.NOT_FILL,
+        DeleteStrategy.DELETE_REFERENCED_ITEMS,
+        FillStrategy.FILL,
+        DeleteStrategy.UNLINK_REFERENCED_ITEMS,
+    ),
+    "NDNM": (
+        FillStrategy.NOT_FILL,
+        DeleteStrategy.DELETE_REFERENCED_ITEMS,
+        FillStrategy.NOT_FILL,
+        DeleteStrategy.MUST_BE_EMPTY,
+    ),
+    "NDND": (
+        FillStrategy.NOT_FILL,
+        DeleteStrategy.DELETE_REFERENCED_ITEMS,
+        FillStrategy.NOT_FILL,
+        DeleteStrategy.DELETE_REFERENCED_ITEMS,
+    ),
+    "NDNU": (
+        FillStrategy.NOT_FILL,
+        DeleteStrategy.DELETE_REFERENCED_ITEMS,
+        FillStrategy.NOT_FILL,
+        DeleteStrategy.UNLINK_REFERENCED_ITEMS,
+    ),
+    "NUFM": (
+        FillStrategy.NOT_FILL,
+        DeleteStrategy.UNLINK_REFERENCED_ITEMS,
+        FillStrategy.FILL,
+        DeleteStrategy.MUST_BE_EMPTY,
+    ),
+    "NUFD": (
+        FillStrategy.NOT_FILL,
+        DeleteStrategy.UNLINK_REFERENCED_ITEMS,
+        FillStrategy.FILL,
+        DeleteStrategy.DELETE_REFERENCED_ITEMS,
+    ),
+    "NUFU": (
+        FillStrategy.NOT_FILL,
+        DeleteStrategy.UNLINK_REFERENCED_ITEMS,
+        FillStrategy.FILL,
+        DeleteStrategy.UNLINK_REFERENCED_ITEMS,
+    ),
+    "NUNM": (
+        FillStrategy.NOT_FILL,
+        DeleteStrategy.UNLINK_REFERENCED_ITEMS,
+        FillStrategy.NOT_FILL,
+        DeleteStrategy.MUST_BE_EMPTY,
+    ),
+    "NUND": (
+        FillStrategy.NOT_FILL,
+        DeleteStrategy.UNLINK_REFERENCED_ITEMS,
+        FillStrategy.NOT_FILL,
+        DeleteStrategy.DELETE_REFERENCED_ITEMS,
+    ),
+    "NUNU": (
+        FillStrategy.NOT_FILL,
+        DeleteStrategy.UNLINK_REFERENCED_ITEMS,
+        FillStrategy.NOT_FILL,
+        DeleteStrategy.UNLINK_REFERENCED_ITEMS,
+    ),
+}
+
+backoffices_m2m = {}
+
+for st_name, st_values in m2m_ofs_ods_combinations.items():
+    human = Item(
+        {
+            "name": String(),
+            "totems": RefsList(
+                coll="animals",
+                field="$.humans",
+                ofs=st_values[0],
+                ods=st_values[1],
+            ),
+        }
+    )
+
+    animal = Item(
+        {
+            "desc": String(),
+            "humans": RefsList(
+                coll="humans",
+                field="$.totems",
+                ofs=st_values[2],
+                ods=st_values[3],
+            ),
+        }
+    )
+
+    b = Backoffice(st_name)
+    b.register_collection(Collection("humans", human, yml_humans))
+    b.register_collection(Collection("animals", animal, yml_animals))
+    backoffices_m2m[st_name] = b
+
+
+o2o_require_combinations = {"FF": (False, False), "FT": (False, True)}
+
+backoffices_o2o = {}
+
+for st_name, st_values in o2o_require_combinations.items():
+    human = Item(
+        {
+            "name": String(),
+            "totem": Ref(coll="animals", field="$.human", required=st_values[0]),
+        }
+    )
+
+    animal = Item(
+        {
+            "desc": String(),
+            "human": Ref(coll="humans", field="$.totem", required=st_values[1]),
+        }
+    )
+
+    b = Backoffice(st_name)
+    b.register_collection(Collection("humans", human, yml_humans))
+    b.register_collection(Collection("animals", animal, yml_animals))
+    backoffices_o2o[st_name] = b
 
 
 class TestReferences(unittest.TestCase):
     """
-    DB with references ()
+    Test for references (Ref and RefsList)
+
     """
 
-    def __init__(self, *args, **kwargs):
-        """
-        init this tests
-        """
-        super().__init__(*args, **kwargs)
-
-        # --- DB for user
-        self.yml_users = DBYmlDirConnector(os.path.join(YML_DIR, "Users"))
-        self.yml_users.generate_id = lambda o: f"User_{o["name"]}_{o["surname"]}"
-
-        # --- DB for sites
-        self.yml_sites = DBYmlDirConnector(os.path.join(YML_DIR, "Sites"))
-        self.yml_sites.generate_id = lambda o: f"Site_{o["name"]}"
-
-        # --- DB for humans
-        self.yml_humans = DBYmlDirConnector(os.path.join(YML_DIR, "Humans"))
-        self.yml_humans.generate_id = lambda o: f"Human_{o["name"]}"
-
-        # --- DB for animals
-        self.yml_animals = DBYmlDirConnector(os.path.join(YML_DIR, "Animals"))
-        self.yml_animals.generate_id = lambda o: f"Animal_{o["desc"]}"
-
-    def tearDown(self):
-        current_user.reinit()
-        return super().tearDown()
-
-    def test_references_one_to_many_fill(self):
-        """
-        creating an backoffice with ref one to many
-        and delete
-        """
-
-        backoffice = Backoffice("myApp")
-
-        backoffice.register_collection(
-            Collection(
-                "users",
-                Item(
-                    {
-                        "name": String(),
-                        "surname": String(),
-                        "site": Ref(coll="sites", field="$.users", required=True),
-                        "male": Bool(default=True),
-                    }
-                ),
-                self.yml_users,
-            )
-        )
-        backoffice.register_collection(
-            Collection(
-                "sites",
-                Item(
-                    {
-                        "name": String(),
-                        "address": String(),
-                        "users": RefsList(
-                            coll="users",
-                            field="$.site",
-                            ofs=FillStrategy.FILL,
-                            ods=DeleteStrategy.MUST_BE_EMPTY,
-                        ),
-                    }
-                ),
-                self.yml_sites,
-            )
-        )
-
-        # Hard clean before tests
-        self.yml_sites.drop()
-        self.yml_users.drop()
-
+    def setUp(self):
+        """setup"""
         current_user.standalone = True
-        si = backoffice.sites.create({"name": "moon", "address": "far"})
+        yml_animals.drop()
+        yml_humans.drop()
+        yml_sites.drop()
+        yml_users.drop()
+        return super().setUp()
 
-        u = backoffice.users.create(
-            {"name": "bebert", "surname": "bebert", "site": si._id}
+    def sub_test_crud_o2m(self, backoffice: Backoffice):
+        """
+        CRUD One 2 many
+
+        """
+        yml_sites.drop()
+        yml_users.drop()
+
+        s1 = backoffice.sites.create({"name": "moon", "address": "far"})
+        s2 = backoffice.sites.create({"name": "mars", "address": "farfar"})
+        u1 = backoffice.users.create(
+            {"name": "bebert", "surname": "bebert", "site": s1._id}
+        )
+        u2 = backoffice.users.create(
+            {"name": "bebert", "surname": "elon", "site": s2._id}
         )
 
         # -- Check if reverse is filled
-        si.reload()
-        self.assertEqual(len(si.users), 1)
-        self.assertEqual(si.users[0], u._id)
+        s1.reload()
+        self.assertEqual(len(s1.users), 1)
+        self.assertEqual(s1.users[0], u1._id)
+        u1.reload()
+        u1.site = s2._id
+        u1.save()
+        s1.reload()
+        self.assertEqual(len(s1.users), 0)
+        s1.delete()
+        s2.reload()
+        self.assertEqual(len(s2.users), 2)
+        u2.delete()
+        s2.reload()
+        self.assertEqual(len(s2.users), 1)
 
-        # -- check if deletion reverse is OK
-        u.delete()
-        si.reload()
-        self.assertEqual(len(si.users), 0)
-
-        # -- delete site
-        si.delete()
-
-    def test_check_syntax(self):
+    def test_crud_o2m(self):
         """
-        creating an backoffice with refs and some error to check syntaxes one to many
-        and delete
+        Wrapper CRUD One to many
         """
+        for backoffice in backoffices_o2m.values():
+            with self.subTest(backoffice=backoffice):
+                self.sub_test_crud_o2m(backoffice)
 
-        backoffice = Backoffice("myApp")
-
-        backoffice.register_collection(
-            Collection(
-                "users",
-                Item(
-                    {
-                        "name": String(),
-                        "surname": String(),
-                        "site": Ref(coll="sites", field="$.users", required=True),
-                        "sitenocoll": Ref(
-                            coll="sitesunknown", field="$.users", required=True
-                        ),
-                        "site1": Ref(coll="sites", required=True),
-                        "site2": Ref(
-                            coll="sites", field="$.unknownfield", required=True
-                        ),
-                        "male": Bool(default=True),
-                    }
-                ),
-                self.yml_users,
-            )
-        )
-        backoffice.register_collection(
-            Collection(
-                "sites",
-                Item(
-                    {
-                        "name": String(),
-                        "address": String(),
-                        "users": RefsList(
-                            coll="users",
-                            field="$.site",
-                            ofs=FillStrategy.FILL,
-                            ods=DeleteStrategy.MUST_BE_EMPTY,
-                        ),
-                        "users1": RefsList(
-                            coll="notfound",
-                            field="$.site",
-                        ),
-                        "users2": RefsList(
-                            coll="users",
-                        ),
-                        "users3": RefsList(
-                            coll="users",
-                            field="$.sitenotfound",
-                        ),
-                    }
-                ),
-                self.yml_sites,
-            )
-        )
-        backoffice.check_syntax()
-
-    def test_references_one_to_many_nofill(self):
+    def test_references_o2m_FM(self):
         """
-        creating an backoffice with ref one to many
-        and delete with NOTFILL STRATEGY
+        Fill Strategy - MUST_BE_EMPTY
         """
+        backoffice = backoffices_o2m["FM"]
 
-        backoffice = Backoffice("myApp")
-
-        backoffice.register_collection(
-            Collection(
-                "users",
-                Item(
-                    {
-                        "name": String(),
-                        "surname": String(),
-                        "site": Ref(coll="sites", field="$.users", required=True),
-                        "male": Bool(default=True),
-                    }
-                ),
-                self.yml_users,
-            )
-        )
-        backoffice.register_collection(
-            Collection(
-                "sites",
-                Item(
-                    {
-                        "name": String(),
-                        "address": String(),
-                        "users": RefsList(
-                            coll="users",
-                            field="$.site",
-                            ofs=FillStrategy.NOT_FILL,
-                            ods=DeleteStrategy.MUST_BE_EMPTY,
-                        ),
-                    }
-                ),
-                self.yml_sites,
-            )
-        )
-
-        # Hard clean before tests
-        self.yml_sites.drop()
-        self.yml_users.drop()
-
-        current_user.standalone = True
         si = backoffice.sites.create({"name": "moon", "address": "far"})
-
-        u = backoffice.users.create(
+        _u = backoffice.users.create(
             {"name": "bebert", "surname": "bebert", "site": si._id}
         )
 
-        # -- Check reverse must not be filled
+        # -- delete site error
         si.reload()
-        self.assertEqual(len(si.users), 0)
-
-        # -- check error delete
         with self.assertRaises(BackoError) as e:
             si.delete()
         self.assertEqual(
-            e.exception.to_string(), 'Collection (not filled) "users" not empty'
+            e.exception.to_string(),
+            'Collection "users" not empty',
         )
 
-        # -- check if deletion reverse is OK
-        u.delete()
-        si.reload()
-        self.assertEqual(len(si.users), 0)
-
-        # -- delete site
-        si.delete()
-
-    def test_references_one_to_many_noreverse(self):
+    def test_references_o2m_FFD(self):
         """
-        creating an backoffice with ref one to many
-        and delete with NO REVERSE
+        Fill Strategy - DELETE_REFERENCED_ITEMS
         """
+        backoffice = backoffices_o2m["FD"]
 
-        backoffice = Backoffice("myApp")
-
-        backoffice.register_collection(
-            Collection(
-                "users",
-                Item(
-                    {
-                        "name": String(),
-                        "surname": String(),
-                        "site": Ref(coll="sites", field="$.users", required=True),
-                        "male": Bool(default=True),
-                    }
-                ),
-                self.yml_users,
-            )
-        )
-        backoffice.register_collection(
-            Collection(
-                "sites",
-                Item(
-                    {
-                        "name": String(),
-                        "address": String(),
-                        "users": RefsList(
-                            coll="users",
-                            ods=DeleteStrategy.MUST_BE_EMPTY,
-                        ),
-                    }
-                ),
-                self.yml_sites,
-            )
-        )
-
-        # Hard clean before tests
-        self.yml_sites.drop()
-        self.yml_users.drop()
-
-        current_user.standalone = True
         si = backoffice.sites.create({"name": "moon", "address": "far"})
-
         u = backoffice.users.create(
             {"name": "bebert", "surname": "bebert", "site": si._id}
         )
 
-        # -- Check reverse must not be filled
-        si.reload()
-        self.assertEqual(len(si.users), 1)
-
-        # -- delete si (we can because we don't know wich field from users point to us)
-        si.delete()
-
-        # -- check if deletion reverse is OK
-        u.delete()
-
-    def test_references_one_to_many_strategy_clean(self):
-        """
-        creating an backoffice with ref one to many
-        and delete
-        """
-
-        backoffice = Backoffice("myApp")
-        backoffice.register_collection(
-            Collection(
-                "users",
-                Item(
-                    {
-                        "name": String(),
-                        "surname": String(),
-                        "site": Ref(coll="sites", field="$.users"),
-                        "male": Bool(default=True),
-                    }
-                ),
-                self.yml_users,
-            )
-        )
-
-        # --- DB for sites
-        backoffice.register_collection(
-            Collection(
-                "sites",
-                Item(
-                    {
-                        "name": String(),
-                        "address": String(),
-                        "users": RefsList(
-                            coll="users",
-                            field="$.site",
-                            ods=DeleteStrategy.UNLINK_REFERENCED_ITEMS,
-                        ),
-                    }
-                ),
-                self.yml_sites,
-            )
-        )
-
-        # Hard clean before tests
-        self.yml_sites.drop()
-        self.yml_users.drop()
-
-        current_user.standalone = True
-        si = backoffice.sites.create({"name": "moon", "address": "far"})
-
-        u = backoffice.users.create(
-            {"name": "bebert", "surname": "bebert", "site": si._id}
-        )
-
-        # -- Check if reverse is filled
-        si.reload()
-        self.assertEqual(len(si.users), 1)
-        self.assertEqual(si.users[0], u._id)
-
         # -- delete site
-        si.delete()
-
-        u.reload()
-        self.assertEqual(u.site, None)
-
-    def test_references_one_to_many_strategy_delete(self):
-        """
-        creating an backoffice with ref one to many
-        and delete
-        """
-
-        backoffice = Backoffice("myApp")
-        backoffice.register_collection(
-            Collection(
-                "users",
-                Item(
-                    {
-                        "name": String(),
-                        "surname": String(),
-                        "site": Ref(coll="sites", field="$.users"),
-                        "male": Bool(default=True),
-                    }
-                ),
-                self.yml_users,
-            )
-        )
-
-        # --- DB for sites
-        backoffice.register_collection(
-            Collection(
-                "sites",
-                Item(
-                    {
-                        "name": String(),
-                        "address": String(),
-                        "users": RefsList(
-                            coll="users",
-                            field="$.site",
-                            ods=DeleteStrategy.DELETE_REFERENCED_ITEMS,
-                        ),
-                    }
-                ),
-                self.yml_sites,
-            )
-        )
-
-        # Hard clean before tests
-        self.yml_sites.drop()
-        self.yml_users.drop()
-
-        current_user.standalone = True
-        si = backoffice.sites.create({"name": "moon", "address": "far"})
-
-        u = backoffice.users.create(
-            {"name": "bebert", "surname": "bebert", "site": si._id}
-        )
-
-        u.reload()
-        self.assertEqual(u.site, si._id)
-
-        # -- Check if reverse is filled
         si.reload()
-        self.assertEqual(len(si.users), 1)
-        self.assertEqual(si.users[0], u._id)
-
-        # -- delete site
         si.delete()
 
         with self.assertRaises(NotFoundError) as e:
@@ -455,67 +449,57 @@ class TestReferences(unittest.TestCase):
             '_id "User_bebert_bebert" not found in "/tmp/backo_tests_references/Users"',
         )
 
-    def test_references_one_to_many_strategy_delete_nofill(self):
+    def test_references_o2m_FFU(self):
         """
-        creating an backoffice with ref one to many
-        and delete
+        Fill Strategy - UNLINK_REFERENCED_ITEMS
         """
+        backoffice = backoffices_o2m["FU"]
 
-        backoffice = Backoffice("myApp")
-        backoffice.register_collection(
-            Collection(
-                "users",
-                Item(
-                    {
-                        "name": String(),
-                        "surname": String(),
-                        "site": Ref(coll="sites", field="$.users"),
-                        "male": Bool(default=True),
-                    }
-                ),
-                self.yml_users,
-            )
-        )
-
-        # --- DB for sites
-        backoffice.register_collection(
-            Collection(
-                "sites",
-                Item(
-                    {
-                        "name": String(),
-                        "address": String(),
-                        "users": RefsList(
-                            coll="users",
-                            field="$.site",
-                            ofs=FillStrategy.NOT_FILL,
-                            ods=DeleteStrategy.DELETE_REFERENCED_ITEMS,
-                        ),
-                    }
-                ),
-                self.yml_sites,
-            )
-        )
-
-        # Hard clean before tests
-        self.yml_sites.drop()
-        self.yml_users.drop()
-
-        current_user.standalone = True
         si = backoffice.sites.create({"name": "moon", "address": "far"})
 
         u = backoffice.users.create(
             {"name": "bebert", "surname": "bebert", "site": si._id}
         )
 
-        u.reload()
-        self.assertEqual(u.site, si._id)
-
-        # -- Check reverse must not be filled (NO_FILL strategy)
+        # -- delete site
         si.reload()
-        self.assertEqual(len(si.users), 0)
+        si.delete()
+        u.reload()
+        self.assertIsNone(u.site.get_value())
+
+    def test_references_o2m_FNM(self):
+        """
+        Not Fill Strategy - MUST_BE_EMPTY
+        """
+        backoffice = backoffices_o2m["NM"]
+
+        si = backoffice.sites.create({"name": "moon", "address": "far"})
+        _u = backoffice.users.create(
+            {"name": "bebert", "surname": "bebert", "site": si._id}
+        )
+
+        # -- delete site error
+        si.reload()
+        with self.assertRaises(BackoError) as e:
+            si.delete()
+        self.assertEqual(
+            e.exception.to_string(),
+            'Collection "users" not empty',
+        )
+
+    def test_references_o2m_FND(self):
+        """
+        Not Fill Strategy - DELETE_REFERENCED_ITEMS
+        """
+        backoffice = backoffices_o2m["ND"]
+
+        si = backoffice.sites.create({"name": "moon", "address": "far"})
+        u = backoffice.users.create(
+            {"name": "bebert", "surname": "bebert", "site": si._id}
+        )
 
         # -- delete site
+        si.reload()
         si.delete()
 
         with self.assertRaises(NotFoundError) as e:
@@ -525,712 +509,220 @@ class TestReferences(unittest.TestCase):
             '_id "User_bebert_bebert" not found in "/tmp/backo_tests_references/Users"',
         )
 
-    def test_references_errors(self):
+    def test_references_o2m_FNU(self):
         """
-        creating an backoffice with ref with errors
+        Not - Fill Strategy - UNLINK_REFERENCED_ITEMS
         """
+        backoffice = backoffices_o2m["NU"]
 
-        backoffice = Backoffice("myApp")
+        si = backoffice.sites.create({"name": "moon", "address": "far"})
 
-        backoffice.register_collection(
-            Collection(
-                "users",
-                Item(
-                    {
-                        "name": String(),
-                        "surname": String(),
-                        "site": Ref(coll="sites", field="$.users"),
-                        "male": Bool(default=True),
-                    }
-                ),
-                self.yml_users,
-            )
+        u = backoffice.users.create(
+            {"name": "bebert", "surname": "bebert", "site": si._id}
         )
 
-        # --- DB for sites
-        backoffice.register_collection(
-            Collection(
-                "sites",
-                Item(
-                    {
-                        "name": String(),
-                        "address": String(),
-                        "users": RefsList(
-                            coll="users",
-                            field="$.site",
-                            ods=DeleteStrategy.DELETE_REFERENCED_ITEMS,
-                        ),
-                    }
-                ),
-                self.yml_sites,
-            )
-        )
-
-        # Hard clean before tests
-        self.yml_sites.drop()
-        self.yml_users.drop()
-
-        current_user.standalone = True
-        si = backoffice.sites.new()
-        si.create({"name": "moon", "address": "far"})
-
-        u = backoffice.users.new()
-        self.assertEqual(u.site.get_root(), u)
-
-        t_id = backoffice.start_transaction()
-        u.site._collection = "unknown_coll"
-        with self.assertRaises(SSyntaxError) as e:
-            u.create(
-                {"name": "bebert", "surname": "bebert", "site": "1234"},
-                transaction_id=t_id,
-            )
-        self.assertEqual(
-            e.exception.to_string(),
-            'Ref "$.site" to unnknown collection "unknown_coll"',
-        )
-        backoffice.rollback_transaction(t_id)
-
-        t_id = backoffice.start_transaction()
-        # self.yml_users.delete_by_id("User_bebert_bebert")
-        u = backoffice.users.new()
-        u.site._collection = "sites"
-        u.site._reverse = "unknown_reverse"
-        with self.assertRaises(PathNotFoundError) as e:
-            u.create(
-                {"name": "bebert", "surname": "bebert", "site": si._id},
-                transaction_id=t_id,
-            )
-        self.assertEqual(
-            e.exception.to_string(),
-            'Path "unknown_reverse" not found in collection "sites"',
-        )
-        backoffice.rollback_transaction(t_id)
-
-        t_id = backoffice.start_transaction()
-        # self.yml_users.delete_by_id("User_bebert_bebert")
-        u = backoffice.users.new()
-        u.site._reverse = "users"
-        with self.assertRaises(NotFoundError) as e:
-            backoffice.users.create(
-                {"name": "bebert", "surname": "bebert", "site": "no_ref"},
-                transaction_id=t_id,
-            )
-        self.assertEqual(
-            e.exception.to_string(),
-            '_id "no_ref" not found in "/tmp/backo_tests_references/Sites"',
-        )
-        backoffice.rollback_transaction(t_id)
-
-    def test_references_one_to_many_modification(self):
-        """
-        creating an backoffice with ref one to many
-        and delete
-        """
-
-        backoffice = Backoffice("myApp")
-
-        backoffice.register_collection(
-            Collection(
-                "users",
-                Item(
-                    {
-                        "name": String(),
-                        "surname": String(),
-                        "site": Ref(coll="sites", field="$.users"),
-                        "male": Bool(default=True),
-                    }
-                ),
-                self.yml_users,
-            )
-        )
-
-        # --- DB for sites
-        backoffice.register_collection(
-            Collection(
-                "sites",
-                Item(
-                    {
-                        "name": String(),
-                        "address": String(),
-                        "users": RefsList(
-                            coll="users",
-                            field="$.site",
-                            ods=DeleteStrategy.DELETE_REFERENCED_ITEMS,
-                        ),
-                    }
-                ),
-                self.yml_sites,
-            )
-        )
-
-        # Hard clean before tests
-        self.yml_sites.drop()
-        self.yml_users.drop()
-
-        current_user.standalone = True
-        si_mars = backoffice.sites.create({"name": "mars", "address": "very far"})
-
-        si_moon = backoffice.sites.create({"name": "moon", "address": "far"})
-
-        u = backoffice.users.new()
-        u.create({"name": "bebert", "surname": "bebert", "site": si_moon._id})
-
-        # -- Check if reverse is filled
-        si_moon.reload()
-        self.assertEqual(len(si_moon.users), 1)
-        self.assertEqual(si_moon.users[0], u._id)
-        si_mars.reload()
-        self.assertEqual(len(si_mars.users), 0)
-
-        # -- change site
-        u.site = si_mars._id
-        u.save()
-
-        # -- Check if reverse is modified
-        si_moon.reload()
-        self.assertEqual(len(si_moon.users), 0)
-
-        si_mars.reload()
-        self.assertEqual(len(si_mars.users), 1)
-        self.assertEqual(si_mars.users[0], u._id)
-
-    def test_references_one_no_fill(self):
-        """
-        creating an backoffice with ref one to many
-        and delete with ref no_fill
-        """
-
-        backoffice = Backoffice("myApp")
-
-        backoffice.register_collection(
-            Collection(
-                "users",
-                Item(
-                    {
-                        "name": String(),
-                        "surname": String(),
-                        "site": Ref(
-                            coll="sites", field="$.users", ofs=FillStrategy.NOT_FILL
-                        ),
-                        "male": Bool(default=True),
-                    }
-                ),
-                self.yml_users,
-            )
-        )
-
-        # --- DB for sites
-        backoffice.register_collection(
-            Collection(
-                "sites",
-                Item(
-                    {
-                        "name": String(),
-                        "address": String(),
-                        "users": RefsList(
-                            coll="users",
-                            field="$.site",
-                            ods=DeleteStrategy.DELETE_REFERENCED_ITEMS,
-                        ),
-                    }
-                ),
-                self.yml_sites,
-            )
-        )
-
-        # Hard clean before tests
-        self.yml_sites.drop()
-        self.yml_users.drop()
-
-        current_user.standalone = True
-
-        si_moon = backoffice.sites.create({"name": "moon", "address": "far"})
-
-        u = backoffice.users.new()
-        u.create({"name": "bebert", "surname": "bebert", "site": si_moon._id})
-
-        # -- Check if reverse is filled
-        si_moon.reload()
-        self.assertEqual(len(si_moon.users), 1)
-        self.assertEqual(si_moon.users[0], u._id)
+        # -- delete site
+        si.reload()
+        si.delete()
         u.reload()
-        self.assertEqual(u.site, si_moon._id)
+        self.assertIsNone(u.site.get_value())
 
-    def test_references_many_to_one_modification(self):
+    def sub_test_crud_m2m(self, backoffice: Backoffice):
         """
-        creating an backoffice with ref one to many
-        and delete
+        CRUD for many to many (RefsList)
+
         """
+        yml_humans.drop()
+        yml_animals.drop()
 
-        backoffice = Backoffice("myApp")
-
-        backoffice.register_collection(
-            Collection(
-                "users",
-                Item(
-                    {
-                        "name": String(),
-                        "surname": String(),
-                        "site": Ref(coll="sites", field="$.users"),
-                        "male": Bool(default=True),
-                    }
-                ),
-                self.yml_users,
-            )
-        )
-
-        # --- DB for sites
-        backoffice.register_collection(
-            Collection(
-                "sites",
-                Item(
-                    {
-                        "name": String(),
-                        "address": String(),
-                        "users": RefsList(
-                            coll="users",
-                            field="$.site",
-                            ods=DeleteStrategy.UNLINK_REFERENCED_ITEMS,
-                        ),
-                    }
-                ),
-                self.yml_sites,
-            )
-        )
-
-        # Hard clean before tests
-        self.yml_sites.drop()
-        self.yml_users.drop()
-
-        current_user.standalone = True
-        si_mars = backoffice.sites.create({"name": "mars", "address": "very far"})
-
-        si_moon = backoffice.sites.create({"name": "moon", "address": "far"})
-
-        ub = backoffice.users.create(
-            {"name": "bebert", "surname": "bebert", "site": si_moon._id}
-        )
-
-        uj = backoffice.users.create(
-            {"name": "john", "surname": "john", "site": si_moon._id}
-        )
+        a1 = backoffice.animals.create({"desc": "ant"})
+        a2 = backoffice.animals.create({"desc": "spider"})
+        h1 = backoffice.humans.create({"name": "parker", "totems": [a1._id]})
+        h2 = backoffice.humans.create({"name": "pym", "totems": [a2._id]})
 
         # -- Check if reverse is filled
-        si_moon.reload()
-        self.assertEqual(len(si_moon.users), 2)
-        si_mars.reload()
-        self.assertEqual(len(si_mars.users), 0)
+        a1.reload()
+        self.assertEqual(len(a1.humans), 1)
+        a2.reload()
+        self.assertEqual(len(a2.humans), 1)
 
-        # -- Modify site
-        si_mars.users = [ub._id]
-        si_mars.save()
-        si_mars = backoffice.sites.new()
-        si_mars.load("Site_mars")
-        self.assertEqual(len(si_mars.users), 1)
+        # Change
+        h1.totems.append(a2._id)
+        h1.save()
+        h1.reload()
+        self.assertEqual(len(h1.totems), 2)
 
-        # -- Check if reverse is modified
-        uj.reload()
-        self.assertEqual(uj.site, si_moon._id)
+        a1.reload()
+        self.assertEqual(len(a1.humans), 1)
 
-        ub.reload()
-        self.assertEqual(ub.site, si_mars._id)
+        a2.reload()
+        self.assertEqual(len(a2.humans), 2)
 
-        si_moon.reload()
-        self.assertEqual(len(si_moon.users), 1)
+        # Change from animals
+        a1.humans = []
+        a1.save()
+        h1.reload()
+        self.assertEqual(len(h1.totems), 1)
+        h2.reload()
+        self.assertEqual(len(h2.totems), 1)
 
-    def test_references_one_to_one(self):
+        # Delete an empty
+        a1.delete()
+        h1.reload()
+        self.assertEqual(len(h1.totems), 1)
+        h2.reload()
+        self.assertEqual(len(h2.totems), 1)
+
+    def test_crud_m2m(self):
         """
-        creating an backoffice with ref one to one
-        and delete
+        wrapper many to many CRUD 
         """
+        for backoffice in backoffices_m2m.values():
+            with self.subTest(backoffice=backoffice):
+                self.sub_test_crud_m2m(backoffice)
 
-        backoffice = Backoffice("myApp")
-
-        backoffice.register_collection(
-            Collection(
-                "humans",
-                Item(
-                    {
-                        "name": String(),
-                        "surname": String(),
-                        "totem": Ref(coll="animals", field="$.human"),
-                    }
-                ),
-                self.yml_humans,
-            )
-        )
-
-        # --- DB for animal
-        backoffice.register_collection(
-            Collection(
-                "animals",
-                Item(
-                    {
-                        "desc": String(),
-                        "human": Ref(coll="humans", field="$.totem"),
-                    }
-                ),
-                self.yml_animals,
-            )
-        )
-
-        # Hard clean before tests
-        self.yml_humans.drop()
-        self.yml_animals.drop()
-
-        current_user.standalone = True
-
-        # create humans
-        up = backoffice.humans.create({"name": "parker", "surname": "peter"})
-        uh = backoffice.humans.create({"name": "pym", "surname": "hank"})
-
-        # ctreate animal totem related to humans
-        asp = backoffice.animals.create({"desc": "spider", "human": up._id})
-        aa = backoffice.animals.create({"desc": "ant", "human": uh._id})
-
-        # check human link
-        up.reload()
-        self.assertEqual(up.totem, asp._id)
-        uh.reload()
-        self.assertEqual(uh.totem, aa._id)
-
-        # change the totem
-        up.totem = aa._id
-        up.save()
-
-        aa.reload()
-        self.assertEqual(aa.human, up._id)
-
-        asp.reload()
-        self.assertEqual(asp.human, None)
-
-        uh.reload()
-        self.assertEqual(uh.totem, None)
-
-        # Delete
-        aa.delete()
-        up.reload()
-        self.assertEqual(up.totem, None)
-
-    def test_references_one_to_one_required(self):
+    def test_references_m2m_FMFM(self):
         """
-        creating an backoffice with ref one to one with require
-        and delete
+        Fill - MUST_BE_EMPTY - Fill  - MUST_BE_EMPTY
         """
 
-        backoffice = Backoffice("myApp")
+        backoffice = backoffices_m2m["FMFM"]
 
-        backoffice.register_collection(
-            Collection(
-                "humans",
-                Item(
-                    {
-                        "name": String(),
-                        "surname": String(),
-                        "totem": Ref(coll="animals", field="$.human", required=True),
-                    }
-                ),
-                self.yml_humans,
-            )
-        )
+        a1 = backoffice.animals.create({"desc": "ant"})
+        a2 = backoffice.animals.create({"desc": "spider"})
+        _h1 = backoffice.humans.create({"name": "parker", "totems": [a1._id]})
+        _h2 = backoffice.humans.create({"name": "pym", "totems": [a2._id]})
 
-        # --- DB for animal
-        backoffice.register_collection(
-            Collection(
-                "animals",
-                Item(
-                    {
-                        "desc": String(),
-                        "human": Ref(coll="humans", field="$.totem"),
-                    }
-                ),
-                self.yml_animals,
-            )
-        )
-
-        # Hard clean before tests
-        self.yml_humans.drop()
-        self.yml_animals.drop()
-
-        current_user.standalone = True
-        # ctreate animal totem related to humans
-        asp = backoffice.animals.create({"desc": "spider"})
-        aa = backoffice.animals.create({"desc": "ant"})
-
-        # create humans
-        up = backoffice.humans.create(
-            {"name": "parker", "surname": "peter", "totem": asp._id}
-        )
-        uh = backoffice.humans.create(
-            {"name": "pym", "surname": "hank", "totem": aa._id}
-        )
-
-        # check human link
-        up.reload()
-        self.assertEqual(up.totem, asp._id)
-        uh.reload()
-        self.assertEqual(uh.totem, aa._id)
-
-        # take pym's totem. impossible (pym will have no totem)
-        up.totem = aa._id
-        with self.assertRaises(SConstraintError) as e:
-            up.save()
-        self.assertEqual(
-            repr(e.exception), 'ConstraintsError("$.totem: Cannot be empty "None"")'
-        )
-
-    def test_references_many_to_many_empty_empty(self):
-        """
-        creating an backoffice with many to many refs
-        and delete
-        """
-
-        backoffice = Backoffice("myApp")
-
-        backoffice.register_collection(
-            Collection(
-                "humans",
-                Item(
-                    {
-                        "name": String(),
-                        "surname": String(),
-                        "totems": RefsList(
-                            coll="animals",
-                            field="$.humans",
-                            ods=DeleteStrategy.MUST_BE_EMPTY,
-                        ),
-                    }
-                ),
-                self.yml_humans,
-            )
-        )
-
-        # --- DB for animal
-        backoffice.register_collection(
-            Collection(
-                "animals",
-                Item(
-                    {
-                        "desc": String(),
-                        "humans": RefsList(
-                            coll="humans",
-                            field="$.totems",
-                            ods=DeleteStrategy.MUST_BE_EMPTY,
-                        ),
-                    }
-                ),
-                self.yml_animals,
-            )
-        )
-
-        # Hard clean before tests
-        self.yml_humans.drop()
-        self.yml_animals.drop()
-
-        current_user.standalone = True
-        # ctreate animal totem related to humans
-        asp = backoffice.animals.create({"desc": "spider"})
-        aa = backoffice.animals.create({"desc": "ant"})
-
-        # create humans
-        up = backoffice.humans.create(
-            {"name": "parker", "surname": "peter", "totems": [asp._id, aa._id]}
-        )
-        uh = backoffice.humans.create(
-            {"name": "pym", "surname": "hank", "totems": [aa._id]}
-        )
-
-        # check human links
-        up.reload()
-        self.assertEqual(len(up.totems), 2)
-        uh.reload()
-        self.assertEqual(len(uh.totems), 1)
-        # check animals links
-        asp.reload()
-        self.assertEqual(len(asp.humans), 1)
-        aa.reload()
-        self.assertEqual(len(aa.humans), 2)
-
-        # modify links
-        asp.humans = []
-        asp.save()
-
-        up.reload()
-        self.assertEqual(len(up.totems), 1)
-        up.totems.append(asp._id)
-        up.save()
-        asp.reload()
-        self.assertEqual(len(asp.humans), 1)
-
-        # check if must be embty error
+        a1.reload()
         with self.assertRaises(BackoError) as e:
-            asp.delete()
-        self.assertEqual(e.exception.to_string(), 'Collection "humans" not empty')
-
-    def test_references_many_to_many_no_fill(self):
-        """
-        creating an backoffice with many to many refs
-        and delete
-        """
-
-        backoffice = Backoffice("myApp")
-
-        backoffice.register_collection(
-            Collection(
-                "humans",
-                Item(
-                    {
-                        "name": String(),
-                        "surname": String(),
-                        "totems": RefsList(
-                            coll="animals",
-                            field="$.humans",
-                            ods=DeleteStrategy.MUST_BE_EMPTY,
-                        ),
-                    }
-                ),
-                self.yml_humans,
-            )
-        )
-
-        # --- DB for animal
-        backoffice.register_collection(
-            Collection(
-                "animals",
-                Item(
-                    {
-                        "desc": String(),
-                        "humans": RefsList(
-                            coll="humans",
-                            field="$.totems",
-                            ofs=FillStrategy.NOT_FILL,
-                            ods=DeleteStrategy.MUST_BE_EMPTY,
-                        ),
-                    }
-                ),
-                self.yml_animals,
-            )
-        )
-
-        # Hard clean before tests
-        self.yml_humans.drop()
-        self.yml_animals.drop()
-
-        current_user.standalone = True
-        # ctreate animal totem related to humans
-        asp = backoffice.animals.create({"desc": "spider"})
-        aa = backoffice.animals.create({"desc": "ant"})
-
-        # create humans
-        up = backoffice.humans.create(
-            {"name": "parker", "surname": "peter", "totems": [asp._id, aa._id]}
-        )
-        uh = backoffice.humans.create(
-            {"name": "pym", "surname": "hank", "totems": [aa._id]}
-        )
-
-        # check human links
-        up.reload()
-        self.assertEqual(len(up.totems), 2)
-        uh.reload()
-        self.assertEqual(len(uh.totems), 1)
-        # check animals links
-        asp.reload()
-        self.assertEqual(len(asp.humans), 1)
-        aa.reload()
-        self.assertEqual(len(aa.humans), 2)
-
-        # modify links
-        asp.humans = []
-        asp.save()
-
-        log.debug("----------------")
-
-        up.reload()
-        self.assertEqual(len(up.totems), 1)
-        up.totems.append(asp._id)
-        up.save()
-        asp.reload()
-        self.assertEqual(len(asp.humans), 1)
-
-        # check if must be embty error
-        with self.assertRaises(BackoError) as e:
-            asp.delete()
+            a1.delete()
         self.assertEqual(
-            e.exception.to_string(), 'Collection (not filled) "humans" not empty'
+            e.exception.to_string(),
+            'Collection "humans" not empty',
         )
 
-    def test_references_selector(self):
+    def test_references_m2m_FMNM(self):
         """
-        creating an backoffice with ref one to many
-        and use selectors to cross
+        Fill - MUST_BE_EMPTY - NOT_Fill  - MUST_BE_EMPTY
         """
+        backoffice = backoffices_m2m["FMNM"]
 
-        backoffice = Backoffice("myApp")
+        a1 = backoffice.animals.create({"desc": "ant"})
+        a2 = backoffice.animals.create({"desc": "spider"})
+        _h1 = backoffice.humans.create({"name": "parker", "totems": [a1._id]})
+        _h2 = backoffice.humans.create({"name": "pym", "totems": [a2._id]})
 
-        backoffice.register_collection(
-            Collection(
-                "users",
-                Item(
-                    {
-                        "name": String(),
-                        "surname": String(),
-                        "site": Ref(coll="sites", field="$.users"),
-                        "male": Bool(default=True),
-                    }
-                ),
-                self.yml_users,
-            )
+        a1.reload()
+        with self.assertRaises(BackoError) as e:
+            a1.delete()
+        self.assertEqual(
+            e.exception.to_string(),
+            'Collection "humans" not empty',
         )
 
-        # --- DB for sites
-        backoffice.register_collection(
-            Collection(
-                "sites",
-                Item(
-                    {
-                        "name": String(),
-                        "address": String(),
-                        "users": RefsList(
-                            coll="users",
-                            field="$.site",
-                            ods=DeleteStrategy.UNLINK_REFERENCED_ITEMS,
-                        ),
-                    }
-                ),
-                self.yml_sites,
-            )
+    def test_references_m2m_FMFU(self):
+        """
+        Fill - MUST_BE_EMPTY - Fill - UNLINK
+        """
+        backoffice = backoffices_m2m["FMFU"]
+
+        a1 = backoffice.animals.create({"desc": "ant"})
+        a2 = backoffice.animals.create({"desc": "spider"})
+        h1 = backoffice.humans.create({"name": "parker", "totems": [a1._id]})
+        _h2 = backoffice.humans.create({"name": "pym", "totems": [a2._id]})
+
+        a1.reload()
+        a1.delete()
+        h1.reload()
+        self.assertEqual(len(h1.totems), 0)
+
+    def test_references_m2m_FMNU(self):
+        """
+        Fill - MUST_BE_EMPTY - NOT_Fill - UNLINK
+        """
+        backoffice = backoffices_m2m["FMNU"]
+
+        a1 = backoffice.animals.create({"desc": "ant"})
+        a2 = backoffice.animals.create({"desc": "spider"})
+        h1 = backoffice.humans.create({"name": "parker", "totems": [a1._id]})
+        _h2 = backoffice.humans.create({"name": "pym", "totems": [a2._id]})
+
+        a1.reload()
+        a1.delete()
+        h1.reload()
+        self.assertEqual(len(h1.totems), 0)
+
+    def test_references_m2m_FMFD(self):
+        """
+        Fill - MUST_BE_EMPTY - Fill - DELETE
+        """
+        backoffice = backoffices_m2m["FMFD"]
+
+        a1 = backoffice.animals.create({"desc": "ant"})
+        a2 = backoffice.animals.create({"desc": "spider"})
+        h1 = backoffice.humans.create({"name": "parker", "totems": [a1._id]})
+        _h2 = backoffice.humans.create({"name": "pym", "totems": [a2._id]})
+
+        a1.reload()
+        a1.delete()
+        with self.assertRaises(NotFoundError) as e:
+            h1.reload()
+        self.assertEqual(
+            e.exception.to_string(),
+            '_id "Human_parker" not found in "/tmp/backo_tests_references/Humans"',
         )
 
-        # Hard clean before tests
-        self.yml_humans.drop()
-        self.yml_animals.drop()
+    def test_references_m2m_FMND(self):
+        """
+        Fill - MUST_BE_EMPTY - NOT_Fill - DELETE
+        """
+        backoffice = backoffices_m2m["FMND"]
 
-        current_user.standalone = True
+        a1 = backoffice.animals.create({"desc": "ant"})
+        a2 = backoffice.animals.create({"desc": "spider"})
+        h1 = backoffice.humans.create({"name": "parker", "totems": [a1._id]})
+        _h2 = backoffice.humans.create({"name": "pym", "totems": [a2._id]})
 
-        # si_mars = backoffice.sites.create({"name": "mars", "address": "very far"})
-        si_moon = backoffice.sites.create({"name": "moon", "address": "far"})
-
-        backoffice.users.create(
-            {"name": "bebert", "surname": "bebert", "site": si_moon._id}
+        a1.reload()
+        a1.delete()
+        with self.assertRaises(NotFoundError) as e:
+            h1.reload()
+        self.assertEqual(
+            e.exception.to_string(),
+            '_id "Human_parker" not found in "/tmp/backo_tests_references/Humans"',
         )
-        uj = backoffice.users.create(
-            {"name": "john", "surname": "john", "site": si_moon._id}
-        )
 
-        # -- follow references in selectors
-        si_moon.reload()
-        self.assertEqual(uj.select("$.name"), "john")
-        se = uj.select("$.site")
-        self.assertEqual(se, "Site_moon")
-        self.assertEqual(isinstance(se, Ref), True)
-        self.assertEqual(uj.select("$.site.name"), "moon")
-        self.assertEqual(uj.select("$.site.address"), "far")
+    def sub_test_crud_o2o(self, backoffice: Backoffice):
+        """
+        test crud one to one for this backoffice
+        """
+        yml_humans.drop()
+        yml_animals.drop()
 
-        self.assertEqual(si_moon.select("$.name"), "moon")
-        se = si_moon.select("$.users")
-        self.assertEqual(isinstance(se, RefsList), True)
-        self.assertEqual(si_moon.select("$.users[0].name"), "bebert")
-        self.assertEqual(si_moon.select("$.users[0:1].name"), ["bebert"])
-        self.assertEqual(si_moon.select("$.users[0].site.address"), "far")
-        self.assertEqual(si_moon.select("$.users.name"), ["bebert", "john"])
+        h1 = backoffice.humans.create({"name": "parker"})
+        h2 = backoffice.humans.create({"name": "pym"})
+        h3 = backoffice.humans.create({"name": "parker2"})
+        a1 = backoffice.animals.create({"desc": "spider", "human": h1._id})
+        a2 = backoffice.animals.create({"desc": "ant", "human": h2._id})
+
+        # -- Check if reverse is filled
+        h1.reload()
+        self.assertEqual(h1.totem, a1._id)
+        h2.reload()
+        self.assertEqual(h2.totem, a2._id)
+
+        # Change spider -> parker 2, so parker is alone
+        a1.human = h3._id
+        a1.save()
+        h3.reload()
+        self.assertEqual(h3.totem, a1._id)
+        h1.reload()
+        self.assertEqual(h1.totem, None)
+
+    def test_crud_o2o(self):
+        """
+        CRUD operations on one to one ref
+        """
+        for backoffice in backoffices_o2o.values():
+            with self.subTest(backoffice=backoffice):
+                self.sub_test_crud_o2o(backoffice)

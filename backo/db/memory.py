@@ -8,7 +8,7 @@ import copy
 from stricto import SFilter
 from .generic.db_handler import DBHandler
 from .generic.interface import SelectResponse
-from ..error import NotFoundError, ExpiredError
+from ..error import NotFoundError
 
 from ..log import log_system
 

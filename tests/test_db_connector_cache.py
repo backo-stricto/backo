@@ -8,13 +8,9 @@ import unittest
 import time
 from datetime import datetime, timedelta
 from backo import (
-    NotFoundError,
     ExpiredError,
-    Backoffice,
-    Collection,
     Item,
     String,
-    FillStrategy,
     Ref,
     Int,
     Dict,
@@ -24,24 +20,10 @@ from backo import (
     Datetime,
     RefsList,
     DeleteStrategy,
-    current_user,
     # log_system,
     # LogLevel,
 )
-from backo import SFilter, Operator
-from backo.db import (
-    DBHandler,
-    SelectResponse,
-    DBMemoryConnector,
-    DBYmlDirConnector,
-    DBMongoConnector,
-    DBSqlite3Connector,
-    DBYmlConnector,
-    DBValkeyConnector,
-    RenameTransformer,
-    IgnoreTransformer,
-    CacheTransformer
-)
+from backo.db import DBMemoryConnector, CacheTransformer
 
 FULL_USER = Item(
     {
@@ -51,7 +33,7 @@ FULL_USER = Item(
         "date": Datetime(),
         "nicknames": List(String()),
         "nationalities": List(Dict({"country": String()})),
-        "site": Ref(coll="sites", field="$.users", ofs=FillStrategy.NOT_FILL),
+        "site": Ref(coll="sites", field="$.users"),
         "male": Bool(default=True),
     }
 )
@@ -91,7 +73,7 @@ class TestDBConnectorCache(unittest.TestCase):
         # log = log_system.get_or_create_logger("DBSqlite3Connector")
         # log.setLevel(LogLevel.DEBUG)
         self.connector = DBMemoryConnector("Memory")
-        self.connector.register_transformer( CacheTransformer( timedelta(seconds=1)) )
+        self.connector.register_transformer(CacheTransformer(timedelta(seconds=1)))
 
         super().__init__(*args, **kwargs)
 
@@ -104,13 +86,10 @@ class TestDBConnectorCache(unittest.TestCase):
         """
         Test create
         """
-        _id = self.connector.create({ "name" : "toto"})
-        o = self.connector.get_by_id( _id )
-        self.assertFalse( "_expire" in o)
+        _id = self.connector.create({"name": "toto"})
+        o = self.connector.get_by_id(_id)
+        self.assertFalse("_expire" in o)
         time.sleep(1.5)
         with self.assertRaises(ExpiredError) as e:
-            self.connector.get_by_id( _id )
-        self.assertEqual(
-            repr(e.exception), 'Exception("Object expired")'
-        )
-    
+            self.connector.get_by_id(_id)
+        self.assertEqual(repr(e.exception), 'Exception("Object expired")')

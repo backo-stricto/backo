@@ -8,10 +8,13 @@ import json
 import pprint
 import re
 import sys
-from typing import Callable, Self
+from typing import Callable, Self, TYPE_CHECKING
 
 from deepdiff import DeepDiff
 from flask import Blueprint, request
+
+if TYPE_CHECKING:
+    from .backoffice import Backoffice
 
 from backo.openapi import OpenAPISpec
 
@@ -162,13 +165,13 @@ class Collection:
         self.refuse_filter = options.get("refuse_filter")
 
         # For actions (aka some element work with datas)
-        self._actions = {}
-        self.backoffice = None
+        self._actions: dict[str, Action] = {}
+        self.backoffice: Backoffice = None
 
         # For views
         self._views = {}
 
-        self._selections = {}
+        self._selections: dict[str, Selection] = {}
 
         db_handler.set_model(self.model.get_schema())
 
@@ -266,7 +269,7 @@ class Collection:
         """
         return self.model.copy()
 
-    def new(self):
+    def new(self) -> Item:
         """See :func:`new_item`
 
 
@@ -295,7 +298,7 @@ class Collection:
         item.enable_permissions()
         return item
 
-    def get_other_collection(self, name) -> Self:
+    def get_other_collection(self, name: str) -> Self:
         """Return another collection (used by :py:class:`Ref` and :py:class:`RefsList`)
 
         :param name: the name of the collection you want
