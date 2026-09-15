@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.3.5] 2026-09-15
+
+    * fix
+      * DBHandler pagination bug fix
+      * BREAKING CHANGE : New option migration MigrationStrategy (strategy=)
+      * BREAKING CHANGE : Removing option FillStrategy (ofs=) for Ref
+  
+    * Internal :
+      * Pagination during migration
+      * test refacto for Ref and RefsList
+      * refacto Ref and RefsList
+
 ## [0.3.4] 2026-09-04
 
     * fix : total routes bug fix
