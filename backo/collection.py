@@ -13,8 +13,8 @@ from typing import Callable, Self, TYPE_CHECKING
 from deepdiff import DeepDiff
 from flask import Blueprint, request
 
-if TYPE_CHECKING:
-    from .backoffice import Backoffice
+# Used for Typing
+from . import backoffice
 
 from backo.openapi import OpenAPISpec
 
@@ -166,7 +166,7 @@ class Collection:
 
         # For actions (aka some element work with datas)
         self._actions: dict[str, Action] = {}
-        self.backoffice: Backoffice = None
+        self.backoffice: backoffice.Backoffice = None
 
         # For views
         self._views = {}

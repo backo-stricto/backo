@@ -3,15 +3,12 @@ Ref and RefsLink class definition
 """
 
 # pylint: disable=wrong-import-position, no-member, import-error, protected-access, wrong-import-order, duplicate-code
-from __future__ import annotations
 import sys
 import copy
 from typing import Any, TYPE_CHECKING
 
-if TYPE_CHECKING:
-    from .collection import Collection
-    from .item import Item
 
+from . import item, collection  
 # used for developpement
 sys.path.insert(1, "../../stricto")
 
@@ -132,7 +129,7 @@ class Ref(String):  # pylint: disable=too-many-instance-attributes
         if self._coll_ref is not None:
             return
 
-        my_collection: Collection = self.get_root()._collection
+        my_collection: collection.Collection = self.get_root()._collection
         self._coll_ref = my_collection.get_other_collection(self._collection)
         if not self._coll_ref:
             raise SSyntaxError(
@@ -300,7 +297,7 @@ class Ref(String):  # pylint: disable=too-many-instance-attributes
 
 
 def check_syntax(
-    event_name: str, root: Item, me: Ref, **kwargs
+    event_name: str, root: item.Item, me: Ref, **kwargs
 ):  # pylint: disable=unused-argument
     """
     Check if everything is correct log some warnings
@@ -342,7 +339,7 @@ def check_syntax(
 
 
 def on_loaded(
-    event_name, root: Item, me: Ref, **kwargs
+    event_name, root: item.Item, me: Ref, **kwargs
 ):  # pylint: disable=unused-argument
     """Trigged when the Item is loaded from the DB.
     if the fill_strategy is "NO_FILL", do the select from the reverse to fill it
@@ -365,7 +362,7 @@ def on_loaded(
 
 
 def on_before_save(  # pylint: disable=too-many-return-statements
-    event_name: str, root: Item, me: Ref, **kwargs
+    event_name: str, root: item.Item, me: Ref, **kwargs
 ):  # pylint: disable=unused-argument
     """
     Before saving, check if the reference
@@ -430,7 +427,7 @@ def on_before_save(  # pylint: disable=too-many-return-statements
 
 
 def on_delete(
-    event_name: str, root: Item, me: Ref, **kwargs
+    event_name: str, root: item.Item, me: Ref, **kwargs
 ):  # pylint: disable=unused-argument, too-many-return-statements
     """
     The object will be deleted
@@ -482,7 +479,7 @@ def on_delete(
 
 
 def on_created(
-    event_name: str, root: Item, me: Ref, **kwargs
+    event_name: str, root: item.Item, me: Ref, **kwargs
 ):  # pylint: disable=unused-argument
     """
     The object as been created

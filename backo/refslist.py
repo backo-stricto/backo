@@ -28,12 +28,9 @@ from .log import log_system
 
 from .refs_strategies import DeleteStrategy, FillStrategy
 
-if TYPE_CHECKING:
-    from .collection import Collection
-    from .item import Item
 
 # WARNING: Specific import for cycling import beetween Ref and RefsLists
-from . import ref
+from . import ref, item
 
 log = log_system.get_or_create_logger("ref")
 
@@ -269,7 +266,7 @@ class RefsList(List):
 
     def load_others(
         self, _ids: list[str], **kwargs
-    ) -> list[tuple[Item, ref.Ref | Self]]:
+    ) -> list[tuple[item.Item, ref.Ref | Self]]:
         """
         Load the target object and the reverse field
         """
@@ -345,7 +342,7 @@ class RefsList(List):
 
 
 def check_syntax(
-    event_name: str, root: Item, me: RefsList, **kwargs
+    event_name: str, root: item.Item, me: RefsList, **kwargs
 ):  # pylint: disable=unused-argument
     """
     Check if everything is correct log some warnings
@@ -379,7 +376,7 @@ def check_syntax(
 
 
 def on_loaded(
-    event_name, root: Item, me: RefsList, **kwargs
+    event_name, root: item.Item, me: RefsList, **kwargs
 ):  # pylint: disable=unused-argument
     """Trigged when the Item is loaded from the DB.
     if the fill_strategy is "NO_FILL", do the select from the reverse to fill it
@@ -412,7 +409,7 @@ def on_loaded(
 
 
 def on_created(
-    event_name: str, root: Item, me: RefsList, **kwargs
+    event_name: str, root: item.Item, me: RefsList, **kwargs
 ):  # pylint: disable=unused-argument
     """
     A creation object with a RefList
@@ -465,7 +462,7 @@ def on_created(
 
 
 def on_delete_must_by_empty(
-    event_name: str, root: Item, me: RefsList, **kwargs
+    event_name: str, root: item.Item, me: RefsList, **kwargs
 ):  # pylint: disable=unused-argument
     """
     The object will be deleted only if this list is empty
@@ -520,7 +517,7 @@ def on_delete_must_by_empty(
 
 
 def on_delete_with_reverse(
-    event_name: str, root: Item, me: RefsList, **kwargs
+    event_name: str, root: item.Item, me: RefsList, **kwargs
 ):  # pylint: disable=unused-argument
     """
     The ref object object will be deleted too
@@ -585,7 +582,7 @@ def on_delete_with_reverse(
 
 
 def on_delete_clean_reverse(
-    event_name: str, root: Item, me: RefsList, **kwargs
+    event_name: str, root: item.Item, me: RefsList, **kwargs
 ):  # pylint: disable=unused-argument
     """
     The reflecting object is cleaned too
@@ -636,7 +633,7 @@ def on_delete_clean_reverse(
 
 
 def on_modify_clean_reverse(  # pylint: disable=too-many-branches
-    _event_name: str, root: Item, me: RefsList, **kwargs
+    _event_name: str, root: item.Item, me: RefsList, **kwargs
 ):
     """
     The reflecting object is set to the new one
