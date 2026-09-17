@@ -758,9 +758,15 @@ class DBSqlite3Connector(DBHandler):
         if filter_report == FilterReport.EXACT:
             response.more_than_filter = False
 
+        sqlite3_sort = self.filter.build_db_sort(sort_object)
+
         select = f"SELECT * FROM {self._table_name}"
         if where_conditions:
             select += f" WHERE {where_conditions}"
+
+        if sqlite3_sort:
+            select += " " + sqlite3_sort
+            response.sorted = True
 
         if page_size:
             values += (page_size,)
@@ -768,6 +774,7 @@ class DBSqlite3Connector(DBHandler):
             select += "LIMIT ? OFFSET ?"
 
         log.debug(f"{select} {values}")
+        # print(f"{select} {values}")
         list_of_items = self._cursor.execute(select, values).fetchall()
 
         cursor_desc_copy = copy.deepcopy(self._cursor.description)

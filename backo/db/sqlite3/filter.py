@@ -12,6 +12,7 @@ from ..generic.filter import Filter, FilterReport
 from ..generic.transformer import Transformer
 from ...error import DBError
 from .pragma import get_sqlite3_type_from_backo
+from ...sort import Sort, SortItem
 
 
 class SQlite3Filter(Filter):
@@ -148,10 +149,14 @@ class SQlite3Filter(Filter):
             return (f"( {table_field_name} < ?)", FilterReport.EXACT)
 
         if sf._operator == Operator.NE:
-
             values.append(str(val))
             return (f"( {table_field_name} != ?)", FilterReport.EXACT)
 
+        if sf._operator == Operator.REG:
+            values.append(str(val))
+            return (f"( {table_field_name} GLOB ?)", FilterReport.EXACT)
+
+        values.append(1)
         return ("( 1 == ? )", FilterReport.MORE)
 
     def build_db_filter(
@@ -174,3 +179,47 @@ class SQlite3Filter(Filter):
             backo_filter, values
         )
         return ((where_conditions, tuple(values)), filter_report)
+
+    def _sort_to_sort_expression(self, sort_item: SortItem) -> str:
+        """
+        Transform the sortItem into a string available for order by
+
+        :param sort_item: the sortItem
+        :type sort_item: SortItem
+        :return: an order by available expression
+        :rtype: str
+        """
+
+        db_path = sort_item.path
+        db_path = []
+        m = sort_item.path
+        m = re.sub(r"^\$\.", "", m)
+        db_path = m.split(".")
+
+        transformer: Transformer = self.get_transformer(db_path)
+        if transformer:
+            db_path = transformer.get_db_path(db_path)
+
+        table_field_name = f"{self._main_table_name}.{'_'.join(db_path)}"
+        return f"{table_field_name} {'ASC' if sort_item.ascendant_order else 'DESC'}"
+
+    def build_db_sort(self, sort: Sort) -> str:
+        """
+        Transfor the sort into a string "ORDER BY ..."
+
+        :param sort: the sort object
+        :type sort: Sort
+        :return: the order by string
+        :rtype: str
+        """
+
+        if sort is None:
+            return None
+
+        sorted_expression = []
+        for sort_item in sort.list_of_sort_item:
+            e = self._sort_to_sort_expression(sort_item)
+            if e:
+                sorted_expression.append(e)
+
+        return f'ORDER BY {", ".join( sorted_expression )}'

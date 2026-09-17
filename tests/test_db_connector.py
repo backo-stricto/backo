@@ -21,6 +21,7 @@ from backo import (
     Datetime,
     RefsList,
     DeleteStrategy,
+    Sort,
     current_user,
     # log_system,
     # LogLevel,
@@ -243,6 +244,20 @@ class TestDBConnector(unittest.TestCase):
             self.assertEqual(type(res), SelectResponse)
             self.assertEqual(len(res.items), 1)
             self.assertEqual(res.more_than_filter, False)
+
+            res = con.select(
+                SFilter("$.name", Operator.REG, r"rambo_1[0-9]"),
+                None,
+                0,
+                0,
+                Sort("-$.name"),
+            )
+            self.assertEqual(type(res), SelectResponse)
+            self.assertEqual(len(res.items), 10)
+            self.assertEqual(res.more_than_filter, False)
+            self.assertEqual(res.sorted, True)
+            self.assertEqual(res.items[0]["name"], "rambo_19")
+            self.assertEqual(res.items[9]["name"], "rambo_10")
 
             res = con.select(SFilter("$.age", Operator.NE, 1))
             self.assertEqual(type(res), SelectResponse)

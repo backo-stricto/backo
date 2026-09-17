@@ -5,7 +5,7 @@ Module providing the Sort Class
 import re
 
 
-class SortItem: # pylint: disable=too-few-public-methods
+class SortItem:  # pylint: disable=too-few-public-methods
     """
     Specifics a Sort Item
     """
@@ -47,9 +47,7 @@ class Sort:
                 match = re.match(r"^([\+\-])(.*)\s*$", s)
                 if match:
                     self.list_of_sort_item.append(
-                        SortItem(
-                            match.group(2), match.group(1) == "+"
-                        )
+                        SortItem(match.group(2), match.group(1) == "+")
                     )
                 else:
                     self.list_of_sort_item.append(SortItem(s))
