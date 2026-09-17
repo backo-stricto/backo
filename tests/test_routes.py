@@ -263,7 +263,7 @@ class TestRoutes(unittest.TestCase):
         """
         do a select
         """
-        response = self.client.get("/myApp/users?name=bert1")
+        response = self.client.get("/myApp/users?name=bert1&_sort=-$.name,+$.surname")
         self.assertEqual(response.status_code, 200)
         results = json.loads(response.data)
         self.assertEqual(results["total"], None)

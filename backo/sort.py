@@ -2,6 +2,8 @@
 Module providing the Sort Class
 """
 
+from typing import Self
+from copy import deepcopy
 import re
 
 
@@ -74,3 +76,19 @@ class Sort:
 
         # Add
         self.list_of_sort_item.append(sort)
+
+    def merge(self, other: Self) -> Self:
+        """
+        merge to sort objects into a third
+
+        :param other: the other object to merge
+        :type other: Self
+        :return: a new Sort object
+        :rtype: Self
+        """
+        out = deepcopy(self)
+        if not other:
+            return out
+        for s in out.list_of_sort_item:
+            out.add_or_replace(s)
+        return out

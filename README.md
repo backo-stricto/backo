@@ -830,6 +830,7 @@ Get a list of objects matching the query string. The query string can be with th
 | \_view | string | "client" | selects the view ([stricto views](https://github.com/backo-stricto/stricto?tab=readme-ov-file#views))  |
 | \_page | int | - | sets the desired number of items per page in paginated data presentation |
 | \_skip | int | - | skips the n-first items of the result list in paginated data presentation. |
+| \_sort | string | - | give the list of sorting fields |
 | \_total | whatyouwant | None | Just compute the total of object and return { 'total' : x } without taking pagination in account |
 
 
@@ -845,9 +846,9 @@ The request returns a HTTP status `200` with that JSON object:
 ```
 
 ##### Example
-Select all users whose name includes 'do' and present the result list with 10 items per page.
+Select all users whose name includes 'do' and present the result list with 10 items per page, sorted by surname.
 ```bash
-curl -X GET 'http://localhost/myApp/users/?name.$re=do&_page=10'  
+curl -X GET 'http://localhost/myApp/users/?name.$re=do&_page=10&_sort=$.surname'  
 ```
 
 #### GET \<my-app-name\>/\<collection name\>/\<_id\>/\<path\>
@@ -1431,6 +1432,11 @@ log = log_system.get_or_create_logger("custom")
 log.setLevel(logging.DEBUG)
 log.addHandler ( my_own_handler )
 # ...
+
+# To see
+log_system.infos()
+# print some available informations about log system (levels, handlers)
+
 ```
 
 ### stack()

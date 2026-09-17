@@ -53,6 +53,7 @@ from .migration import MigrationReport, MigrationStrategy
 from .patch import Patch
 from .request_decorators import check_content_type, error_to_http_handler
 from .selection import Selection
+from .sort import Sort
 from .db.generic.interface import SelectResponse
 
 log = log_system.get_or_create_logger("collection")
@@ -928,6 +929,8 @@ class Collection:
         query = request.args
         _page = int(query.get("_page", 10))
         _skip = int(query.get("_skip", 0))
+        _sort = query.get("_sort")
+
         _total = query.get("_total")
 
         if _total:
@@ -935,9 +938,14 @@ class Collection:
 
         match_filter: SFilter = multidict_to_sfilter(query)
 
-        log.debug(f"filtering {self.name}/_all with filter={match_filter}")
+        # Transform the _sort from query to Sort() object
+        sort = None
+        if _sort:
+            sort = Sort(_sort)
 
-        result = self._selections["_all"].select(match_filter, _page, _skip)
+        log.debug(f"filtering {self.name}/_all with filter={match_filter}, sort={sort}")
+
+        result = self._selections["_all"].select(match_filter, _page, _skip, sort)
 
         log.debug(
             f"select in {self.name}/_all {match_filter}/{_page} skip {_skip} -> {result}"
@@ -964,6 +972,7 @@ class Collection:
         query = request.args
         _page = int(query.get("_page", 10))
         _skip = int(query.get("_skip", 0))
+        _sort = query.get("_sort")
         _total = query.get("_total")
 
         if _total:
@@ -971,10 +980,17 @@ class Collection:
 
         match_filter: SFilter = multidict_to_sfilter(query)
 
-        result = self._selections[_selection_name].select(match_filter, _page, _skip)
+        # Transform the _sort from query to Sort() object
+        sort = None
+        if _sort:
+            sort = Sort(_sort)
+
+        result = self._selections[_selection_name].select(
+            match_filter, _page, _skip, sort
+        )
 
         log.debug(
-            f"select in {self.name}/{_selection_name} {match_filter}/{_page} skip {_skip} -> {result}"
+            f"select in {self.name}/{_selection_name} {match_filter}/{_page} skip {_skip} sort={sort}-> {result}"
         )
 
         return (json.dumps(result, cls=StrictoEncoder), 200)
@@ -1026,6 +1042,7 @@ class Collection:
         query = request.args
         _page = int(query.get("_page", 10))
         _skip = int(query.get("_skip", 0))
+        _sort = query.get("_sort")
 
         _total = query.get("_total")
 
@@ -1033,10 +1050,18 @@ class Collection:
             return self.do_post_count(_selection_name)
 
         match_filter: SFilter = dict_to_sfilter(request_content)
-        result = self._selections[_selection_name].select(match_filter, _page, _skip)
+
+        # Transform the _sort from query to Sort() object
+        sort = None
+        if _sort:
+            sort = Sort(_sort)
+
+        result = self._selections[_selection_name].select(
+            match_filter, _page, _skip, sort
+        )
 
         log.debug(
-            f"select in {self.name}/{_selection_name} {match_filter}/{_page} skip {_skip} -> {result}"
+            f"select in {self.name}/{_selection_name} {match_filter}/{_page} skip {_skip} sort={sort}-> {result}"
         )
 
         return (json.dumps(result, cls=StrictoEncoder), 200)

@@ -36,7 +36,7 @@ KPARSE_MODEL = {
         "type": Callable | SFilter,
         "default": SFilter(None, Operator.TRUE, None),
     },
-    "sort": Callable | Sort,
+    "sort": str | Sort,
 }
 
 
@@ -93,7 +93,12 @@ class Selection(CollectionAddon):
         self._filter = options.get("filter")
 
         # Get the sort in Sort format
-        self._sort = options.get("sort")
+        self._sort = None
+        sort = options.get("sort")
+        if isinstance(sort, str):
+            self._sort = Sort(sort)
+        if isinstance(sort, Sort):
+            self._sort = sort
 
         # self._db_filter = options.get("db_filter")
 
@@ -122,7 +127,7 @@ class Selection(CollectionAddon):
         """
         return self.is_allowed_to("read")
 
-    def _merge_and_filter(self, f1: dict, f2: dict) -> dict:
+    def _merge_and_filter1(self, f1: dict, f2: dict) -> dict:
         """Merge 2 object in a sens of a filter
 
 
@@ -144,7 +149,7 @@ class Selection(CollectionAddon):
                 continue
             if isinstance(f[key], dict):
                 if isinstance(value, dict):
-                    f[key] = self._merge_and_filter(f[key], value)
+                    f[key] = self._merge_and_filter1(f[key], value)
                     continue
             f[key] = ("$and", [f[key], value])
 
@@ -290,8 +295,14 @@ class Selection(CollectionAddon):
         # build the filter with filter given and self._filter
         filter_object: SFilter = self._merge_filters(select_filter)
 
+        sort = None
+        if self._sort:
+            sort = self._sort.merge(sort_object)
+        elif sort_object:
+            sort = sort_object
+
         response = SelectResponse(page_size, num_of_element_to_skip)
-        self._fill_response(response, filter_object, sort_object)
+        self._fill_response(response, filter_object, sort)
 
         return response.get_as_dict()
 

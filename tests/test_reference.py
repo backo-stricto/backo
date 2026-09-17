@@ -392,9 +392,41 @@ class TestReferences(unittest.TestCase):
         u1.save()
         s1.reload()
         self.assertEqual(len(s1.users), 0)
+
+        # Check select follow object
+        a = u1.select("$.site")
+        self.assertEqual( type(a), Ref )
+        a = u1.select("$.site.")
+        self.assertEqual( type(a), Item )
+
         s1.delete()
         s2.reload()
         self.assertEqual(len(s2.users), 2)
+
+        a = s2.select("$.users")
+        self.assertEqual( type(a), RefsList )
+        a = s2.select("$.users.")
+        self.assertEqual( type(a), list )
+        self.assertEqual( len(a), 2 )
+        self.assertEqual( type(a[0]), Item )
+        self.assertEqual( type(a[1]), Item )
+
+        a = s2.select("$.users[-1].")
+        self.assertEqual( type(a), Item )
+
+        a = s2.select("$.users[-1].name")
+        self.assertEqual( a, "bebert" )
+
+
+        a = s2.select("$.users[0:2].")
+        self.assertEqual( type(a), list )
+
+        
+        a = s2.select("$.users[0].")
+        self.assertEqual( type(a), Item )
+
+
+
         u2.delete()
         s2.reload()
         self.assertEqual(len(s2.users), 1)

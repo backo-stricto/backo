@@ -284,6 +284,8 @@ class Ref(String):  # pylint: disable=too-many-instance-attributes
         # (key, sub_index_or_slice) = sel.pop()
 
         # continue the selection
+
+        # print(f'continue the select {sel} into {other.select("$.name")} ')
         return other.get_selectors(None, sel)
 
     def get_view(self, view_name, final=True):  # pylint: disable=protected-access
