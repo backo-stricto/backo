@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.3.6] 2026-09-17
+
+    * Feat
+      * sorting on selection
+      * sorting in Sqlite3DBConnector and DBMongoConnector
+      * sorting in routes with _sort= in the query string
+  
+    * Internal :
+      * Adding FilterReport for evaluation of SFilters into the DB
+      * test refacto for Ref and RefsList
+      * refacto Ref and RefsList
+  
+    * Fix
+      * import __futures__ error on validation parameters
+      * fix bug on selector in Ref and RefsList
+
 ## [0.3.5] 2026-09-15
 
     * fix
