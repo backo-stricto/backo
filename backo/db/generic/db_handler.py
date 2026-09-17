@@ -18,6 +18,7 @@ from stricto import Kparse, SFilter
 from .transformer import Transformer
 from .filter import Filter
 from .interface import SelectResponse
+from ...sort import Sort
 
 from ...error import DBError, ExpiredError
 
@@ -306,7 +307,7 @@ class DBHandler(ABC):  # pylint: disable=too-many-instance-attributes
         projection: list[str] = None,
         page_size: int = 0,
         num_of_element_to_skip: int = 0,
-        sort_object: list[str] = [],
+        sort_object: Sort = None,
     ) -> SelectResponse:
         """
         Select from filter in the DB and return a list of dicts, with pagination

@@ -126,6 +126,13 @@ class Transformer:
         """
         return v
 
+    def transform_filter_value(self, v: Any) -> Any:
+        """
+        Transform the filter value
+
+        """
+        return v
+
     def must_be_store_in_db(self) -> bool:
         """
         Return if this key path must be saved into the DB.

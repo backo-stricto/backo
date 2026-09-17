@@ -17,7 +17,7 @@ from .generic.transformer import path_to_json_path
 from .generic.interface import SelectResponse
 
 from ..error import NotFoundError, DBError
-
+from ..sort import Sort
 from ..log import log_system
 
 log = log_system.get_or_create_logger("DBYmlConnector")
@@ -374,12 +374,14 @@ class DBYmlConnector(DBHandler):
         projection: list[str] = [],
         page_size: int = 0,
         num_of_element_to_skip: int = 0,
-        sort_object: list[str] = None,
+        sort_object: Sort = None,
     ) -> SelectResponse:
         """
         Make a selection
         """
         response = SelectResponse(page_size, num_of_element_to_skip)
+        if select_filter is None:
+            response.more_than_filter = False
 
         with open(self._filename, mode="r", encoding="utf-8") as stream:
             data_loaded = yaml.safe_load(stream)

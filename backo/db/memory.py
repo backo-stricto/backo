@@ -9,7 +9,7 @@ from stricto import SFilter
 from .generic.db_handler import DBHandler
 from .generic.interface import SelectResponse
 from ..error import NotFoundError
-
+from ..sort import Sort
 from ..log import log_system
 
 log = log_system.get_or_create_logger("DBMemoryConnector")
@@ -105,7 +105,7 @@ class DBMemoryConnector(DBHandler):
         projection: list[str] = None,
         page_size: int = 0,
         num_of_element_to_skip: int = 0,
-        sort_object: list[str] = [],
+        sort_object: Sort = None,
     ) -> SelectResponse:
         """
         Select from filter in the DB and return a list of dicts, with pagination
@@ -123,6 +123,8 @@ class DBMemoryConnector(DBHandler):
 
         """
         response = SelectResponse(page_size, num_of_element_to_skip)
+        if select_filter is None:
+            response.more_than_filter = False
         response.total = len(self._datas.keys())
         for idx, d in enumerate(self._datas.values()):
 

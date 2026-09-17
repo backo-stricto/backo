@@ -8,7 +8,7 @@ import json
 import pprint
 import re
 import sys
-from typing import Callable, Self, TYPE_CHECKING
+from typing import Callable, Self
 
 from deepdiff import DeepDiff
 from flask import Blueprint, request
@@ -137,6 +137,8 @@ class Collection:
     """The item definition"""
     db_handler: DBHandler = None
     """The database connector"""
+    migration_page_size = 50
+    """ The page size for migrations """
 
     @validation_parameters
     def __init__(self, name: str, model: Item, db_handler: DBHandler, **kwargs):
@@ -426,11 +428,10 @@ class Collection:
     ) -> None:
 
         skip = 0
-        page_size = 3
 
         while True:
             response: SelectResponse = self.db_handler.select(
-                None, None, page_size, skip, None
+                None, None, self.migration_page_size, skip, None
             )
 
             if not response.items:
@@ -442,9 +443,9 @@ class Collection:
                 else:
                     report.add_change(obj["_id"], changes)
 
-            if len(response.items) < page_size:
+            if len(response.items) < self.migration_page_size:
                 break
-            skip += page_size
+            skip += self.migration_page_size
 
     def _migrate_obj(
         self,
@@ -527,7 +528,7 @@ class Collection:
         obj.enable_permissions()
         return obj
 
-    def select(self, filter_for_selection: SFilter) -> list[Item]:
+    def select(self, filter_for_selection: SFilter = None) -> list[Item]:
         """Do a selection directly with a filter
 
         :param filter_for_selection: a filter
@@ -538,7 +539,7 @@ class Collection:
         result = self._selections["_all"].select(filter_for_selection, 0, 0)
         return result["result"]
 
-    def admin_select(self, filter_for_selection: SFilter) -> list[Item]:
+    def admin_select(self, filter_for_selection: SFilter = None) -> list[Item]:
         """Do a selection directly with a filter withou rigths
 
         :param filter_for_selection: a filter
@@ -549,7 +550,7 @@ class Collection:
         result = self._selections["_all"].admin_select(filter_for_selection)
         return result["result"]
 
-    def select_one(self, filter_for_selection: SFilter) -> Item:
+    def select_one(self, filter_for_selection: SFilter = None) -> Item:
         """select one item (if only one)
 
         :param filter_for_selection: a filter

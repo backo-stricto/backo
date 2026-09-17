@@ -14,7 +14,7 @@ from .generic.db_handler import DBHandler
 from .generic.interface import SelectResponse
 
 from ..error import NotFoundError, DBError
-
+from ..sort import Sort
 from ..log import log_system
 
 log = log_system.get_or_create_logger("DBYmlDirConnector")
@@ -159,13 +159,15 @@ class DBYmlDirConnector(DBHandler):
         projection: list[str] = [],
         page_size=0,
         num_of_element_to_skip=0,
-        sort_object: list[str] = [],
+        sort_object: Sort = None,
     ) -> SelectResponse:
         """
         Make a selection
         """
 
         response = SelectResponse(page_size, num_of_element_to_skip)
+        if select_filter is None:
+            response.more_than_filter = False
 
         try:
             dirs = os.listdir(self._dir)

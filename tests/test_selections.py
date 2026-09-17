@@ -9,7 +9,7 @@ from backo import Item, Collection
 from backo.db import DBYmlDirConnector
 from backo import Backoffice
 from backo import current_user, Selection
-from backo import String, Bool, SFilter, Operator
+from backo import String, Bool, SFilter, Operator, Sort, SortItem
 
 ### --- For development ---
 # import logging
@@ -59,7 +59,7 @@ class TestSelections(unittest.TestCase):
         current_user.reinit()
         return super().tearDown()
 
-    def test__all_selection(self):
+    def test_all_selection(self):
         """
         creating an backoffice with ref one to many
         and use selectors to cross
@@ -207,3 +207,14 @@ class TestSelections(unittest.TestCase):
 
         self.assertEqual(rep["result"][0][0], "User_paul_001_bebert_001")
         self.assertEqual(rep["result"][9][0], "User_paul_019_bebert_019")
+
+    def test_sort_1(self):
+        """
+        test sort
+        """
+        a = Sort("$.name,-$.age")
+        self.assertEqual(repr(a), "Sort[+$.name,-$.age]")
+        a.add_or_replace(SortItem("$.surname"))
+        self.assertEqual(repr(a), "Sort[+$.name,-$.age,+$.surname]")
+        a.add_or_replace(SortItem("$.name", False))
+        self.assertEqual(repr(a), "Sort[-$.name,-$.age,+$.surname]")

@@ -5,10 +5,11 @@ Ref and RefsLink class definition
 # pylint: disable=wrong-import-position, no-member, import-error, protected-access, wrong-import-order, duplicate-code
 import sys
 import copy
-from typing import Any, TYPE_CHECKING
+from typing import Any
 
 
-from . import item, collection  
+from . import item, collection
+
 # used for developpement
 sys.path.insert(1, "../../stricto")
 

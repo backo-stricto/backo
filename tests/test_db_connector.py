@@ -121,6 +121,7 @@ class TestDBConnector(unittest.TestCase):
         """
         # log = log_system.get_or_create_logger("DBSqlite3Connector")
         # log.setLevel(LogLevel.DEBUG)
+        # log_system.infos()
 
         super().__init__(*args, **kwargs)
 
@@ -228,9 +229,12 @@ class TestDBConnector(unittest.TestCase):
         # Select All
         res = con.select(None)
         self.assertEqual(type(res), SelectResponse)
+        self.assertEqual(res.more_than_filter, False)
+
         self.assertGreaterEqual(len(res.items), max_item)
         res = con.select(SFilter(None, Operator.TRUE, None))
         self.assertEqual(type(res), SelectResponse)
+
         self.assertGreaterEqual(len(res.items), max_item)
 
         if handle_sfilter:
@@ -238,16 +242,20 @@ class TestDBConnector(unittest.TestCase):
             res = con.select(SFilter("$.name", Operator.EQ, "rambo_1"))
             self.assertEqual(type(res), SelectResponse)
             self.assertEqual(len(res.items), 1)
+            self.assertEqual(res.more_than_filter, False)
 
             res = con.select(SFilter("$.age", Operator.NE, 1))
             self.assertEqual(type(res), SelectResponse)
+            self.assertEqual(res.more_than_filter, False)
             self.assertEqual(len(res.items), max_item - 1)
 
             res = con.select(SFilter("$.age", Operator.GT, 2))
+            self.assertEqual(res.more_than_filter, False)
             self.assertEqual(type(res), SelectResponse)
             self.assertEqual(len(res.items), max_item - 3)
 
             res = con.select(SFilter("$.age", Operator.GTE, 2))
+            self.assertEqual(res.more_than_filter, False)
             self.assertEqual(type(res), SelectResponse)
             self.assertEqual(len(res.items), max_item - 2)
 
@@ -262,6 +270,7 @@ class TestDBConnector(unittest.TestCase):
                 )
             )
             self.assertEqual(type(res), SelectResponse)
+            self.assertEqual(res.more_than_filter, False)
             self.assertEqual(len(res.items), 1)
             res = con.select(
                 SFilter(
@@ -274,6 +283,7 @@ class TestDBConnector(unittest.TestCase):
                 )
             )
             self.assertEqual(type(res), SelectResponse)
+            self.assertEqual(res.more_than_filter, False)
             self.assertEqual(len(res.items), max_item - 4)
             res = con.select(
                 SFilter(
@@ -286,6 +296,7 @@ class TestDBConnector(unittest.TestCase):
                 )
             )
             self.assertEqual(type(res), SelectResponse)
+            self.assertEqual(res.more_than_filter, False)
             self.assertEqual(len(res.items), 0)
 
     def sub_test_backo_connector(self, con_users: DBHandler, con_sites: DBHandler):

@@ -4,6 +4,7 @@ Attribut mapper for sql db connector
 """
 
 import copy
+from datetime import datetime
 from ..generic.transformer import Transformer
 
 
@@ -90,3 +91,24 @@ class IdTransformer(Transformer):
         """
         obj["id"] = int(obj["_id"])
         del obj["_id"]
+
+
+class DateTransformer(Transformer):
+    """
+    specific transformer for Datetime (savec as Date in sqlit3)
+    (Sqlite3 use DATE for Datetime )
+    """
+
+    def __init__(self):
+        """ """
+        super().__init__(None, "Datetime")
+
+    def transform_filter_value(self, v: datetime | str) -> str:
+        """
+        for Filtering, sqlite3 use isoformat
+        """
+        if isinstance(v, datetime):
+            return v.isoformat()
+        if isinstance(v, str):
+            return v
+        return None

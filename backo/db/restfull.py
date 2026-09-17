@@ -15,6 +15,7 @@ from stricto import SFilter, Kparse
 from .generic.db_handler import DBHandler
 from .generic.interface import SelectResponse
 
+from ..sort import Sort
 from ..error import NotFoundError, DBError, TemporaryNotFound
 
 from ..log import log_system
@@ -465,7 +466,7 @@ class DBRestFullConnector(DBHandler):
         projection: list[str] = None,
         page_size: int = 0,
         num_of_element_to_skip: int = 0,
-        sort_object: list[str] = [],
+        sort_object: Sort = None,
         **kwargs,
     ) -> SelectResponse:
         """

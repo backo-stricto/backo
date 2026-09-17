@@ -137,7 +137,7 @@ class Logger:
         """
         Initialisation
         """
-        self.loggers: dict[str, Logger] = {}
+        self.loggers: dict[str, logging.Logger] = {}
         self.handlers_for_all = []
 
     def get_or_create_logger(self, name, level=LogLevel.ERROR) -> logging.Logger:
@@ -159,6 +159,22 @@ class Logger:
         # use for test
         l.get_last_message = types.MethodType(get_last_message_for_a_logger, l)
         return l
+
+    def infos(self) -> bool:
+        """
+        Check if the logging system is ready
+        """
+        print("Logging system information")
+        one_handler_found = False
+        for name, log in self.loggers.items():
+            if log.hasHandlers():
+                one_handler_found = True
+            print(f"  {name:<25} level={log.level:3d}, {len(log.handlers):2d} handlers")
+
+        if not one_handler_found:
+            print("!! NO HANDLER DEFINED. Need at least one if you want some logs !!")
+
+        return one_handler_found
 
     def setLevel(self, level) -> None:  # pylint: disable=invalid-name
         """

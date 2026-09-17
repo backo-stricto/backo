@@ -4,11 +4,11 @@ filter for sqlite3 db connector
 """
 
 import re
-from typing import Callable
+from typing import Callable, Any
 
 
 from stricto import SFilter, Operator
-from ..generic.filter import Filter
+from ..generic.filter import Filter, FilterReport
 from ..generic.transformer import Transformer
 from ...error import DBError
 from .pragma import get_sqlite3_type_from_backo
@@ -34,9 +34,9 @@ class SQlite3Filter(Filter):
         self.joins = []
         super().__init__(get_transformer)
 
-    def _sfilter_to_db_filter(  # pylint: disable=too-many-return-statements, too-many-branches
-        self, sf: SFilter
-    ) -> dict:
+    def _sfilter_to_db_filter(  # pylint: disable=too-many-return-statements, too-many-branches, too-many-statements
+        self, sf: SFilter, values: list[Any]
+    ) -> tuple[str, FilterReport]:
         """
 
         Transform a SFilter to a where condition
@@ -49,24 +49,48 @@ class SQlite3Filter(Filter):
 
         if sf._operator == Operator.AND:
             sub_list = []
+            filter_report = FilterReport.EXACT
             for sub in sf._value:
-                sub_list.append(self._sfilter_to_db_filter(sub))
+                sql_filter, sub_filter_report = self._sfilter_to_db_filter(sub, values)
+                sub_list.append(sql_filter)
 
-            return f'( {" AND ".join( sub_list ) } )'
+                if sub_filter_report == FilterReport.MORE:
+                    filter_report = FilterReport.LESS
+                if sub_filter_report == FilterReport.LESS:
+                    filter_report = FilterReport.MORE
+
+            return (f'( {" AND ".join( sub_list ) } )', filter_report)
 
         if sf._operator == Operator.OR:
             sub_list = []
+            filter_report = FilterReport.EXACT
             for sub in sf._value:
-                sub_list.append(self._sfilter_to_db_filter(sub))
+                sql_filter, sub_filter_report = self._sfilter_to_db_filter(sub, values)
+                sub_list.append(sql_filter)
 
-            return f'( {" OR ".join( sub_list ) } )'
+                if sub_filter_report == FilterReport.MORE:
+                    filter_report = FilterReport.LESS
+                if sub_filter_report == FilterReport.LESS:
+                    filter_report = FilterReport.MORE
+
+            return (f'( {" OR ".join( sub_list ) } )', filter_report)
 
         if sf._operator == Operator.NOT:
-            return f"( NOT ( {self._sfilter_to_db_filter(sf._value)} ) )"
+            sql_filter, sub_filter_report = self._sfilter_to_db_filter(
+                sf._value, values
+            )
+
+            filter_report = FilterReport.EXACT
+            if sub_filter_report == FilterReport.MORE:
+                filter_report = FilterReport.LESS
+            if sub_filter_report == FilterReport.LESS:
+                filter_report = FilterReport.MORE
+
+            return (f"( NOT ( {sql_filter} ) )", filter_report)
 
         if sf._operator == Operator.TRUE:
-            self.values.append(1)
-            return "( 1 == ? )"
+            values.append(1)
+            return ("( 1 == ? )", FilterReport.EXACT)
 
         if not sf._path:
             raise DBError("Cannot interpret empty filter {0}", repr(sf))
@@ -82,56 +106,57 @@ class SQlite3Filter(Filter):
         )
         sql_type = get_sqlite3_type_from_backo(model_for_this_path["types"])
 
+        val = sf._value
         transformer: Transformer = self.get_transformer(db_path)
         if transformer:
-            db_path = transformer.get_db_path()
+            db_path = transformer.get_db_path(db_path)
+            val = transformer.transform_filter_value(sf._value)
 
         table_field_name = f"{self._main_table_name}.{'_'.join(db_path)}"
 
         if sf._operator == Operator.EQ:
 
-            self.values.append(str(sf._value))
-            return f"( {table_field_name} == ?)"
+            values.append(str(val))
+            return (f"( {table_field_name} == ?)", FilterReport.EXACT)
 
         if sf._operator == Operator.GT:
-            if sql_type not in ["INTEGER", "REAL"]:
+            if sql_type not in ["INTEGER", "REAL", "DATE"]:
                 raise DBError("Cannot do a gt on {0}", sf._path)
 
-            self.values.append(sf._value)
-            return f"( {table_field_name} > ?)"
+            values.append(val)
+            return (f"( {table_field_name} > ?)", FilterReport.EXACT)
 
         if sf._operator == Operator.GTE:
-            if sql_type not in ["INTEGER", "REAL"]:
+            if sql_type not in ["INTEGER", "REAL", "DATE"]:
                 raise DBError("Cannot do a gte on {0}", sf._path)
 
-            self.values.append(str(sf._value))
-            return f"( {table_field_name} >= ?)"
+            values.append(str(val))
+            return (f"( {table_field_name} >= ?)", FilterReport.EXACT)
 
         if sf._operator == Operator.LTE:
-            if sql_type not in ["INTEGER", "REAL"]:
+            if sql_type not in ["INTEGER", "REAL", "DATE"]:
                 raise DBError("Cannot do a lte on {0}", sf._path)
 
-            self.values.append(str(sf._value))
-            return f"( {table_field_name} <= ?)"
+            values.append(str(val))
+            return (f"( {table_field_name} <= ?)", FilterReport.EXACT)
 
         if sf._operator == Operator.LT:
-            if sql_type not in ["INTEGER", "REAL"]:
+            if sql_type not in ["INTEGER", "REAL", "DATE"]:
                 raise DBError("Cannot do a lt on {0}", sf._path)
 
-            self.values.append(str(sf._value))
-            return f"( {table_field_name} < ?)"
+            values.append(str(val))
+            return (f"( {table_field_name} < ?)", FilterReport.EXACT)
 
         if sf._operator == Operator.NE:
 
-            self.values.append(str(sf._value))
-            return f"( {table_field_name} != ?)"
+            values.append(str(val))
+            return (f"( {table_field_name} != ?)", FilterReport.EXACT)
 
-        # Not implemented
-        raise DBError(
-            "Operator {0} not implemented in sqlite3 (path={1})", sf._operator, sf._path
-        )
+        return ("( 1 == ? )", FilterReport.MORE)
 
-    def build_db_filter(self, backo_filter: SFilter) -> tuple[str, tuple[str]]:
+    def build_db_filter(
+        self, backo_filter: SFilter
+    ) -> tuple[tuple[str, tuple[str]], FilterReport]:
         """
 
         Transform a SFilter to a sqlite query
@@ -142,8 +167,10 @@ class SQlite3Filter(Filter):
         :rtype: dict
         """
         if not backo_filter:
-            return (None, ())
+            return (("( 1 == ? )", (1,)), FilterReport.EXACT)
 
-        self.values = []
-        where_conditions = self._sfilter_to_db_filter(backo_filter)
-        return (where_conditions, tuple(self.values))
+        values = []
+        where_conditions, filter_report = self._sfilter_to_db_filter(
+            backo_filter, values
+        )
+        return ((where_conditions, tuple(values)), filter_report)

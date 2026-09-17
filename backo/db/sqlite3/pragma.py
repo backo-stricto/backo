@@ -15,7 +15,7 @@ SQL_TYPE_MAPPER = {
     "Int": "INTEGER",
     "Bool": "INTEGER",
     "Float": "REAL",
-    "Datetime": "INTEGER",
+    "Datetime": "DATE",
     "Ref": "TEXT",
     "List": "TEXT",
     "RefsList": "TEXT",

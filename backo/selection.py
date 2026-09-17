@@ -26,6 +26,7 @@ from .collection_addon import CollectionAddon
 from .log import log_system
 from .error import DBError
 from .item import Item
+from .sort import Sort
 
 log = log_system.get_or_create_logger("select")
 
@@ -35,6 +36,7 @@ KPARSE_MODEL = {
         "type": Callable | SFilter,
         "default": SFilter(None, Operator.TRUE, None),
     },
+    "sort": Callable | Sort,
 }
 
 
@@ -89,6 +91,9 @@ class Selection(CollectionAddon):
 
         # Get the filter in SFilter format
         self._filter = options.get("filter")
+
+        # Get the sort in Sort format
+        self._sort = options.get("sort")
 
         # self._db_filter = options.get("db_filter")
 
@@ -170,7 +175,7 @@ class Selection(CollectionAddon):
         self,
         response: SelectResponse,
         filter_object: SFilter,
-        sort_object: list[str],
+        sort_object: Sort,
         with_right: bool = True,
     ) -> None:
         """
@@ -202,6 +207,9 @@ class Selection(CollectionAddon):
                 raise DBError(
                     'DBHandler does nor return a SelectResponse "{0}"', self.name
                 )
+
+            response.sorted = resp.sorted
+            response.more_than_filter = resp.more_than_filter
 
             # At the end of elements in the DB
             if not resp.items:
@@ -265,7 +273,7 @@ class Selection(CollectionAddon):
         select_filter: SFilter = None,
         page_size: int = 0,
         num_of_element_to_skip: int = 0,
-        sort_object: list[str] = [],
+        sort_object: Sort = None,
     ) -> dict:
         """
         Do the selection

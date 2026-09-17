@@ -5,6 +5,7 @@ DB Connector redirect to another backo server
 
 from stricto import SFilter
 from ..error import DBError
+from ..sort import Sort
 from .restfull import DBRestFullConnector
 from .generic.interface import SelectResponse
 
@@ -63,7 +64,7 @@ class DBBackoRedirectConnector(
         projection: list[str] = None,
         page_size=0,
         num_of_element_to_skip=0,
-        sort_object: list[str] = [],
+        sort_object: Sort = None,
     ) -> SelectResponse:
         """See :func:`DBConnector.select`
 

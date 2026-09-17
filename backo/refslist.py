@@ -6,7 +6,7 @@ Ref and RefsLink class definition
 
 import sys
 import copy
-from typing import Self, TYPE_CHECKING
+from typing import Self
 
 # used for developpement
 sys.path.insert(1, "../../stricto")
@@ -27,7 +27,6 @@ from .error import BackoError, NotFoundError, TemporaryNotFound
 from .log import log_system
 
 from .refs_strategies import DeleteStrategy, FillStrategy
-
 
 # WARNING: Specific import for cycling import beetween Ref and RefsLists
 from . import ref, item

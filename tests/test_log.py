@@ -20,10 +20,15 @@ class TestLog(unittest.TestCase):
         log_system = Logger()
         log1 = log_system.get_or_create_logger("test_1", LogLevel.DEBUG)
         log2 = log_system.get_or_create_logger("test_2", LogLevel.DEBUG)
+
+        self.assertFalse(log_system.infos())
+
         filehandler = log_system.set_filehandler("/dev/null")
         log_system.add_handler(filehandler, "test_1")
         # must do nothing
         log_system.add_handler(filehandler, "dontexists")
+
+        self.assertTrue(log_system.infos())
 
         self.assertEqual(log1.get_last_message(), None)
         self.assertEqual(log2.get_last_message(), None)

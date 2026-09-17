@@ -4,9 +4,28 @@ Attribut Filter
 """
 
 from typing import Any, Callable
+from enum import Enum, auto
 
 from stricto import SFilter
 from ...error import DBError
+from ...sort import Sort
+
+
+class FilterReport(Enum):
+    """
+    Specify the report of the filter
+
+    """
+
+    EXACT = auto()
+    """ The filter transposition into the DB will return exactly the SFilter wanted """
+    MORE = auto()
+    """ The filter transposition into the DB will return more element the SFilter wanted """
+    LESS = auto()
+    """ The filter transposition into the DB will return less element the SFilter wanted """
+
+    def __repr__(self):
+        return self.name
 
 
 class Filter:
@@ -63,14 +82,14 @@ class Filter:
 
         raise DBError("Wrong path {0} (doesnt exists in model)", path)
 
-    def build_db_filter(self, backo_filter: SFilter) -> Any:
+    def build_db_filter(self, backo_filter: SFilter) -> tuple[Any, FilterReport]:
         """
         Transform a SFilter into a filter for the DB
 
-        :param backo_filter: the SFilter
+        :param backo_filter: _description_
         :type backo_filter: SFilter
-        :return: a filter available to the DB
-        :rtype: Any
+        :return: the filter for the DB and a Filter Report
+        :rtype: tuple [ Any, FilterReport ]
         """
 
     def build_db_projection(self, _backo_projection: list[str]) -> Any:
@@ -80,6 +99,17 @@ class Filter:
         :param backo_filter: the SFilter
         :type backo_filter: SFilter
         :return: a filter available to the DB
+        :rtype: Any
+        """
+        return None
+
+    def build_db_sort(self, _backo_sort: Sort) -> Any:
+        """
+        Transform a Sort into a sort command available for this DB
+
+        :param _backo_sort: the Sort
+        :type _backo_sort: Sort
+        :return: a order available to the DB
         :rtype: Any
         """
         return None

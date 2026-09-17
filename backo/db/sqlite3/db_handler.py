@@ -11,14 +11,16 @@ import sqlite3
 from stricto import SFilter
 
 from ..generic.db_handler import DBHandler
+from ..generic.filter import FilterReport
 from ...error import NotFoundError, DBError
 
-from .transformers import IdTransformer, BooleanTransformer
+from .transformers import IdTransformer, BooleanTransformer, DateTransformer
 from ..generic.transformer import Transformer
 from ..generic.interface import SelectResponse
 from .pragma import TablePragma, SqlFieldDescription
 from .filter import SQlite3Filter
 
+from ...sort import Sort
 from ...log import log_system
 
 log = log_system.get_or_create_logger("DBSqlite3Connector")
@@ -61,6 +63,7 @@ class DBSqlite3Connector(DBHandler):
 
         self.register_transformer(IdTransformer())
         self.register_type_transformer(BooleanTransformer())
+        self.register_type_transformer(DateTransformer())
 
         self.filter = SQlite3Filter(self._table_name, self.get_transformer_by_key)
 
@@ -723,7 +726,7 @@ class DBSqlite3Connector(DBHandler):
         projection: list[str] = None,
         page_size: int = 0,
         num_of_element_to_skip: int = 0,
-        sort_object: list[str] = None,
+        sort_object: Sort = None,
     ) -> SelectResponse:
         """
         Select from filter in the DB and return a list of dicts, with pagination
@@ -742,7 +745,19 @@ class DBSqlite3Connector(DBHandler):
         """
         response = SelectResponse(page_size, num_of_element_to_skip)
 
-        where_conditions, values = self.filter.build_db_filter(select_filter)
+        (where_conditions, values), filter_report = self.filter.build_db_filter(
+            select_filter
+        )
+
+        # If the filter will return less elements than the wanted filter, raise an error
+        if filter_report == FilterReport.LESS:
+            raise DBError(
+                f'Sqlite3 filter interpretation cannot be done for filter "{repr(select_filter)}"'
+            )
+
+        if filter_report == FilterReport.EXACT:
+            response.more_than_filter = False
+
         select = f"SELECT * FROM {self._table_name}"
         if where_conditions:
             select += f" WHERE {where_conditions}"

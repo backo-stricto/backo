@@ -49,4 +49,5 @@ from .api_toolbox import (
     multidict_to_sfilter,
     dict_to_sfilter,
 )
+from .sort import SortItem, Sort
 from .initialisation.init_script import backo_init

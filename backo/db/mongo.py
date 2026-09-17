@@ -17,8 +17,9 @@ from stricto import SFilter, Operator
 from .generic.transformer import Transformer
 from .generic.db_handler import DBHandler
 from .generic.interface import SelectResponse
-from .generic.filter import Filter
+from .generic.filter import Filter, FilterReport
 
+from ..sort import Sort, SortItem
 from ..error import NotFoundError, DBError
 from ..log import log_system
 
@@ -30,9 +31,9 @@ class MongoFilter(Filter):
     Filter transformation for mongo
     """
 
-    def _sfilter_to_mongo_query(  # pylint: disable=too-many-return-statements, too-many-branches
+    def _sfilter_to_mongo_query(  # pylint: disable=too-many-return-statements, too-many-branches, too-many-statements
         self, sf: SFilter
-    ) -> dict:
+    ) -> tuple[dict, FilterReport]:
         """
 
         Transform a SFilter to a mongo query
@@ -56,25 +57,47 @@ class MongoFilter(Filter):
         if sf._operator == Operator.AND:
             q = {}
             sub_list = []
+            filter_report = FilterReport.EXACT
             for sub in sf._value:
-                sub_list.append(self._sfilter_to_mongo_query(sub))
+                mf, sub_filter_report = self._sfilter_to_mongo_query(sub)
+                if sub_filter_report == FilterReport.MORE:
+                    filter_report = FilterReport.MORE
+                if sub_filter_report == FilterReport.LESS:
+                    filter_report = FilterReport.LESS
+                if mf:
+                    sub_list.append(mf)
 
             q["$and"] = sub_list
-            return q
+            return (q, filter_report)
 
         if sf._operator == Operator.OR:
             q = {}
             sub_list = []
+            filter_report = FilterReport.EXACT
             for sub in sf._value:
-                sub_list.append(self._sfilter_to_mongo_query(sub))
+                mf, sub_filter_report = self._sfilter_to_mongo_query(sub)
+                if sub_filter_report == FilterReport.MORE:
+                    filter_report = FilterReport.LESS
+                if sub_filter_report == FilterReport.LESS:
+                    filter_report = FilterReport.MORE
+                if mf:
+                    sub_list.append(mf)
 
             q["$or"] = sub_list
-            return q
+            return (q, filter_report)
 
         if sf._operator == Operator.NOT:
             q = {}
-            q["$not"] = self._sfilter_to_mongo_query(sf._value)
-            return q
+            mf, sub_filter_report = self._sfilter_to_mongo_query(sf._value)
+            if mf:
+                q["$not"] = mf
+
+            filter_report = FilterReport.EXACT
+            if sub_filter_report == FilterReport.MORE:
+                filter_report = FilterReport.LESS
+            if sub_filter_report == FilterReport.LESS:
+                filter_report = FilterReport.MORE
+            return (q, filter_report)
 
         db_value = (
             transformer.transform_value_to_db(sf._value) if transformer else sf._value
@@ -83,59 +106,93 @@ class MongoFilter(Filter):
         if sf._operator == Operator.EQ:
             q = {}
             q[db_path_string] = db_value
-            return q
+            return (q, FilterReport.EXACT)
 
         if sf._operator == Operator.GT:
             q = {}
             q[db_path_string] = {"$gt": db_value}
-            return q
+            return (q, FilterReport.EXACT)
 
         if sf._operator == Operator.GTE:
             q = {}
             q[db_path_string] = {"$gte": db_value}
-            return q
+            return (q, FilterReport.EXACT)
 
         if sf._operator == Operator.LTE:
             q = {}
             q[db_path_string] = {"$lte": db_value}
-            return q
+            return (q, FilterReport.EXACT)
 
         if sf._operator == Operator.LT:
             q = {}
             q[db_path_string] = {"$lt": db_value}
-            return q
+            return (q, FilterReport.EXACT)
 
         if sf._operator == Operator.NE:
             q = {}
             q[db_path_string] = {"$ne": db_value}
-            return q
+            return (q, FilterReport.EXACT)
 
         if sf._operator == Operator.REG:
             q = {}
             q[db_path_string] = {"$regex": db_value}
-            return q
+            return (q, FilterReport.EXACT)
 
         if sf._operator == Operator.SIZE:
             q = {}
             q[db_path_string] = {"$size": db_value}
-            return q
+            return (q, FilterReport.EXACT)
 
         # Not implemented
-        return None
+        return (None, FilterReport.MORE)
 
-    def build_db_filter(self, backo_filter: SFilter) -> Any:
+    def build_db_filter(self, backo_filter: SFilter) -> tuple[Any, FilterReport]:
         """
-
         Transform a SFilter to a mongo query
 
-        :param sf: The SFilter
-        :type sf: SFilter
-        :return: the mongo query
-        :rtype: dict
+        :param backo_filter: the backo filter
+        :type backo_filter: SFilter
+        :return: The mongo filter
+        :rtype: tuple [ Any, FilterReport ]
         """
         if not backo_filter:
-            return {}
+            return ({}, FilterReport.EXACT)
         return self._sfilter_to_mongo_query(backo_filter)
+
+    def _sort_to_mongo_sort(self, backo_sort: SortItem) -> tuple[str, int]:
+
+        db_path_string = backo_sort.path
+        if db_path_string is None:
+            return None
+
+        transformer: Transformer = None
+        db_path_string = re.sub(r"^\$\.", "", db_path_string)
+        db_path = db_path_string.split(".")
+        transformer = self.get_transformer(db_path)
+        if transformer:
+            db_path = transformer.get_db_path(db_path)
+            db_path_string = ".".join(db_path)
+
+        return (db_path_string, 1 if backo_sort.ascendant_order else -1)
+
+    def build_db_sort(self, backo_sort: Sort) -> list[tuple[str, int]]:
+        """
+
+        Transform a Sort to a mongo sort
+
+        :param backo_sort: The Sort
+        :type backo_sort: Sort
+        :return: the mongo sort
+        :rtype: list [ tuple [ str, int ]]
+        """
+        if not backo_sort:
+            return [("_id", 1)]
+        sort = []
+        for sort_item in backo_sort.list_of_sort_item:
+            s = self._sort_to_mongo_sort(sort_item)
+            if s:
+                sort.append(s)
+        return sort
 
 
 class IdTransformer(Transformer):
@@ -424,7 +481,7 @@ class DBMongoConnector(DBHandler):
         projection: list[str] = None,
         page_size: int = 0,
         num_of_element_to_skip: int = 0,
-        sort_object: list[str] = [],
+        sort_object: Sort = None,
     ) -> SelectResponse:
         """
         Select from filter in the DB and return a list of dicts, with pagination
@@ -442,15 +499,30 @@ class DBMongoConnector(DBHandler):
 
         """
 
-        mongo_filter = self.filter.build_db_filter(select_filter)
+        mongo_filter, filter_report = self.filter.build_db_filter(select_filter)
+
+        # If the filter will return less elements than the wanted filter, raise an error
+        if filter_report == FilterReport.LESS:
+            raise DBError(
+                f'Mongo filter interpretation cannot be done for filter "{repr(select_filter)}"'
+            )
+
         mongo_projection = self.filter.build_db_projection(projection)
+        mongo_sort = self.filter.build_db_sort(sort_object)
 
         response = SelectResponse(page_size, num_of_element_to_skip)
+
+        if filter_report == FilterReport.EXACT:
+            response.more_than_filter = False
+        if filter_report == FilterReport.MORE:
+            response.more_than_filter = True
+
+        response.sorted = True
 
         try:
             result_list = list(
                 self._collection.find(mongo_filter, mongo_projection)
-                .sort({"_id": 1})
+                .sort(mongo_sort)
                 .skip(num_of_element_to_skip)
                 .limit(page_size)
             )
