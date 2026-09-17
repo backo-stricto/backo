@@ -196,16 +196,14 @@ class RefsList(List):
 
         """
 
-
         # No need to continue, return self or slice of lists
         if sel.empty():
             if index_or_slice is None:
                 return self
             return List.get_selectors(self, index_or_slice, sel)
 
-        # Get all ids depending on index_or_slice            
+        # Get all ids depending on index_or_slice
         list_ids_or_id = List.get_selectors(self, index_or_slice, Selector(None))
-
 
         if list_ids_or_id is None:
             return None
