@@ -299,11 +299,24 @@ class File(Dict):
         :rtype: bool
         """
 
-        if callable(self._auto_set):
-            value = self._auto_set(self.get_root())
-            return self.set_value(value)
+        function = self._auto_set
+        listening_selectors = None
+        root = self.get_root()
+        if isinstance(self._auto_set, tuple):
+            function = self._auto_set[0]
+            listening_selectors = self._auto_set[1]
+        if not root._changes.has_change_for_me(listening_selectors, self.path_name()):
+            return
 
-        return False
+        if not callable(function):
+            return
+
+        value = function(root)
+        change = self.set_value(value)
+        if change is True:
+            root._add_change(self.path_name())
+
+        return change
 
     def delete_content(self) -> None:
         """Delete the file"""

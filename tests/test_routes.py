@@ -69,13 +69,25 @@ class TestRoutes(unittest.TestCase):
             o.save(**kwargs)
 
         change_surname_action = Action(
-            {"new_surname": String(required=True)},
+            {"new_surname": String(required=True, default="")},
             change_surname,
             can_execute=lambda self, right_name, action, o: True,
         )
         self.users_coll.register_action("change_surname", change_surname_action)
 
         self.backo.register_collection(self.users_coll)
+
+        # set the flask route
+        self.flask = Flask(__name__)
+        self.backo.build_routes(self.flask)
+
+        # Set client for testing
+        self.ctx = self.flask.app_context()
+        self.ctx.push()
+        self.client = self.flask.test_client()
+
+    def setUp(self):
+        current_user.standalone = True
 
         self.yml_users.drop()
 
@@ -88,14 +100,10 @@ class TestRoutes(unittest.TestCase):
         u = self.backo.users.create({"name": "bert2", "surname": "bert2"})
         self.assertEqual(u._id, "User_bert2_bert2")
 
-        # set the flask route
-        self.flask = Flask(__name__)
-        self.backo.build_routes(self.flask)
 
-        # Set client for testing
-        self.ctx = self.flask.app_context()
-        self.ctx.push()
-        self.client = self.flask.test_client()
+        return super().setUp()
+
+
 
     def tearDown(self):
         current_user.reinit()

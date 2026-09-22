@@ -99,7 +99,6 @@ class TestRestApiConnector(TestRoutes):
 
     def setUp(self):
         current_user.standalone = True
-        return super().setUp()
 
     @classmethod
     def setUpClass(cls):

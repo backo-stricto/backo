@@ -38,9 +38,10 @@ class Patch(Dict):  # pylint: disable=too-few-public-methods
         Dict.__init__(
             self,
             {
-                "op": String(require=True, union=["test", "replace", "remove", "add"]),
+                "op": String(require=True, union=["test", "replace", "remove", "add"], default="test"),
                 "path": String(
                     require=True,
+                    default="",
                     # constraint=lambda value, o: bool(re.match(r"^\$.*", value)),
                     constraint=must,
                 ),
