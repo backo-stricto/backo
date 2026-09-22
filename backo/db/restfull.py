@@ -429,6 +429,7 @@ class DBRestFullConnector(DBHandler):
         log.debug(
             f"Get {_id} from endpoint {endpoint} with url_parameters {url_parameters} and query_options {query_options}"
         )
+
         status_code, data, error = self._request(
             endpoint=endpoint,
             url_parameters=url_parameters or [_id],

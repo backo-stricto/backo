@@ -6,6 +6,7 @@ test for Flask and routes
 
 import unittest
 import json
+import uuid
 from flask import Flask
 
 # get the resources folder in the tests folder
@@ -16,9 +17,9 @@ from backo import Backoffice, current_user, Action, Selection
 
 from backo import String, Bool, SFilter, Operator
 
+
+
 YML_DIR = "/tmp/backo_tests_routes"
-my_db_connector = DBYmlDirConnector(YML_DIR)
-my_db_connector.generate_id = lambda o: f"User_{o["name"]}_{o["surname"]}"
 
 
 class TestRoutes(unittest.TestCase):
@@ -32,10 +33,15 @@ class TestRoutes(unittest.TestCase):
         """
         super().__init__(*arg, **kwargs)
 
+
         # ignore sessions for this campaign of tests.
         current_user.standalone = True
 
         # --- DB for user
+        my_db_connector = DBYmlDirConnector(YML_DIR + str(uuid.uuid4().int >> 64) )
+        my_db_connector.generate_id = lambda o: f"User_{o["name"]}_{o["surname"]}"
+
+
         self.yml_users = my_db_connector
         # self.yml_users.generate_id = lambda o: f"User_{o["name"]}_{o["surname"]}"
 
@@ -99,6 +105,7 @@ class TestRoutes(unittest.TestCase):
 
         u = self.backo.users.create({"name": "bert2", "surname": "bert2"})
         self.assertEqual(u._id, "User_bert2_bert2")
+
 
         return super().setUp()
 
