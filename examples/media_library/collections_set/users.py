@@ -58,7 +58,7 @@ def can_modify_roles(right_name: str, user: Item) -> bool:
 # ------------------------------------
 item = Item(
     {
-        "login": String(require=True, can_modify=can_modify_login),
+        "login": String(require=True, can_modify=can_modify_login, default=""),
         "email": String(),
         "roles": List(
             String(union=["ADMIN", "EMPLOYEE", "USER"], default="USER"),
