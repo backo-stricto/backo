@@ -77,7 +77,7 @@ requires-dist = [
     { name = "questionary" },
     { name = "redis", specifier = ">=8.1.0" },
     { name = "requests" },
-    { name = "stricto", specifier = ">=0.2.6" },
+    { name = "stricto", specifier = ">=0.2.7" },
 ]
 provides-extras = ["mongo"]
 
@@ -1057,11 +1057,11 @@ wheels = [
 
 [[package]]
 name = "stricto"
-version = "0.2.6"
+version = "0.2.8"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/77/6d/a840782ce79a1fb5df70f93ac11e93c26a17255648665a90b6204676f989/stricto-0.2.6.tar.gz", hash = "sha256:7cc6061b7667008f8aadfeac266b41a3c4b7c3ce891da20ed896a7ee664b4eb6", size = 62224, upload-time = "2026-09-17T13:47:09.397Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/d5/1b/38319d33558b7f126014a7e51248e4faef427f3ebd42a820b6defb91f486/stricto-0.2.8.tar.gz", hash = "sha256:ee863d0d542f3092cf98ca869569ea65ca624d413485081ecdb476d3ddcf91b1", size = 63455, upload-time = "2026-09-21T08:41:30.82Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/07/a0/3d009c9f5ff4e095f054fd105c7526d6fde82122a0d744f31db66ab4a273/stricto-0.2.6-py3-none-any.whl", hash = "sha256:1dc9e6d55856951758c41a01ac139dc66103f0dd0b8a47e6c6f74d44d5c53aee", size = 51151, upload-time = "2026-09-17T13:47:08.334Z" },
+    { url = "https://files.pythonhosted.org/packages/49/ac/0dcc4eab99f917571c5df5d1532cea5f43c99d3e5fa763455bca6c1c2d6f/stricto-0.2.8-py3-none-any.whl", hash = "sha256:1eaf4e7ca6819e8babb3372f3f9a3c516864deb6876bc8b5dfa4344291b60d71", size = 52281, upload-time = "2026-09-21T08:41:29.825Z" },
 ]
 
 [[package]]

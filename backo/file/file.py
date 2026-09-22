@@ -306,10 +306,10 @@ class File(Dict):
             function = self._auto_set[0]
             listening_selectors = self._auto_set[1]
         if not root._changes.has_change_for_me(listening_selectors, self.path_name()):
-            return
+            return False
 
         if not callable(function):
-            return
+            return False
 
         value = function(root)
         change = self.set_value(value)

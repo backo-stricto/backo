@@ -14,7 +14,6 @@ from backo import (
     Bool,
     SSyntaxError,
     Int,
-    SConstraintError,
     SAttributeError,
     MigrationStrategy,
 )

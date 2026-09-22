@@ -2,7 +2,7 @@
 test for Flask and routes
 """
 
-# pylint: disable=wrong-import-position, no-member, import-error, protected-access, wrong-import-order, duplicate-code
+# pylint: disable=wrong-import-position, no-member, import-error, protected-access, wrong-import-order, duplicate-code, too-many-public-methods
 
 import unittest
 import json
@@ -100,10 +100,7 @@ class TestRoutes(unittest.TestCase):
         u = self.backo.users.create({"name": "bert2", "surname": "bert2"})
         self.assertEqual(u._id, "User_bert2_bert2")
 
-
         return super().setUp()
-
-
 
     def tearDown(self):
         current_user.reinit()
