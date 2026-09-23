@@ -171,7 +171,7 @@ class Ref(String):  # pylint: disable=too-many-instance-attributes
 
         return reverse_field_model
 
-    def load_target(self, _id: str, **kwargs) -> tuple[Any, Self | Any ]:
+    def load_target(self, _id: str, **kwargs) -> tuple[Any, Self | Any]:
         """
         Load the target Item and its reverse field
 

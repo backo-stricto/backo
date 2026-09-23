@@ -51,11 +51,9 @@ def launch_backoffice2():
     backo2.users2.create({"name": "bert1", "surname": "bert1"})
     backo2.users2.create({"name": "bert2", "surname": "bert2"})
 
-
     flask2 = Flask("backo2")
     backo2.build_routes(flask2)
     flask2.run(host="0.0.0.0", port=5050)
-
 
 
 process_backo_2 = multiprocessing.Process(target=launch_backoffice2, args=())
@@ -96,12 +94,11 @@ class TestRestApiConnector(TestRoutes):
             tls=False,
             prefix="backo2",
         )
-        db_handler.set_model( self.backo.users.model.get_schema() )
+        db_handler.set_model(self.backo.users.model.get_schema())
         self.backo.users.db_handler = db_handler
-        self.backo.users.model.set_db_handler( db_handler )
+        self.backo.users.model.set_db_handler(db_handler)
 
     def setUp(self):
-
 
         current_user.standalone = True
 

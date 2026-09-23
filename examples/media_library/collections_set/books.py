@@ -90,7 +90,7 @@ books_item = Item(
     {
         "title": String(require=True, default=""),
         "pages": Int(),
-        "borrowed": Bool(set=set_borrowed, views=['save']),
+        "borrowed": Bool(set=set_borrowed, views=["save"]),
         "borrow": Dict(
             {
                 "user": Ref(
@@ -199,7 +199,12 @@ def can_see_borrow_action(right_name: str, book: Item) -> bool:
 #
 # Definition of the action
 borrow_action = Action(
-    {"user_id": String(require=True, default=""), "return_date": Datetime(require=True, default=datetime.now().replace(microsecond=0))},
+    {
+        "user_id": String(require=True, default=""),
+        "return_date": Datetime(
+            require=True, default=datetime.now().replace(microsecond=0)
+        ),
+    },
     borrow,
     can_execute=can_borrow,
     can_see=can_see_borrow_action,
