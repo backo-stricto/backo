@@ -37,9 +37,11 @@ jobs:
       with:
         version: "latest"        
     
-    - name: Install Python
-      run: uv python install
-
+    - name: Installer Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+          python-version: ${{ matrix.python-version }}
+      
     - name: Install dependencies
       run: |
         sudo apt-get install libmagic1
