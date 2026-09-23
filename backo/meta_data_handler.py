@@ -95,7 +95,7 @@ class StandardMetaDataHandler(
                     ),
                     "modified_by": Dict(
                         {"_id": String(), "login": String(default="ANONYMOUS")},
-                        description="Modifyied by",
+                        description="Modified by",
                     ),
                 },
                 can_modify=False,
