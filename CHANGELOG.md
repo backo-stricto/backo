@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.3.7] 2026-09-23
+  
+    * Internal :
+      * github action matrix python bug fix
+      * Changing Ref hints to be compliant with older python version
+      * fix test error TestRoutes and TestRestApiConnector
+      * use stricto 0.2.11
+  
+    * Fix
+      * Fix save into examples/media_library with view save for borrowed
+
 ## [0.3.6] 2026-09-17
 
     * Feat
