@@ -5,7 +5,7 @@ Ref and RefsLink class definition
 # pylint: disable=wrong-import-position, no-member, import-error, protected-access, wrong-import-order, duplicate-code
 import sys
 import copy
-from typing import Any
+from typing import Any, Self
 
 
 from . import item, collection
@@ -141,12 +141,12 @@ class Ref(String):  # pylint: disable=too-many-instance-attributes
 
         return
 
-    def get_reverse(self) -> Ref | refslist.RefsList:
+    def get_reverse(self) -> Any:
         """
-        Return the reverse field
+        Return the reverse field model
 
-        :return: _description_
-        :rtype: Ref|refslist.RefsList
+        :return: The reverse field model
+        :rtype: Ref|RefsList
         """
 
         if not self._reverse:
@@ -171,9 +171,14 @@ class Ref(String):  # pylint: disable=too-many-instance-attributes
 
         return reverse_field_model
 
-    def load_target(self, _id: str, **kwargs) -> tuple[Any, Ref | refslist.RefsList]:
+    def load_target(self, _id: str, **kwargs) -> tuple[Any, Self | Any ]:
         """
-        Load the target object and the reverse field
+        Load the target Item and its reverse field
+
+        :param _id: The _id to load
+        :type _id: str
+        :return: the loaded Item and the reverse field
+        :rtype: tuple[ Item, Ref | RefsList ]
         """
         # set the _coll_ref (in case of)
         self.set_collection_reference()
