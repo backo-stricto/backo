@@ -23,7 +23,7 @@ dependencies = [
   "python-magic",
   "redis>=8.1.0",
   "python-jsonpath",
-  "stricto>=0.2.11"
+  "stricto>=0.3.0"
 ]
 
 [project.optional-dependencies]
