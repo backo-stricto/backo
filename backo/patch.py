@@ -13,7 +13,7 @@ sys.path.insert(1, "../../stricto")
 from stricto import Dict, String, GenericType
 
 
-def must(value, o) -> bool:  # pylint: disable=unused-argument
+def must(_o, value, _old_value) -> bool:
     """check if start with a $.
 
     :param value: _description_

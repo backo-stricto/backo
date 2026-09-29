@@ -62,17 +62,17 @@ class StandardMetaDataHandler(
 
         # Set creation ctime and owner
         if o._meta.ctime == None:  # pylint: disable=singleton-comparison
-            o._meta.ctime = now
+            o._meta.ctime.set_value(now)
 
         login = current_user.login.copy()
         user_id = current_user._id.copy()
 
         if o._meta.created_by._id == None:  # pylint: disable=singleton-comparison
-            o._meta.created_by.set({"_id": user_id, "login": login})
+            o._meta.created_by.set_value({"_id": user_id, "login": login})
 
         # Set modificattion time and last updater
-        o._meta.modified_by.set({"_id": user_id, "login": login})
-        o._meta.mtime.set(now)
+        o._meta.modified_by.set_value({"_id": user_id, "login": login})
+        o._meta.mtime.set_value(now)
 
         # Put permission back
         if permission_enabled is True:
@@ -95,7 +95,7 @@ class StandardMetaDataHandler(
                     ),
                     "modified_by": Dict(
                         {"_id": String(), "login": String(default="ANONYMOUS")},
-                        description="Modifyied by",
+                        description="Modified by",
                     ),
                 },
                 can_modify=False,

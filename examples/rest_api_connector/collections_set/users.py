@@ -28,9 +28,9 @@ log = log_system.get_or_create_logger("users")
 # ------------------------------------
 item = Item(
     {
-        "name": String(require=True),
-        "surname": String(require=True),
-        "login": String(require=True),
+        "name": String(require=True, default=""),
+        "surname": String(require=True, default=""),
+        "login": String(require=True, default=""),
         "vms": RefsList(coll="vms"),
     },
     meta_data_handler=GenericMetaDataHandler(),

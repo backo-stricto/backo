@@ -179,6 +179,7 @@ class Item(Dict):  # pylint: disable=too-many-instance-attributes
         self.set_value(obj)
         self.set_status_saved()
         self.__dict__["_loaded_object"] = copy.copy(self)
+        self.enable_permissions()
         self.trigg("loaded", **kwargs)
 
     def load(self, _id: str, **kwargs) -> None:
@@ -385,20 +386,6 @@ class Item(Dict):  # pylint: disable=too-many-instance-attributes
             self.get_value(),
         )
 
-    def create_uniq_id(self) -> str:
-        """
-        Create an _id before creation.
-        Depends on the db_connector used. some of them needs _ids
-
-        is probably overwritten
-
-
-        :meta private:
-
-
-        """
-        return self.db_handler.generate_id(self)
-
     def create(self, obj: dict, **kwargs):
         """
         Create and save an object into the DB
@@ -433,9 +420,6 @@ class Item(Dict):  # pylint: disable=too-many-instance-attributes
 
         self.set(obj)
 
-        # Set the _id
-        self._id = self.create_uniq_id()
-
         # Set _meta
         if self.meta_data_handler:
             self.meta_data_handler.update(self)
@@ -447,9 +431,7 @@ class Item(Dict):  # pylint: disable=too-many-instance-attributes
         # dict_to_save = self.get_value()
         dict_to_save = self.get_view("save").get_encoded()
 
-        self.disable_permissions()
-        self._id = self.db_handler.create(dict_to_save)
-        self.enable_permissions()
+        self._id.set_value(self.db_handler.create(dict_to_save))
 
         self.set_status_saved()
 

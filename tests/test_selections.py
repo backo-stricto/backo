@@ -9,7 +9,7 @@ from backo import Item, Collection
 from backo.db import DBYmlDirConnector
 from backo import Backoffice
 from backo import current_user, Selection
-from backo import String, Bool, SFilter, Operator, Sort, SortItem
+from backo import String, Bool, SFilter, Operator, Sort, SortItem, SRightError
 
 ### --- For development ---
 # import logging
@@ -33,6 +33,8 @@ class TestSelections(unittest.TestCase):
         """
         super().__init__(*args, **kwargs)
 
+        self.read = True
+
         # --- DB for user
         self.yml_users = DBYmlDirConnector(YML_DIR)
         self.yml_users.generate_id = lambda o: f"User_{o["name"]}_{o["surname"]}"
@@ -48,6 +50,8 @@ class TestSelections(unittest.TestCase):
                 }
             ),
             self.yml_users,
+            can_read=self.can_read,
+            can_modify=True,
         )
 
         self.backo.register_collection(self.users)
@@ -58,6 +62,12 @@ class TestSelections(unittest.TestCase):
     def tearDown(self):
         current_user.reinit()
         return super().tearDown()
+
+    def can_read(self, _right_name, _obj):
+        """
+        function for can_read method used in test
+        """
+        return self.read
 
     def test_all_selection(self):
         """
@@ -95,6 +105,22 @@ class TestSelections(unittest.TestCase):
             SFilter("$.name", Operator.REG, r"bert.*")
         )
         self.assertEqual(rep["total"], 2)
+
+    def test_selection_cant_read_collection(self):
+        """
+        test cannot read the selection
+        """
+
+        self.yml_users.drop()
+
+        self.read = False
+        with self.assertRaises(SRightError) as e:
+            self.users._selections["_all"].select()
+        self.assertEqual(
+            e.exception.to_string(),
+            "Execute _all selection is forbidden",
+        )
+        self.read = True
 
     def test_multi_selection(self):
         """

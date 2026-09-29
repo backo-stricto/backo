@@ -18,7 +18,8 @@ from backo import (
     Action,
     Selection,
 )
-from backo.db import DBMongoConnector
+# from backo.db import DBMongoConnector
+from backo.db import DBYmlDirConnector
 
 log = log_system.get_or_create_logger("{{ name }}", LogLevel.INFO)
 
@@ -39,9 +40,11 @@ log = log_system.get_or_create_logger("{{ name }}", LogLevel.INFO)
 # ------------------------------------------------
 # COLLECTION
 # ------------------------------------------------
-connector = DBMongoConnector(
-    mongodb://localhost:27017/{{ app_name }}", "{{ name }}"
-)
+# If you want mongo...
+# connector = DBMongoConnector(
+#     mongodb://localhost:27017/{{ app_name }}", "{{ name }}"
+# )
+connector = DBYmlDirConnector( "/tmp/{{ app_name }}/{{ name }}" )
 
 
 def can_create(right_name: str, {{ name }}: Item) -> bool:

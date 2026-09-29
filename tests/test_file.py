@@ -218,7 +218,7 @@ class TestFile(unittest.TestCase):
     def test_file_constraints(self):
         """Test constraints on a file"""
 
-        def only_text(f: FileStorage | None, o) -> bool:
+        def only_text(_o, f: FileStorage | None, _old_f) -> bool:
             """check manualy if the mime type is text/plain"""
 
             if f is None:

@@ -105,6 +105,7 @@ class Selection(CollectionAddon):
         CollectionAddon.__init__(self)
         self._permissions = Permissions(**kwargs)
         self._permissions.add_or_modify_permission("read", options.get("can_read"))
+        self._permissions.enable()
 
     def get_schema(self) -> dict:
         """

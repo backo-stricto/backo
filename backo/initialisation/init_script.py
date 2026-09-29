@@ -157,6 +157,7 @@ class Init:
 
         if exists == False:
             return
+
         if can_read == False:
             return
 
@@ -254,7 +255,10 @@ and if it is required.",
                 views=["!conf"],
             ),
             "name": String(
-                require=True, description="Name of the field", regexp=r"[A-z_-]+"
+                require=True,
+                description="Name of the field",
+                regexp=r"[A-z_-]+",
+                default="",
             ),
             "type": String(
                 require=True,
@@ -262,8 +266,13 @@ and if it is required.",
                 default="String",
                 description="type of the field",
             ),
-            "required": Bool(default=False, description="is the field required"),
-            "default": String(description="a default value", can_read=args.expert),
+            "required": Bool(
+                default=False, description="is the field required", can_read=args.expert
+            ),
+            "default": String(
+                description="a default value (mandatory if the field is required)",
+                can_read=args.expert,
+            ),
         },
         description="field",
     )
@@ -271,10 +280,15 @@ and if it is required.",
     selection_model = Dict(
         {
             "name": String(
-                require=True, description="Name of the selection", regexp=r"[A-z_-]+"
+                require=True,
+                description="Name of the selection",
+                regexp=r"[A-z_-]+",
+                default="",
             ),
             "paths": List(
-                String(required=True, description="path", regexp=r"^\$\..+"),
+                String(
+                    required=True, description="path", regexp=r"^\$\..+", default=""
+                ),
                 description="paths list",
             ),
         },
@@ -284,11 +298,17 @@ and if it is required.",
     action_model = Dict(
         {
             "name": String(
-                require=True, description="Name of the action", regexp=r"[A-z_-]+"
+                require=True,
+                description="Name of the action",
+                regexp=r"[A-z_-]+",
+                default="",
             ),
             "fields": List(field_model, default=[], description="action fields list"),
             "function_name": String(
-                required=True, description="name of the function", regexp=r"[A-z_-]+"
+                required=True,
+                description="name of the function",
+                regexp=r"[A-z_-]+",
+                default="",
             ),
         },
         description="selection",
@@ -297,7 +317,10 @@ and if it is required.",
     collection_model = Dict(
         {
             "name": String(
-                require=True, description="Name of the collection", regexp=r"[A-z_-]+"
+                require=True,
+                description="Name of the collection",
+                regexp=r"[A-z_-]+",
+                default="",
             ),
             "welcome1": Message(
                 default='\
@@ -358,7 +381,10 @@ Lets go.",
                 views=["!conf"],
             ),
             "name": String(
-                require=True, description="Name of the application", regexp=r"[A-z_-]+"
+                require=True,
+                description="Name of the application",
+                regexp=r"[A-z_-]+",
+                default="",
             ),
             "welcome2": Message(
                 default='\
@@ -469,21 +495,26 @@ It is better to have at least one collection :).',
 
     template = env.get_template("__init__.pytemplate")
     rendered = template.render(db_json_struct)
-    filename = os.path.join(destination_collection_directory, "__init__.py")
-    with open(filename, mode="w", encoding="utf-8") as outfile:
-        questionary.print(f"> creating file {filename}", style="italic fg:yellow")
-        outfile.write(rendered)
-
-    template = env.get_template("backoffice.pytemplate")
-    rendered = template.render(db_json_struct)
-    backo_filename = os.path.join(repo_dir, "backoffice.py")
+    backo_filename = os.path.join(destination_collection_directory, "__init__.py")
     with open(backo_filename, mode="w", encoding="utf-8") as outfile:
         questionary.print(f"> creating file {backo_filename}", style="italic fg:yellow")
         outfile.write(rendered)
 
+    for fname in ["backoffice", "main", "migrate"]:
+        template = env.get_template(f"{fname}.pytemplate")
+        rendered = template.render(db_json_struct)
+        backo_filename = os.path.join(repo_dir, f"{fname}.py")
+        with open(backo_filename, mode="w", encoding="utf-8") as outfile:
+            questionary.print(
+                f"> creating file {backo_filename}", style="italic fg:yellow"
+            )
+            outfile.write(rendered)
+
     questionary.print(f'{"\u2500"*40}', style="bold fg:yellow")
-    questionary.print("Now you can start the backoffice :", style="fg:darkred")
-    questionary.print(f"python {backo_filename}")
+    questionary.print(
+        f"Now you can start the backoffice (in {repo_dir}) :", style="fg:darkred"
+    )
+    questionary.print("[uv run] python main.py")
 
 
 if __name__ == "__main__":

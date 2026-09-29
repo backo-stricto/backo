@@ -35,7 +35,7 @@ FILE_MODEL = {
 
 
 def transform_to_filestorage(  # pylint: disable=unused-argument
-    v: Any, o: Any
+    _o: Any, v: Any, _old_value: Any
 ) -> FileStorage | None:
     """Transform any kind of object into a FileStorage
 
@@ -267,7 +267,7 @@ class File(Dict):
         Set the file content
         """
         return self._set_content_from_filestorage(
-            transform_to_filestorage(content, None)
+            transform_to_filestorage(None, content, None)
         )
 
     def set_value(self, value: Any) -> bool:
