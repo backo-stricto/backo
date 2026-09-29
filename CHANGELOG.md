@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.3.8] 2026-09-29
+  
+    * Internal :
+      * BREAKING CHANGE : use stricto 0.3.0
+        * function signature of transform=, contraint=, contraints= has change to (object, value, old_value)
+        * required= field must be with a default=
+    * Fix
+      * fix issue #32 (load and check value)
+      * fix issue #31 (StandardMetaDataHandler do set_value() rather than set())
+      * fix issue #29
+      * fix issue require= during init_script
+      * fix issue need mongo for init_script (now with DBYmlDirConnector)
+    * Feature
+      * BREAKING CHANGE : add feature by default fields with set= are not saved into the DB. Must
+    add view= [ "save" ] to save it.
+
 ## [0.3.7] 2026-09-23
   
     * Internal :

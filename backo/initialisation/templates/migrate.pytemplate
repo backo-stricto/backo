@@ -1,0 +1,58 @@
+"""
+backoffice : The migration
+"""
+
+# linter is lost with different modules with the same name
+# pylint: disable=no-name-in-module
+import argparse
+from backo import log_system, LogLevel, MigrationStrategy
+from backoffice import my_backoffice
+
+log = log_system.get_or_create_logger("migration")
+log.addHandler( log_system.set_streamhandler() )
+log.setLevel( LogLevel.INFO )
+
+# Setup argument parser
+parser = argparse.ArgumentParser(description="Backo: initialisation tool.")
+parser.add_argument(
+    "--id", "--ids",
+    nargs="*",
+    type=str,
+    default=[],
+    dest="_ids",
+    help="id or ids to check for migration",
+) 
+parser.add_argument(
+    "--mode",
+    type=str,
+    choices=["dry_run", "execute", "force"],
+    default="dry_run",
+    dest="mode",
+    help="execution mode (by default dry_run)"
+)
+parser.add_argument(
+    "-coll", "--collection",
+    type=str,
+    required=True,
+    dest="collection",
+    help="the collection name"
+)
+
+# Parse command line arguments
+args = parser.parse_args()
+s = MigrationStrategy[args.mode.upper()]
+_ids = args._ids if args._ids else None
+# ------------------------------------------------------
+# Change Here the migration function
+# ------------------------------------------------------
+def migrate(o: dict) -> dict:
+    """fake migration"""
+    return o
+
+
+log.info(f'Start migration for collection="{args.collection}", _ids={_ids}, strategy={s}')
+# To check compatibility
+my_backoffice.migrate( args.collection, _ids=_ids, strategy=s)
+
+# To do or check migration (the migration function must be filled)
+# my_backoffice.migrate( args.collection, migrate, _ids=_ids, strategy=s)
