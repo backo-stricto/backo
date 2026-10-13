@@ -541,7 +541,8 @@ A selection is a *named* list of Items with sub elements provided by a [path](ht
 An selection is compose by :
 1. a list of [selectors](https://github.com/backo-stricto/stricto#selectors)
 2. a [filter](https://github.com/backo-stricto/stricto#matching)
-3. Some rights
+3. a sort (optional)
+4. Some rights
 
 > [!IMPORTANT]  
 > A selection must be registered to a collection (with .register_selection() call)
@@ -555,7 +556,8 @@ This is a selection of borrowed books (all collections ar not described).
 # Les livres empruntés
 borrowed_book_select = Selection(
      [ "$.title", "$.borrow.user.login" ], 
-     filter={ 'borrowed' : True }
+     filter={ 'borrowed' : True }, # Only borrowed books
+     sort=[ "-$.borrow.return_date", "$.title" ]  # sort by return_date (descendant) and for the same date by title.
      can_read=...
      )
 books.register_selection("borrowed", borrowed_book_select)
@@ -784,6 +786,22 @@ When you call
 mybackoffice.build_routes(flask)
 ```
 Api routes are generated
+
+### Routes prefix
+
+You can change prefix and version for route. 
+
+```python
+mybackoffice=Backoffice( "app1", "1.2.3" )
+mybackoffice.build_routes(flask, "my_company")
+```
+
+will build routes like :
+
+```bash
+curl -X GET 'http://localhost/my_company/app1/1.2.3/...'
+```
+
 
 ### CRUD Routes
 #### GET \<my-app-name\>/\<collection name\>/\<_id\> \?_view=\<view name\>
@@ -1281,12 +1299,12 @@ This route is used to generate the OpenAPI specification of the backoffice.
 For a local usage, you can take at look at [documento](https://github.com/backo-stricto/documento) to quickly serve the documentation using either Swagger, ReDoc, Rapidoc or ST
 calar.
 
-#### GET /\<my-app-name\>/openapi
+#### GET /\<my-app-name\>/_openapi
 
 Return the OpenAPI specification in JSON format.
 
 ```bash
-curl -x GET http://localhost/myApp/openapi
+curl -x GET http://localhost/myApp/_openapi
 ```
 
 ## Internal usage

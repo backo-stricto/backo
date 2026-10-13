@@ -3,7 +3,7 @@ Utility class to convert backo Collection to OpenAPI specification.
 """
 
 from typing import Any
-
+from copy import deepcopy
 from .action import Action
 from .selection import Selection
 
@@ -48,6 +48,10 @@ JSON_PATCH_SCHEMA: dict[str, Any] = {
                 "additionalProperties": False,
                 "required": ["from", "op", "path"],
                 "properties": {
+                    "from": {
+                        "description": "A JSON Pointer path.",
+                        "type": "string",
+                    },
                     "path": {
                         "description": "A JSON Pointer path.",
                         "type": "string",
@@ -345,12 +349,27 @@ class OpenAPISpec:
         }
 
         for prop_name, prop_scheme in item_schema["sub_scheme"].items():
+
+            my_type = _convert_type(prop_scheme["types"])
+            prop = {
+                "description": (
+                    prop_scheme["description"]
+                    if prop_scheme["description"] is not None
+                    else ""
+                )
+            }
+            if my_type == "file":
+                prop["type"] = "string"
+                prop["contentEncoding"] = "base64"
+            elif my_type == "date-time":
+                prop["type"] = "string"
+                prop["format"] = "date-time"
+            else:
+                prop["type"] = my_type
+
             spec["requestBody"]["content"]["application/json"]["schema"]["properties"][
                 prop_name
-            ] = {
-                "type": _convert_type(prop_scheme["types"]),
-                "description": prop_scheme["description"],
-            }
+            ] = prop
 
         spec["responses"] = {}
         spec["responses"][str(ok[0])] = {
@@ -519,7 +538,7 @@ class OpenAPISpec:
         errors: list[tuple[int, str]],
     ):
         """
-        Set OpenAPI specification for DEL /items/<string:id>
+        Set OpenAPI specification for DELETE /items/<string:id>
         """
         spec: dict[str, Any] = {}
         spec["summary"] = f"Delete {item_name}"
@@ -550,7 +569,7 @@ class OpenAPISpec:
                 "content": {"text/plain": {}},
             }
 
-        self.__add_spec(route, "del", spec)
+        self.__add_spec(route, "delete", spec)
 
     def add_patch_item(
         self,
@@ -716,20 +735,52 @@ class OpenAPISpec:
                     "content": {"text/plain": {}},
                 }
 
-            self.__add_spec(base_route + f"/{name}", "get", spec)
+            spec_response = deepcopy(spec)
+            self.__add_spec(base_route + f"/{name}", "get", spec_response)
 
-            spec = dict(spec)
-            del spec["parameters"]
-            spec["operationId"] = f"selection_post_{name}_{item_name}"
-            spec["requestBody"] = {
+            spec_response_post = deepcopy(spec_response)
+            del spec_response_post["parameters"]
+            spec_response_post["operationId"] = f"selection_post_{name}_{item_name}"
+            spec_response_post["requestBody"] = {
                 "content": {
                     "application/json": {
                         "schema": {"$ref": "#/components/schemas/backo-filter"}
                     }
                 }
             }
+            self.__add_spec(base_route + f"/{name}", "post", spec_response_post)
 
-            self.__add_spec(base_route + f"/{name}", "post", spec)
+            spec["responses"][str(ok[0])] = {
+                "description": ok[1],
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "total": {"type": "integer"},
+                            },
+                        }
+                    }
+                },
+            }
+
+            spec_response = deepcopy(spec)
+            spec_response["operationId"] = f"selection_get_total_{name}_{item_name}"
+            self.__add_spec(base_route + f"_total/{name}", "get", spec_response)
+
+            spec_response_post = deepcopy(spec_response)
+            del spec_response_post["parameters"]
+            spec_response_post["operationId"] = (
+                f"selection_post_total_{name}_{item_name}"
+            )
+            spec_response_post["requestBody"] = {
+                "content": {
+                    "application/json": {
+                        "schema": {"$ref": "#/components/schemas/backo-filter"}
+                    }
+                }
+            }
+            self.__add_spec(base_route + f"_total/{name}", "post", spec_response_post)
 
     def __add_spec(self, route: str, method: str, spec: dict) -> None:
         if route not in self.__routes:

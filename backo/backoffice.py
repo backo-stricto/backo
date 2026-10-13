@@ -54,9 +54,16 @@ class Backoffice:  # pylint: disable=too-many-instance-attributes
     """The list of collections, per name"""
 
     @validation_parameters
-    def __init__(self, name: str):
-        """Constructor for backoffice"""
+    def __init__(self, name: str, version: str = None):
+        """
+
+        :param name: The name of this backoffice
+        :type name: str
+        :param version: a version string for this backoffice, defaults to None
+        :type version: str, optional
+        """
         self.name = name
+        self.version = version
         self.collections: dict[str, Collection] = {}
         self._transaction_id_reference = 1
         self.transactions: dict[int, list[Transaction]] = {}
@@ -184,17 +191,18 @@ class Backoffice:  # pylint: disable=too-many-instance-attributes
     def build_routes(
         self, flask_app: Flask, prefix: str = "", jwt_auth: Callable | None = None
     ) -> None:
-        """Add all routes to flask application
+        """Build all routes to flask application
 
         :param flask_app: The Flask object
         :type flask_app: Flask
         :param prefix: an optional prefix to the path
         :type prefix: str
         :param jwt_auth: The token function
-
+        :type jwt_auth: Callable
         """
 
-        my_path = f"/{prefix}/{self.name}/" if prefix else f"/{self.name}"
+        my_path = f"/{self.name}/{self.version}/" if self.version else f"/{self.name}"
+        my_path = f"/{prefix}{my_path}" if prefix else my_path
         log.debug("Adding routes under %s", my_path)
 
         for collection in self.collections.values():
@@ -216,7 +224,7 @@ class Backoffice:  # pylint: disable=too-many-instance-attributes
         flask_app.view_functions[f"_meta_{self.name}"] = self._meta_http
 
         flask_app.add_url_rule(
-            f"{my_path}/openapi", f"_openapi_{self.name}", methods=["GET"]
+            f"{my_path}/_openapi", f"_openapi_{self.name}", methods=["GET"]
         )
         flask_app.view_functions[f"_openapi_{self.name}"] = self._export_openapi
 
@@ -251,6 +259,7 @@ class Backoffice:  # pylint: disable=too-many-instance-attributes
             "info": {
                 "title": f"{self.name}",
                 "description": f"{self.name} backoffice powered by Backo",
+                "version": self.version if self.version is not None else "",
             },
             "paths": {
                 path: spec

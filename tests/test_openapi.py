@@ -3,8 +3,10 @@ Test for OpenAPI specification generation.
 """
 
 import unittest
-
 from flask import Flask
+
+from openapi_spec_validator import validate
+
 
 from backo import (
     Backoffice,
@@ -36,17 +38,17 @@ class TestOpenAPI(unittest.TestCase):
 
     def test_openapi_route(self):
         """
-        Test if the /openapi route is properly registered.
+        Test if the /_openapi route is properly registered.
         """
         # Setup Test Flask app and Backoffice
         app = Flask(__name__)
-        backoffice = Backoffice("app")
+        backoffice = Backoffice("app", "3.2")
         backoffice.build_routes(app)
         ctx = app.app_context()
         ctx.push()
         client = app.test_client()
-        # Test the /openapi route
-        response = client.get("/app/openapi")
+        # Test the /_openapi route
+        response = client.get("/app/3.2/_openapi")
         # Ensure the response is successful and contains JSON data with correct MIME type
         self.assertEqual(response.status_code, 200)
         self.assertIsNotNone(response.get_json())
@@ -61,6 +63,10 @@ class TestOpenAPI(unittest.TestCase):
         # Setup Test Backoffice
         backoffice = Backoffice("app")
         spec = backoffice.get_openapi()
+
+        # Must be a valid openapi spec
+        validate(spec)
+
         # Expecting OpenAPI version 3.1.0
         self.assertEqual(spec["openapi"], "3.1.0")
         # Expecting 3 default schemas: backo-meta, json-patch, backo-filter
@@ -94,6 +100,13 @@ class TestOpenAPI(unittest.TestCase):
         )
         backoffice.build_routes(Flask(__name__))
         spec = backoffice.get_openapi()
+
+        # Must be a valid openapi spec
+        validate(spec)
+
+        # with open("/tmp/openapi.json", "w") as f:
+        #     f.write(json.dumps(spec, indent=2))
+
         # expecting the test schema to be present in the components
         self.assertIn("test", spec["components"]["schemas"])
         # expecting all properties to be present in the test schema with the correct type
@@ -123,7 +136,7 @@ class TestOpenAPI(unittest.TestCase):
         self.assertEqual(schemas["test"]["title"], "test")
 
         # expecting routes to be present for the test collection
-        self.assertEqual(len(spec["paths"]), 6)
+        self.assertEqual(len(spec["paths"]), 7)
         ## get and post on /test
         self.assertIn("/test", spec["paths"])
         self.assertEqual(len(spec["paths"]["/test"]), 2)
@@ -140,7 +153,7 @@ class TestOpenAPI(unittest.TestCase):
         ## get, put, patch, delete on /test/{id}
         self.assertIn("/test/{id}", spec["paths"])
         self.assertEqual(len(spec["paths"]["/test/{id}"]), 4)
-        for method in ["get", "put", "patch", "del"]:
+        for method in ["get", "put", "patch", "delete"]:
             self.assertIn(method, spec["paths"]["/test/{id}"])
         ## get on /test/{id}/{path}
         self.assertIn("/test/{id}/{path}", spec["paths"])
@@ -168,6 +181,9 @@ class TestOpenAPI(unittest.TestCase):
         backoffice.build_routes(Flask(__name__))
         spec = backoffice.get_openapi()
 
+        # Must be a valid openapi spec
+        validate(spec)
+
         self.assertIn("/test/_actions/do/{id}", spec["paths"])
         self.assertIn("post", spec["paths"]["/test/_actions/do/{id}"])
         request_body = spec["paths"]["/test/_actions/do/{id}"]["post"]["requestBody"]
@@ -190,6 +206,9 @@ class TestOpenAPI(unittest.TestCase):
         coll.register_selection("see", Selection(["$.value"]))
         backoffice.build_routes(Flask(__name__))
         spec = backoffice.get_openapi()
+
+        # Must be a valid openapi spec
+        validate(spec)
 
         self.assertIn("/test/_selections/see", spec["paths"])
         selection_path = spec["paths"]["/test/_selections/see"]

@@ -23,7 +23,7 @@ dependencies = [
   "python-magic",
   "redis>=8.1.0",
   "python-jsonpath",
-  "stricto>=0.3.0"
+  "stricto>=0.3.1"
 ]
 
 [project.optional-dependencies]
@@ -37,6 +37,7 @@ dev = [
     "black",
     "coverage",
     "pylint",
+    "openapi-spec-validator",
 ]
 doc = [
   "sphinx==8.2.3",
