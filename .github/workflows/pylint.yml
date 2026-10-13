@@ -21,9 +21,6 @@ jobs:
       with:
         version: "latest"        
     
-    - name: Install Python
-      run: uv python install
-
     - name: Install dependencies
       run: |
         sudo apt-get install libmagic1
