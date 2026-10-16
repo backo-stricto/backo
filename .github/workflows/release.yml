@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.12"]
+        python-version: ["3.14"]
     steps:
     - uses: actions/checkout@v3
     - name: Set up Python ${{ matrix.python-version }}
@@ -21,9 +21,6 @@ jobs:
       uses: astral-sh/setup-uv@v1
       with:
         version: "latest"        
-
-    - name: Install Python
-      run: uv python install
 
     - name: Install dependencies
       run: |
