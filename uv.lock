@@ -79,6 +79,7 @@ dev = [
 doc = [
     { name = "myst-parser" },
     { name = "sphinx" },
+    { name = "sphinx-design" },
     { name = "sphinx-rtd-theme" },
     { name = "sphinxcontrib-mermaid" },
     { name = "toml" },
@@ -96,7 +97,7 @@ requires-dist = [
     { name = "questionary" },
     { name = "redis", specifier = ">=8.1.0" },
     { name = "requests" },
-    { name = "stricto", specifier = ">=0.3.0" },
+    { name = "stricto", specifier = ">=0.3.1" },
 ]
 provides-extras = ["mongo"]
 
@@ -110,6 +111,7 @@ dev = [
 doc = [
     { name = "myst-parser", specifier = "==4.0.1" },
     { name = "sphinx", specifier = "==8.2.3" },
+    { name = "sphinx-design" },
     { name = "sphinx-rtd-theme" },
     { name = "sphinxcontrib-mermaid", specifier = "==1.2.3" },
     { name = "toml" },
@@ -1387,6 +1389,18 @@ wheels = [
 ]
 
 [[package]]
+name = "sphinx-design"
+version = "0.7.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "sphinx" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/13/7b/804f311da4663a4aecc6cf7abd83443f3d4ded970826d0c958edc77d4527/sphinx_design-0.7.0.tar.gz", hash = "sha256:d2a3f5b19c24b916adb52f97c5f00efab4009ca337812001109084a740ec9b7a", size = 2203582, upload-time = "2026-01-19T13:12:53.297Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/30/cf/45dd359f6ca0c3762ce0490f681da242f0530c49c81050c035c016bfdd3a/sphinx_design-0.7.0-py3-none-any.whl", hash = "sha256:f82bf179951d58f55dca78ab3706aeafa496b741a91b1911d371441127d64282", size = 2220350, upload-time = "2026-01-19T13:12:51.077Z" },
+]
+
+[[package]]
 name = "sphinx-rtd-theme"
 version = "3.1.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1481,11 +1495,11 @@ wheels = [
 
 [[package]]
 name = "stricto"
-version = "0.3.0"
+version = "0.3.1"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/67/4e/66a23d47a8def2c264395253a775a0c284cb6b8bfd680238986ba54352fe/stricto-0.3.0.tar.gz", hash = "sha256:b393b6f5d9543e7ed3c7110d2f23d769591805c7790397cb7711df92e1cc36b6", size = 63704, upload-time = "2026-09-25T09:12:58.34Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/fe/55/ddec8cde2daf252289a0637a173fa2574720e9a87c80d60162c8a8f10f39/stricto-0.3.1.tar.gz", hash = "sha256:51856228d8a7cb32be9c9513d0462a52fa94ddacdf94dbf368b3d5a77b9999e7", size = 63758, upload-time = "2026-10-07T08:20:59.245Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/25/f5/e36b5fdcbfb309a233d72ed8b10a4ba93a8249638e68710e345daf8aad21/stricto-0.3.0-py3-none-any.whl", hash = "sha256:269417730a166081680cbd420a31eecf46d700c326f0ad164b0bff726c0d0c12", size = 52313, upload-time = "2026-09-25T09:12:57.343Z" },
+    { url = "https://files.pythonhosted.org/packages/8a/f4/5c0f3fab69cd0e1fc5c8bd524a6b5f022a01063c2010045ea7542817ef82/stricto-0.3.1-py3-none-any.whl", hash = "sha256:531b894a980f08382ea9925d9427f6c92cc863b70552e0f74dab14b0579c1abb", size = 52326, upload-time = "2026-10-07T08:20:57.969Z" },
 ]
 
 [[package]]

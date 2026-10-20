@@ -1,5 +1,5 @@
 
-# Database Management
+# Database handler
 
 Backo can connect to different databases. Il use some {py:class}`DBHandler <backo.db.DBHandler>` for that.
 

@@ -30,7 +30,12 @@ release = project_information["project"]["version"]
 
 source_suffix = {".rst": "restructuredtext", ".md": "markdown"}
 
-extensions = ["sphinx.ext.autodoc", "myst_parser", "sphinxcontrib.mermaid"]
+extensions = [
+    "sphinx.ext.autodoc",
+    "myst_parser",
+    "sphinxcontrib.mermaid",
+    "sphinx_design",
+]
 
 templates_path = ["_templates"]
 exclude_patterns = []

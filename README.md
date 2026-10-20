@@ -7,7 +7,7 @@
 
 ![pylint](https://img.shields.io/github/actions/workflow/status/backo-stricto/backo/pylint.yml?label=linter) ![test](https://img.shields.io/github/actions/workflow/status/backo-stricto/backo/test.yml?label=test)
 
-Jump to [Quickstart](#quickstart) for a basic setup.
+Jump to [Quickstart](https://backo.readthedocs.io/en/latest/Quickstart.html) for a basic setup.
 
 
 
@@ -15,1611 +15,254 @@ See [Documentation](https://backo.readthedocs.io/en/latest/) for all details
 
 
 ## What is backo
-It aims at providing a simple and efficient way to create a backend application that exposes a set of RESTful API routes. 
+
+It aims at providing a simple and efficient way to create a backend application that exposes a set of RESTfull API routes for [CRUD](https://en.wikipedia.org/wiki/Create,_read,_update_and_delete) and more.
+
+It is based on :
+
+* _Standard_ description of elements :
+  * `Collection` (aka Table in SQL)
+  * `Item` the object in the collection
+  * `Ref`erences cross collections (_Ref_ and _RefsList_)
+  * standard _types_ (Int, String, Dict, Float, Bool, List, Tuple)
+  * custom types (inheritance)
+  * files
+  * standard attributes (required, default, ...)
+* _Standard_ API 
+  * All routes for CRUD
+  * All routes for select (pagination, complex filtering)
+* _Connector_ to a standard Database or file (MongoDB, Sqlite3, ...)
 
 
-## Installation
+No dedicated language, no configuration file : __100% python__,  Full programatic (you can change _any_ value by a function with return a value, it is __YOUR__ code).
 
-```bash
+### Features
 
-# basic
-pip install backo
+#### Full ORM in python
 
-# With mongo
-pip install backo[mongo]
+Backo is a [ORM](https://en.wikipedia.org/wiki/Object%E2%80%93relational_mapping) written in python.
+It is Database agnostic.
 
-```
+Backo use [References to manage cardinalities](https://backo.readthedocs.io/en/latest/Cardinalities.html)
 
-## Quickstart
+#### Api RestFull
 
-### very fast
+Backo provide a complete [restfull API](https://en.wikipedia.org/wiki/REST) for CRUD, with data validation testing, security check, error management. 
 
-```bash
-# launch backo_init and answer to questions !
-backo_init
+It provides more routes than just CRUD :
 
-Backo>
-────────────────────────────────────────
-Welcome to backo  
-First you must chose a name for your application.
-Lets go.
-────────────────────────────────────────
-? Name of the application 
+* routes for checking,
+* routes for mutipart (for file management)
+* automatic [openapi 3.1](https://www.openapis.org/) structure
 
-...
-
-```
-### some code
-
-Here is a sample with a DB (storage full in yaml file) with users to adresses reference
-
-Imagine this Entity Relationship (users ar living in exactly one address, but zero onr more user can live at the same address)
-
-```mermaid
-erDiagram
-    direction LR
-    classDef className fill:#f9f,stroke:#333,stroke-width:4px
-    Users |o--o{ Addresses : live
-    Users {
-        String name
-        String surname
-        Bool male
-    }
-    Addresses {
-        String name
-        String address
-    }
-```
-
-You only will add [Ref](#cardinalities) and [Refs](#cardinalities) to exprime the relationship. 
-
-```mermaid
-erDiagram
-    direction LR
-    classDef className fill:#f9f,stroke:#333,stroke-width:4px
-    Users |o--o{ Addresses : live
-    Users {
-        String name
-        String surname
-        Bool male
-        Ref addr "link one-to-many to Addresses"
-    }
-    Addresses {
-        String name
-        String address
-        Refs users "link many-to-one to Usres"
-    }
-```
+See [Routing](https://backo.readthedocs.io/en/latest/Routing.html) for details
 
 
+#### Database handling
+
+Backo can access to multiple database system (like SQlite3 or mongo). It can make cross references between different databases.
+
+* Different types of databases (MongoDB, SQL, ...)
+  * Filtering / sorting transformation into the DB language
+* can adapt to existing database with `Transformer`
+* can integration in an existing _SI_
+  * mix different types of `DBHandler` per `Collection` with cross references
+* Structure coherence policies
+  * keep database coherence
+  * delete item, _external collections_
+  
+See [Database handling](https://backo.readthedocs.io/en/latest/Database.html) for details
 
 
-It translates into Python code using Backo like following:
+#### More than just schema
+
+backo has an kind of extended schema description (like [pydantic](https://pydantic.dev/docs/validation/latest/get-started/)), but propose more features.
+
+* Complex constraints
+  You can have fields with contraint function. Example : the field `salary` must be above _10000_ if the field `job` is _doctor_
+
+* Computational fields
+  You can have fields that are the result of a python function. Example : the field `age` is a computation of another field (`date_of_birth`) and datetime.now()
+
+* Conditional fields
+  Every time, you have fields that exists only in some cases. Example : The field `thesis_defense_date` exists only if the field `job` is _doctor_
+
+* File fields
+  Files are managed like any other field. See [File documentation](https://backo.readthedocs.io/en/latest/File.html) for details.
+
+* Events
+  You can add events on fields. You can trigg a function when the field `address` has changed, when the object is deleted, loaded, ... or whatever
+
+
+See [fields](https://backo.readthedocs.io/en/latest/Item.html#options) for details
+
+
+#### Low code
+
+The main idea is to reduce the code you write, and focus on the _business code_.
+
+| feature | backo | you | comment |
+| -- | -- | -- | -- |
+| Input Validation Testing | :white_check_mark: | | |
+| Schema Validation Testing | :white_check_mark: | | |
+| Security check | :white_check_mark: | | |
+| Database consistency | :white_check_mark: | | different [policies](https://backo.readthedocs.io/en/latest/Cardinalities.html#api-reference) |
+| Web server and API Restfull | :white_check_mark: | | Done with [Flask](https://flask.palletsprojects.com/en/stable/) |
+| Authentication | :heavy_check_mark: | :white_check_mark: | Code the auth, and give a JWT to backo |
+| RBAC | :white_check_mark: | :white_check_mark: |  _business code_ : You just have to describe what you want (in python) |
+| Security everywhere | :white_check_mark: | :white_check_mark: | _business code_ : You can add rights on every objects, field... |
+| Database(s) |  :white_check_mark: | :rocket: | you can use mutiple databases and adapt to existing databases, with cross-references |
+| Files |  :white_check_mark: | | files are just fields like others |
+| Compute a field | :white_check_mark: | :rocket: | you can add fields with are the result of a python function, and depend on other fields. Just write the function |
+| Conditional fields | :white_check_mark: | :rocket: | you can have fields depending on others |
+| Events | :white_check_mark: | :rocket: | every field can trigg and react on events |
+| openapi | :white_check_mark: | | The [openapi 3.1 doc](https://www.openapis.org/) is generated from your code |
+
+### Short example
+
+Here is a small example to see what looks like a backo code for one Collection.
+
+See [Coding](https://backo.readthedocs.io/en/latest/Quickstart.html#coding.html) to understand quickly how it works.
+
 
 ```python
-from flask import Flask
-from backo import Item, Backoffice, Collection, Item
-from backo.db import DBYmlConnector
-from backo import Ref, RefsList, DeleteStrategy
-
-# --- Storage for user
-yml_users = DBYmlConnector("/tmp/users.yml")
-# --- Storage for addresses
-yml_addr = DBYmlConnector("/tmp/addresses.yml")
-
-# -- Description of the backoffice
-my_backoffice = Backoffice("myApp")
-
-# -- Add the collection "users" into this backoffice (with a reference to the futur "addrs" collection)
-coll_users = Collection( 
-    "users",
-    Item({
-        "name": String(),
-        "surname": String(),
-        "addr": Ref(coll="addrs", field="$.users", required=True),
-        "male": Bool(default=True),
-    }),
-    yml_users,
-)
-my_backoffice.register_collection(coll_users)
-
-# -- Add the collection "addrs" into this backoffice (with reference to the "usres" collection)
-coll_addrs = Collection(
-    "addrs",
-    Item(
-        {
-            "name": String(),
-            "address": String(),
-            "users": RefsList(
-                coll="users", field="$.addr", ods=DeleteStrategy.MUST_BE_EMPTY
-            ),
-        },
-    ),
-    yml_addr,
-)
-my_backoffice.register_collection(coll_addrs)
-
-# Your flask application
-flask = Flask(__name__)
-
-# -- Add CRUD routes for this application
-my_backoffice.build_routes(flask)
-
-```
-
-
-## Item
-
-`Item` is the central class in Backo. 
-
-It represents a database entity and includes all the methods required for CRUD operations: *Create*, *Read*, *Update*, and *Delete*.
-
-A generic object is a [stricto](https://github.com/backo-stricto/stricto) `Dict()` object.
-
-
-
-`Item( description object )`
-
-### example
-
-```python
-# Describe what a 'cat' is
-cat_item = Item(
-        {
-            "name": String( required=True, default='Felix'),
-            "address": String(),
-            "age" : Int()
-            # And so on...
-        })
-
-# --- Storage for cats
-db_for_cats = DBMongoConnector(
-    "mongodb://localhost:27017/my_database", "Cats_collection"
-)
-
-
-# Add the cat object into the Collection object by adding a name and a db connector
-cats = Collection("cats", cat_item, db_for_cats)
-
-# Then add collection to the backoffice
-backoffice.register_collection( "cats", cats )
-```
-
-> [!IMPORTANT]  
-> no need to care about [_id](#_id).
-
-### Methods
-
-| Method                      | Description                                                                        |
-| --------------------------- | ---------------------------------------------------------------------------------- |
-| ```.create( data :dict )``` | Create a new `Item` in the database using the provided `data` dictionary.          |
-| ```.save()```               | saves the current `Item` to the database.                                          |
-| ```.load( _id :str )```     | loads an `Item` from the database by its `_id`.                                    |
-| ```.reload()```             | reloads the current `Item` from the database.                                      |
-| ```.delete()```             | deletes the current `Item` from the database.                                      |
-| ```.new()```                | creates a new empty `Item` (must be populated with `.set()` and then saved).       |
-| ```.select()```             | retrieves a selection of `Item` from the database based on the selection criteria. |
-
-For each function above, an error is triggered in case of something went wrong.
-
-## Cardinalities
-Relations cardinalities are expressed by the mean of `Ref()` and `RefsList()`:
-* `Ref()`: for `0 or 1` or `exactly 1` relations.
-* `RefsList()`: for `0 or more` or `1 or more` relations.
-
-
-
-| Item A                       | Item B              | description      |
-| ---------------------------- | ------------------- | ---------------- |
-| <kbd>Ref</kbd>               | <kbd>Ref</kbd>      | 0 or One to one  |
-| <kbd>Ref</kbd>               | <kbd>RefsList</kbd> | 0 or One to many |
-| <kbd>Ref(require=True)</kbd> | <kbd>RefsList</kbd> | One to many      |
-| <kbd>RefsList</kbd>          | <kbd>RefsList</kbd> | Many to many     |
-
-
-### RefsList
-
-* <kbd>ofs=</kbd> On Fill Strategy : fill the value ?
-  * ```FillStrategy.FILL``` (by default) fill it
-  * ```FillStrategy.NOT_FILL``` just keep ref
-
-* <kbd>ods=</kbd> On Delete Strategy : what append when delete this item ?
-  * ```DeleteStrategy.MUST_BE_EMPTY``` (by default) drop only if empty
-  * ```DeleteStrategy.DELETE_REFERENCED_ITEMS``` drop all 
-  * ```DeleteStrategy.UNLINK_REFERENCED_ITEMS``` references are lost
-
-
-#### Options
-
-| Option for Ref | Default | Description |
-| - | - | - |
-| <kbd>coll=</kbd> | None | the collection to make the ref |
-| <kbd>field=</kbd> | None | The reverse field in the targeted collection (use [selector](https://github.com/backo-stricto/stricto?tab=readme-ov-file#selectors) to target it) |
-| <kbd>ods=</kbd> | ```DeleteStrategy.MUST_BE_EMPTY``` | *On Delete Strategy* see [ods](#deletion-strategies-ods)|
-| <kbd>ofs=</kbd> | ```FillStrategy.FILL``` | *On Fill Strategy* |
-
-And all options availables in [stricto String()](https://github.com/backo-stricto/stricto?tab=readme-ov-file#string) fields.
-
-
-#### Deletion strategies (`ods`)
-
-ods define the behaviour of the database when a delete occure and the object contain some <kbd>RefList</kbd>. For each  <kbd>RefList</kbd>, you can define the strategy :
-
-* ```DeleteStrategy.MUST_BE_EMPTY``` (by default)
-Requires the RefList to be empty before allowing the object to be deleted.
-If the RefList contains items, the deletion will be blocked and an error will be raised.
-
-* ```DeleteStrategy.DELETE_REFERENCED_ITEMS```
-When deleting the parent object, this strategy also deletes all objects referenced in the RefList.
-[!Warning] Use with caution, as this causes cascading deletes and may remove many related objects unintentionally.
-
-* ```DeleteStrategy.UNLINK_REFERENCED_ITEMS```
-Instead of deleting the referenced objects, this strategy removes the reference to the deleted object from each referenced item.
-This is commonly used for many-to-many relationships where you want to delete the parent object but keep the referenced objects intact, but simply cleaning up their links.
-
-
-### Example
-
-Relationship example: Books and Authors
-
-* An author can write 0 or many books.
-* A book can be written only by 1 author.
-
-```python
-# Authors write books
-an_author = Item({
-    'name' : String(),
-    # An author may have written 0 or many books
-    'books' : RefsList( coll='books', field="$.author" )
-})
-
-# A book is written by an author
-a_book = Item({
-    ... # Some attibutes
-    # A book may have 1 or more authors
-    author = RefsList( coll='authors', field="$.books", required=True )
-})
-```
-
-
-## Files objects
-
-backo can manage files in a simple way : Like other [stricto types](https://github.com/backo-stricto/stricto?tab=readme-ov-file#basic-types).
-You can use File() or BlobFile().
-
-| object     | Description                                                                                                                  |
-| ---------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| File()     | Generic object to manage a file. You need to define a FileConnector to indicate the object File where to store the file      |
-| BlobFile() | File data is integrated literally into the datastructure, so there is no need for a FileConnector. Reserved for small files. |
-
-You can use all [parameters](https://github.com/backo-stricto/stricto?tab=readme-ov-file#types) for Files like other fields. 
-
-
-However there are extra specific parameters :
-
-| Option                                | Default | Description                                                                                                                  |
-| ------------------------------------- | ------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| ```mime_types=[ str ]```              | None    | The list of allowed content types                                                                                            |
-| ```max_size=8192```                   | None    | The maximum size of the file                                                                                                 |
-| ```work_connector=FileConnector```    | None    | File working copy connector (main file location)                                                                             |
-| ```storage_connector=FileConnector``` | None    | Second fileConnector used to store the file permanently after processing. If unset, file unique location is *work_connector* |
-
-
-Attributes and methods of the File object:
-
-```python
-a = BlobFile()
-
-a.set(b'Hello word')
-# or
-a.set_content(b'Hello word')
-
-a.filename = "my_hello.txt"
-a.content_type # -> 'text/plain'
-a.size # -> 9
-a.file_id # -> A random id
-
-# Get the content of the file
-a.get_content() # -> b'Hello word'
-
-```
-
-
-### BlobFile()
-
-
-Add a file with inlined data: 
-
-```python
-an_author = Item({
-    'name' : String( require=True ),
-    'surname' : String(),
-    'pict' : BlobFile( require=True , mime_types=[ 'image/jpeg', 'image/png' ])
-    'books' : RefsList( coll='books', field="$.author" )
-})
-```
-### File()
-
-
-Add a file stored in a specific location on the file system:
-
-```python
-an_author = Item({
-    'name' : String( require=True ),
-    'surname' : String(),
-    'pict' : File( require=True , mime_types=[ 'image/jpeg', 'image/png' ], work=FileSystemConnector( path="/path/to/store/the/file" ) )
-    'books' : RefsList( coll='books', field="$.author" )
-})
-```
-
-
-### routes
-
-In a general context, [routes](#routes-1) are RESTful JSON API calls. But with files, every routes (CRUD, actions, ... )
-can be called in two ways :
-
-1. With files embedded in JSON in string format (for text files) or with base64 encoded (for other).
-    
-    ```bash
-        # creating an author with a pict
-        curl -X POST 'http://localhost/myApp/authors/' -d '{"surname":"John","name":"Rambo", "pict" : "base64:Sm9obiBwaWN0"}'
-    ```
-   
-2. With a multipart route
-    
-    Each file is a part of the HTML multipart message. The JSON structure must be encoded in a ```_json``` multipart part.
-   
-    ```bash
-        # creating an author with a pict
-        curl -X POST -F _json='{"surname":"John","name":"Rambo"}' -F pict=@rambo.png http://localhost/myApp/authors/
-
-        # Modifying the author picture
-        curl -X PUT -F pict=@rambo1.png http://localhost/myApp/authors/id_of_rambo
-
-        # Modifying the author picture and name
-        curl -X PUT  -F _json='{ "name":"Rimbaud" }' -F pict=@rimbaud.png http://localhost/myApp/authors/id_of_rambo
-
-    ```
-
-
-3. link to the file are GET \<my-app-name\>/\<collection name\>/\<_id\>/\<path\>
-
-
-
-See [routes](#routes-1) for more details 
-
-
-
-
-## Collection
-
-A collection is composed by :
-1. an [Item](#item)
-2. a connector to a DB (DBHandler)
-3. Some rights
-
-> [!IMPORTANT]  
-> A collection must be registered to a backoffice (with .register_collection() call)
-
-A collection can have :
-1. Some [Actions](#action)
-2. Some [Selections](#selection)
-
-
-See [routes](#routes) for resulting RESTful API routes.
-
-
-### example
-
-```python
-from backo import Collection, current
+from Flast import flask
+from backo import Backoffice, Collection, Item, String, Int, Dict, Ref, Datetime
+from backo.file import File, FileSystemConnector
 from backo.db import DBMongoConnector
 
-connector = DBMongoConnector(
-    "mongodb://localhost:27017/media_library", "Books"
-)
-def can_delete(right_name: str, book: Item) -> bool:
-    """Check if can delete a book"""
-    if current_user.has_role(["ADMIN", "EMPLOYEE"]):
-        return True
-    return False
-
-books = Collection(
-    "books",
-    books_item,
-    connector,
-    can_create=True,
-    can_modify=True,
-    can_delete=can_delete,
-)
-```
-
-### rights
-
-A right is a function (or a lambda) with thoses parameters, and must return a boolean.
-
-```python
-def your_function_name(right_name: str, o: Item) -> bool:
-
-```
-
-| right      | description                                              |
-| ---------- | -------------------------------------------------------- |
-| can_read   | Check if the collection can be read                      |
-| can_modify | Check if some elements in the collection can be modified |
-| can_delete | Check if some elements in the collection can be deleted  |
-
-
-
-
-## Action
-
-
-An action represent some modifications to an Item witch is more complex than just a PATCH/PUT (modification).
-
-An action is compose by :
-1. an [Stricto Dict](https://github.com/backo-stricto/stricto?tab=readme-ov-file#dict)
-2. a function
-3. Some rights
-
-> [!IMPORTANT]  
-> An action must be registered to a collection (with .register_action() call)
-
-
-### example
-
-This is an action to *borrow a book*, with a start time at daytime.
-(all collections are not described)
-
-```python
-
-def borrow(action: Action, book: Item, **kwargs) -> None:
-    """borrow the book"""
-    book.borrow.user = action.user_id
-    book.borrow.date = datetime.now().replace(microsecond=0)
-    book.borrow.return_date = action.return_date
-    book.save(**kwargs)
-
-
-def can_borrow(right_name: str, book: Item) -> bool:
-    """Tel if current_user can execute the borrow action
-    """
-    if current_user.has_role("EMPLOYEE"):
-        return True
-    return False
-
-
-def can_see_borrow_action(right_name: str, book: Item) -> bool:
-    """Tel the borrow action is a nonsense ?
-    """
-    return not book.borrowed
-#
-# Definition of the action
-borrow_action = Action(
+# Define the Item
+books_item = Item(
     {
-        "user_id": String(require=True), 
-        "return_date": Datetime(require=True)
-    },
-    borrow,
-    can_execute=can_borrow,
-    exists=can_see_borrow_action,
+        "title": String(require=True, default="No title", can_modify=modify_books_title_function),
+        'cover': File( require=True, mime_types=[ 'image/jpeg', 'image/png' ], work=FileSystemConnector( path="/path/to/store/the/file" ) ),
+        "pages": Int(),
+        "borrow": Dict(
+            {
+                "user": Ref(
+                    coll="users",
+                    field="$.rent.books",
+                ),
+                "return_date": Datetime(),
+                "date": Datetime(),
+            },
+        ),
+    }
 )
+# define the DBHandler
+connector = DBMongoConnector(
+    connection_string="mongodb://...", collection="Books"
+)
+# define the Collection
+books = Collection("books", books_item, connector)
+myapp = Backoffice("media_library") # my backo
+myapp.register_collection(books)
 
-# Add the action to the book collection
-books.register_action("borrow", borrow_action)
-
+# set up the serveur
+flask = Flask("my_media_library")
+myapp.build_routes(flask) # build API routes
+flask.run(host="0.0.0.0", port=5000) # start the web server
 ```
 
-### rights for actions
+See [the full example](https://github.com/backo-stricto/backo/tree/main/examples/media_library)
 
-A right is a function (or a lambda) with these parameters, and must return a boolean.
 
-```python
-def your_function_name(right_name: str, o: Item) -> bool:
+## Architecture
 
+### A single application
+
+
+Scheme of a classical architecture (mono database), with `Collections` (aka `Tables`) all in the same DB.
+
+```mermaid
+flowchart LR
+    subgraph application
+        flask@{ shape: div-rect, label: "flask" }
+        subgraph backo
+            backoffice@{ shape: div-rect, label: "backoffice" }
+            coll1[collection 1]
+            coll2[collection 2]
+            coll3[collection 3]
+            DBHandler1[ DBHandler ]
+            DBHandler2[ DBHandler ]
+            DBHandler3[ DBHandler ]
+        end
+        DB1[(Database)]
+    end
+    client1[ client ] -. GET\nPOST\nPATCH\nDELETE .-> flask
+    client2[ client ] -. GET\nPOST\nPATCH\nDELETE .-> flask
+    flask <==> backoffice
+    backoffice <==>|"get_by_id()\ncreate()\nselect()\nupdate()"| coll1
+    backoffice <==> coll2
+    backoffice <==> coll3
+    coll1 <==>|"get()\ncreate()\nselect()\nsave()"| DBHandler1
+    DBHandler1 <-->|"SELECT * FROM WHERE"| DB1
+    coll2 <==> DBHandler2
+    DBHandler2 <--> DB1
+    coll3 <==> DBHandler3
+    DBHandler3 <--> DB1
 ```
 
-| right       | description                                                   |
-| ----------- | ------------------------------------------------------------- |
-| can_execute | Check if [current_user](#current_user) can execute the action |
-| can_see     | exists                                                        | Check if this action is a available for this item |
+### Integration
 
 
-### routes
-
-
-See [actions routes](#actions-routes) for resulting RESTful API routes.
-
-
-
-
-## Selection
-
-
-A selection is a *named* list of Items with sub elements provided by a [path](https://github.com/backo-stricto/stricto#selectors).
-
-An selection is compose by :
-1. a list of [selectors](https://github.com/backo-stricto/stricto#selectors)
-2. a [filter](https://github.com/backo-stricto/stricto#matching)
-3. a sort (optional)
-4. Some rights
-
-> [!IMPORTANT]  
-> A selection must be registered to a collection (with .register_selection() call)
-
-
-### example
-
-This is a selection of borrowed books (all collections ar not described).
-
-```python
-# Les livres empruntés
-borrowed_book_select = Selection(
-     [ "$.title", "$.borrow.user.login" ], 
-     filter={ 'borrowed' : True }, # Only borrowed books
-     sort=[ "-$.borrow.return_date", "$.title" ]  # sort by return_date (descendant) and for the same date by title.
-     can_read=...
-     )
-books.register_selection("borrowed", borrowed_book_select)
-```
-
-And to call the selection...
-
-```bash
-curl -X GET 'http://localhost/media_library/coll/books/_selections/borrowed' 
-  '{"result": [
-     ["666", "Docker as BDSM toy", "Wallrich"], 
-     ["1234", "Martine chez Epstein", "Lang"]
-    ],
-    "total": None, "_skip": 0, "_page": 10}'
-curl -X GET 'http://localhost/media_library/coll/books/_selections/borrowed?title.$reg=Martine'
-
-curl -X GET 'http://localhost/media_library/coll/books/_selections/borrowed?_total=1' 
-   '{ "total" : 2 }'
-# or
-curl -X GET 'http://localhost/media_library/coll/books/_selections_total/borrowed' 
-   '{ "total" : 2 }'
-```
-
-
-
-### rights for selections
-
-A right is a function (or a lambda) with these parameters, and must return a boolean.
-
-```python
-def your_function_name(right_name: str, o: Item) -> bool:
-
-```
-
-| right    | description                                                 |
-| -------- | ----------------------------------------------------------- |
-| can_read | Check if [current_user](#current_user) can do the selection |
-
-
-### routes
-
-
-See [actions routes](#actions-routes) for resulting RESTful API routes.
-
-
-## Ref and RefsList
-
-See [Cardinalities](#cardinalities)
-
-## Authentication
-
-### General
-
-Authentication is not managed by backo. Authentication is your side and you have to provide :
-
-1. One or more authentication methode which set a ```JWT token```
-2. A *verify function* which read the ```JWT token``` and populate the [current_user](#current_user).
-
-> [!IMPORTANT]  
-> The *verify function* must be passed as args to .build_routes() call
+Scheme of an architecture with `Collections` (aka `Tables`) dispatched in differents DB (not because you want to do that, but because databases already exists like that)
 
 
 ```mermaid
 flowchart LR
-    login[ /login ]
-    route[At each route]
-    setjwt[ set jwt ]
-    decjwt[ decode jwt ]
-    set[ current_user.set ]
-    logout[ /logout ]
-    dropjwt[drop jwt]
-
-    login --> setjwt
-    route --> decjwt
-    decjwt --> set
-    logout --> dropjwt
-
-```
-
-### Example
-
-This is an short and uncompleted example to authenticate and fill [current_user](#current_user).
-
-First, the connection part. a `/login` route allows the login and returns a JWT.
-
-```python
-app = Flask(__name__)
-app.secret_key = "super secret key"
-# Set the login route
-@app.route("/login", methods=["POST"])
-def login():
-    """
-    login load the user from the DB, verify the password and if
-    Ok generate a JWT an return it to the client.
-    At this point, current_user is not used.
-    """
-    d = request.json
-    login = d["login"]
-    password = d["password"]
-    # find the user by your way
-    user = load_from_db_by_login( login )
-    # Do the check of the password
-    if not user.check_password( password ):
-      return jsonify({"message": "Invalid email or password"}), 401
- 
-    token = jwt.encode(
-        {
-            "exp": datetime.now(timezone.utc) + timedelta(hours=1),
-            "user_id": user._id ,
-        },
-        "myappsecretkey",
-        algorithm="HS256",
-    )
-    response = make_response(json.dumps({"login": "ok"}))
-    response.set_cookie("jwt_token", token)
-    return response
-```
-
-Second part : The decorator used to authenticate the route and to populate [current_user](#current_user)
-
-```python
-def token_required(f):
-    @wraps(f)
-    def decorated(*args, **kwargs):
-        token = request.cookies.get("jwt_token")
-        if not token:
-            return jsonify({"message": "Token is missing!"}), 401
-        try:
-            data = jwt.decode(token, "myappsecretkey", algorithms=["HS256"])
-        except:  # pylint: disable=bare-except
-            return jsonify({"message": "Token is invalid!"}), 401
-
-        # Load the user from the DB and fill current_user
-        # we supose roles are store in your user_db
-        user = load_from_db_by_id( data["user_id"] )
-        current_user.set( { "_id" : user._id, "login" : user.login, "roles" : user.roles })
-
-        return f(*args, **kwargs)
-    return decorated
-```
-
-Then pass the function as args when you build routes.
-
-```python
-myapp.build_routes(flask, "", check_user_token)
-```
-
-## current_user
-
-`current_user` represents the currently loggued user.
-
-### usage
-
-```python
-# anywhere in your code
-from backo import current_user
-
-print(current_user._id) # The id of the current connected user
-print(current_user.login) # A login name or whatever you store as "login"
-
-# check if the user has the given role
-if current_user.has_role('teamManager'):
-  return True
-```
-
-### How to set values to the current_user ?
-
-`backo` doesnt manage authentication, because there is so much way to authenticate a user (or an app). So you have to do the auth by yourself.
-
-However, using jwt is a goot solution. See [Authentication](#authentication) for that.
-
-
-### current_user API
-
-`current_user` is a very simple [Stricto Dict](https://github.com/backo-stricto/stricto?tab=readme-ov-file#dict) (but can be [extended](#extend-current_user)). It contains :
-
-| key | type | usage |
-| - | - | - |
-| _id | [Stricto String()](https://github.com/backo-stricto/stricto?tab=readme-ov-file#string) | the _id of the user. 
-| login | [Stricto String()](https://github.com/backo-stricto/stricto?tab=readme-ov-file#string) | the login or whatever you store . 
-| roles | [Stricto List( String() )](https://github.com/backo-stricto/stricto?tab=readme-ov-file#list) | the list of roles for this users. A *role* is a kid of group the user belongs to | 
-| has_role() | function | return True or false to the role givent in param | 
-| reset() | function | change the current_user object type. See [extend current_user](#extend-current_user) for that| 
-
-
-### extend current_user
-
-You can extend `current_user`, adding stuff in its schema, functions... etc.
-
-
-```python
-from backo import current_user, CurrentUser, CurrentUserWrapper
-
-class MyCurrentUser(CurrentUser):
-
-
-      def __init__(self, obj: CurrentUser):
-
-        CurrentUser.__init__(self, obj)
-        self.add_to_model( 'email' , String() )
-
-
-    """
-    a new class child of CuurrentUser
-    """
-    def my_function(self):
-        """
-        a Dummy function
-        """
-        return(f"user {self.login} ({self._id})")
-
-current_user.reset(MyCurrentUser())
-
-# Later in the code
-current_user.email = "toto@titi.com"
-current_user.my_function() # return the string "user ..."
-```
-
-
-
-## Routes
-
-When you call
-
-```python
-mybackoffice.build_routes(flask)
-```
-Api routes are generated
-
-### Routes prefix
-
-You can change prefix and version for route. 
-
-```python
-mybackoffice=Backoffice( "app1", "1.2.3" )
-mybackoffice.build_routes(flask, "my_company")
-```
-
-will build routes like :
-
-```bash
-curl -X GET 'http://localhost/my_company/app1/1.2.3/...'
-```
-
-
-### CRUD Routes
-#### GET \<my-app-name\>/\<collection name\>/\<_id\> \?_view=\<view name\>
-
-```_view``` are defined in [stricto views](https://github.com/backo-stricto/stricto?tab=readme-ov-file#views)
-
-Return the object of this collection *by _id*.
-
-```bash
-curl -X GET 'http://localhost/myApp/users/123'
-
-# Equivalent (by default _view=client)
-curl -X GET 'http://localhost/myApp/users/123?_view=client'
-
-# Another view
-curl -X GET 'http://localhost/myApp/users/123?_view=otherviewname'
+    subgraph application
+        flask@{ shape: div-rect, label: "flask" }
+        subgraph backo
+            backoffice@{ shape: div-rect, label: "backoffice" }
+            coll1[collection 1]
+            coll2[collection 2]
+            coll3[collection 3]
+            DBHandler1[ DBHandler ]
+            DBHandler2[ DBHandler ]
+            DBHandler3( DBRestFull )
+        end
+        DB1[(Database 1)]
+    end
+    client1[ client ] -. GET\nPOST\nPATCH\nDELETE .-> flask
+    client2[ client ] -. GET\nPOST\nPATCH\nDELETE .-> flask
+    flask <==> backoffice
+    backoffice <==>|"get_by_id()\ncreate()\nselect()\nupdate()"| coll1
+    backoffice <==> coll2
+    backoffice <==> coll3
+    coll1 <==>|"get()\ncreate()\nselect()\nsave()"| DBHandler1
+    DBHandler1 <-->|"SELECT * FROM WHERE"| DB1
+    coll2 <==> DBHandler2
+    DBHandler2 <-->|"coll.find().sort()"| DB2[(Database 2)]
+    coll3 <==> DBHandler3
+    DBHandler3 <-..->|GET\nPOST\nPATCH\nDELETE| DB3[external API]
 
 ```
-Answers can be :
 
-| code | data             | Description                              |
-| ---- | ---------------- | ---------------------------------------- |
-| 200  | JSON object data | the requested item                       |
-| 401  | None             | you are not authorized to view this item |
-| 404  | None             | item not found                           |
-| 500  | None             | server-side error                        |
+## Documentation and examples
 
-#### GET \<my-app-name\>/\<collection name\>?\<query_string\>
+We try to maintain a [full comprehensive documentation](https://backo.readthedocs.io/en/latest)
 
-Get a list of objects matching the query string. The query string can be with this format
+And some runnable examples [runnable examples](https://github.com/backo-stricto/backo/tree/main/examples)
 
-| key                    | value     | description                                                                                                                                                                  |
-| ---------------------- | --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| \<field\>              | \<value\> | matches items where `<field>` equals `<value>`. Example: `surname=donald` finds all items where surname equals to "donald".                                                  |
-| \<field\>.\<operator\> | \<value\> | matches items where `<field>` satisfies `<operator>` with `<value>`. Example: `age.$lt=12` finds items where age is less than 12.                                            |
-| \<field\>.\<subfield\> | \<value\> | Matches items where `<field>` is a nested dictionary containing `<subfield>` equal to `<value>`. Example: `address.number=1` matches items where address.number equals to 1. |
 
 
-[list of available operators](https://github.com/backo-stricto/stricto?tab=readme-ov-file#filtering-and-matching)
+## About us
 
+backo is developped and maintained by [the engineers team](https://sed-nge.inria.fr/) of [inria](https://inria.fr/en) (especially [Centre inria de l'Universite de Lorraine](https://inria.fr/fr/centre-inria-universite-lorraine))
 
-| key | value | default | description |
-| - | - | - | - |
-| \_view | string | "client" | selects the view ([stricto views](https://github.com/backo-stricto/stricto?tab=readme-ov-file#views))  |
-| \_page | int | - | sets the desired number of items per page in paginated data presentation |
-| \_skip | int | - | skips the n-first items of the result list in paginated data presentation. |
-| \_sort | string | - | give the list of sorting fields |
-| \_total | whatyouwant | None | Just compute the total of object and return { 'total' : x } without taking pagination in account |
+(Sorry some links are in french...)
 
+## Disclaimer
 
-The request returns a HTTP status `200` with that JSON object:
+We want backo as :
 
-```python
-{
-    "result": # list of dict containing objects matched
-    "_view": # the _view given in the request
-    "_skip": # the _skip given in the request
-    "_page": # the _page given in the request
-}
-```
+* [FOSS](https://en.wikipedia.org/wiki/Free_and_open-source_software), event if some binding to non free databases ([mongoDB](https://www.mongodb.com)...)
+* under MIT Licence, 
+* without the minimum dependency from other packages. A light package.
+* __without vibe coding__ : You can use IA for helping you, but without embedded agent in your IDE. And your prompt must start with "Explain me how ...". **The IA must enhance your knowledge !**
 
-##### Example
-Select all users whose name includes 'do' and present the result list with 10 items per page, sorted by surname.
-```bash
-curl -X GET 'http://localhost/myApp/users/?name.$re=do&_page=10&_sort=$.surname'  
-```
-
-#### GET \<my-app-name\>/\<collection name\>/\<_id\>/\<path\>
-
-Get the file content (if path refer to a file, otherwhise an error)
-
-```bash
-curl -X GET 'http://localhost/myApp/users/1234/pict'
-
-# will probably return a content_type 'image/--'  and its content.
-
-```
-
-
-
-#### POST \<my-app-name\>/\<collection name\>
-Create a new item for the collection `collection name`.
-
-##### Example
-```bash
-curl -X POST 'http://localhost/myApp/users/' -d '{"name":"John","surname":"Rambo"}'
-```
-
-It returns the created *user* JSON object with a generated unique identifier `_id` and some _metadata or an error otherwise.
-
-
-#### PUT /\<my-app-name\>/\<collection name\>/\<_id\>
-Modify an existing object whose id is `_id`.
-
-##### Example
-```bash
-curl -X PUT 'http://localhost/myApp/users/1234' -d '{"name":"Johnny"}'
-
-```
-Modify the users with _id *1234* and return the modified object.
-
-
-
-#### DELETE /\<my-app-name\>/\<collection name\>/\<_id\>
-Delete an existing object whose id is `_id`.
-
-##### Example
-```bash
-curl -X DELETE 'http://localhost/myApp/users/1234'
-
-```
-Delete the user that has _id = *1234*.
-
-
-#### PATCH /\<my-app-name\>/\<collection name\>/\<_id\>
-Partial change of an existing object whose id is `_id`.
-Please refer to the [Stricto patch method](https://github.com/backo-stricto/stricto?tab=readme-ov-file#patch).
-
-##### Example
-```bash
-curl -X PATCH  'http://localhost/myApp/users/1234' -d '{"op": "replace", "path" : "$.name", "value": "Gilda"}'
-```
-
-Partial modification of the user with _id *1234* with the patch.
-
-Patch content can be a *list of patch operations*.
-
-### Validation routes
-
-#### POST /\<my-app-name\>/\<collection name\>/_check
-
-Check the validity of an item field.
-
-Please refer to [stricto selectors](https://github.com/backo-stricto/stricto#selectors) for more details on selectors.
-
-get must provide a json structure in the body :
-
-| field | type | descrimtion |
-| -- | -- | -- |
-| item | dict | the data to check. It can be partial, see examples below |
-| path | string | the field to check in the item. This is a selector. Please refer to [stricto selectors](https://github.com/backo-stricto/stricto#selectors) for more details |
-
-The answer is a status 200 message with a json structure :
-
-| field | type           | descrimtion                                           |
-| ----- | -------------- | ----------------------------------------------------- |
-| error | string or null | if null ther is no error, otherwise the error message |
-
-
-Examples :
-
-
-```bash
-curl -X POST 'http://localhost/myApp/users/_check' -d '{ "item" : { "name" : "John", "surname" : 32 }, "path" : "$.surname" }'
-# will check surname an return a response.data like 
-{
-    'error' : "Must be a string"
-}
-```
-
-The response is a *status 200* even if the check returns an error. The request is correct.
-
-```bash
-curl -X POST 'http://localhost/myApp/users/_check' -d '{ "item" : { "surname" : "Johnny" }, "path" : "$.surname" }' 
-# will check surname an return a response.data like 
-{
-    'error' : null
-}
-
-
-curl -X GET 'http://localhost/myApp/users/_check' -d '{ "item" : { "name" : 23, "surname" : "Johnny" }, "path" : "$.surname" }'
-# (only the surname is tested. don't car if name is correct or not)
-{
-    'error' : null
-}
-```
-
-### Actions routes
-
-Each collection has routes for its actions.
-
-#### POST /\<my-app-name\>/\<collection name\>/_actions/<action_name>/<_id>
-
-
-is used to call an action.
-
-
-### Selections routes
-
-
-| Method          | Route                                                              | Description                          |
-| --------------- | ------------------------------------------------------------------ | ------------------------------------ |
-| <kbd>GET</kbd>  | \<my-app-name\>/\<collection name\>/_selections/\<selection_name\> | do the selection                     |
-| <kbd>POST</kbd> | \<my-app-name\>/\<collection name\>/_selections/\<selection_name\> | do the selection with complex filter |
-
-And for counting the total of objects
-
-| Method          | Route                                                              | Description                          |
-| --------------- | ------------------------------------------------------------------ | ------------------------------------ |
-| <kbd>GET</kbd>  | \<my-app-name\>/\<collection name\>/_selections_total/\<selection_name\> | get the total for the selection |
-| <kbd>POST</kbd> | \<my-app-name\>/\<collection name\>/_selections_total/\<selection_name\> | get the total for the selection with complex filter |
-
-#### example
-
-```bash
-curl -X GET 'http://localhost/media_library/coll/books/_selections/borrowed' 
-  '{"result": [
-     ["666", "Docker as BDSM toy", "Wallrich"], 
-     ["1234", "Milf forever", "Epstein"]
-    ],
-    "total": None, "_skip": 0, "_page": 10}'
-curl -X GET 'http://localhost/media_library/coll/books/_selections_total/borrowed' 
-  '{ "total" : 2 }'
-# or
-curl -X GET 'http://localhost/media_library/coll/books/_selections/borrowed?_total=1' 
-  '{ "total" : 2 }'
-
-curl -X GET 'http://localhost/media_library/coll/books/_selections_total/borrowed?title.$reg=Dock'
-  '{ "total" : 1 }'
-# or 
-curl -X GET 'http://localhost/media_library/coll/books/_selections/borrowed?title.$reg=Dock&_total=1'
-```
-
-
-### Meta routes
-Meta route are used to retrieve introspective informations about the application itself (structure, rights, ...).
-
-#### GET /\<my-app-name\>/_meta
-
-Return the structure of the application as a JSON with thoses keys :
-
-| key         | type                              | description                         |
-| ----------- | --------------------------------- | ----------------------------------- |
-| name        | string                            | The name of the application         |
-| collections | array of *collection description* | list of all collections description |
-
-##### collection description
-
-Describe a collection
-
-| key  | type                                                  | description                |
-| ---- | ----------------------------------------------------- | -------------------------- |
-| name | string                                                | The name ov the collection |
-| item | [meta element description](#meta-element-description) | description of an item     |
-
-##### meta element description
-
-Describe an element (an item, a key in an item)
-
-| key         | type                                                           | description                                                                                                                          |
-| ----------- | -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| type        | string                                                         | the type of this element. For example *"<class 'backo.item.Item'>"* or *"<class 'stricto.string.String'>"*                           |
-| type_short  | string                                                         | the type of this element, but a short version like *"Item"* or *"String"*                                                            |
-| description | string                                                         | a sort of comment. (optional) or null                                                                                                |
-| require     | boolean                                                        | mean this element is required or not                                                                                                 |
-| in          | array of values                                                | if the element must be in a list of value, or null if not.                                                                           |
-| constraints | boolean                                                        | means if there is one or more constraints on this value                                                                              |
-| default     | --                                                             | the default value for this field (= null if no default value)                                                                        |
-| transform   | boolean                                                        | say there is a transformation function                                                                                               |
-| exists      | boolean                                                        | false mean this field does not exist and must not be displayed                                                                       |
-| rights      | [meta rights description](#meta-rights-description)            | the description of rights                                                                                                            |
-| sub_scheme  | [meta element description](#meta-element-description)          | reccusive description for childs if this object is a [Dict](https://github.com/bwallrich/stricto?tab=readme-ov-file#dict) or an Item |
-| sub_type    | [meta element description](#meta-element-description)          | description of the content if this object is a [List](https://github.com/bwallrich/stricto?tab=readme-ov-file#list)                  |
-| sub_types   | array of [meta element description](#meta-element-description) | description of the tuple content if this object is a [Tuple](https://github.com/bwallrich/stricto?tab=readme-ov-file#tuple)          |
-
-##### meta rights description
-
-
-
-##### Example
-```bash
-curl -X GET  'http://localhost/myApp/_meta'
-# Will return for example
-
-{
-  "name": "myApp",
-  "collections": [
-    {
-      "name": "users",
-      "item": {
-        "type": "<class 'backo.item.Item'>",
-        "type_short": "Item",
-        "description": null,
-        "required": false,
-        "in": null,
-        "constraints": [],
-        "default": null,
-        "transform": null,
-        "exists": true,
-        "rights": {
-          "read": null,
-          "modify": null
-        },
-        "sub_scheme": {
-          "name": {
-            "type": "<class 'stricto.string.String'>",
-            "type_short": "String",
-            "description": null,
-            "required": false,
-            "in": null,
-            "constraints": [],
-            "default": null,
-            "transform": null,
-            "exists": true,
-            "rights": {
-              "read": null,
-              "modify": null
-            },
-            "regexp": []
-          },
-          "surname": {
-            "type": "<class 'stricto.string.String'>",
-            "type_short": "String",
-            "description": null,
-            "required": false,
-            "in": null,
-            "constraints": [],
-            "default": null,
-            "transform": null,
-            "exists": true,
-            "rights": {
-              "read": null,
-              "modify": null
-            },
-            "regexp": []
-          },
-          "age": {
-            "type": "<class 'stricto.int.Int'>",
-            "type_short": "Int",
-            "description": null,
-            "required": false,
-            "in": null,
-            "constraints": [
-              "func"
-            ],
-            "default": null,
-            "transform": null,
-            "exists": true,
-            "rights": {
-              "read": null,
-              "modify": null
-            },
-            "min": null,
-            "max": null
-          },
-          "site": {
-            "type": "<class 'backo.reference.Ref'>",
-            "type_short": "Ref",
-            "description": null,
-            "required": false,
-            "in": null,
-            "constraints": [],
-            "default": null,
-            "transform": null,
-            "exists": true,
-            "rights": {
-              "read": null,
-              "modify": null
-            },
-            "regexp": []
-          },
-          "_id": {
-            "type": "<class 'stricto.string.String'>",
-            "type_short": "String",
-            "description": null,
-            "required": false,
-            "in": null,
-            "constraints": [],
-            "default": null,
-            "transform": null,
-            "exists": true,
-            "rights": {
-              "read": null,
-              "modify": null
-            },
-            "regexp": []
-          }
-        }
-      }
-    }
-  ]
-}
-
-```
-
-#### POST /\<my-app-name\>/\<collection name\>/_meta
-
-Ask the backoffice the current meta informations for this collection object.
-
-
-            "type": ty,
-            "type_short" : re.sub(".*\.|\'>", '', ty),
-            "description": self.get_as_string(self._description),
-            "required": self.get_as_string(self._required),
-            "in": self.get_as_string(self._union),
-            "constraints": self.get_as_string(self._constraints),
-            "default": self.get_as_string(self._default),
-            "exists": self.exists( self.get_value() ),
-            "rights": rights,
-
-
-##### Example
-
-For this structure :
-
-```python
-def can_see_and_modify_salary(right_name, o, other):
-
-    """
-    return true if can read the salary
-    """
-    global current_user_name
-    if current_user_name == o.name:
-        return True
-    return False
-
-my_backoffice.register_collection(
-    "users",
-    Item(
-        {
-            "name" : String(),
-            "salary" : Int( default=0, can_read=can_see_and_modify_salary, can_modify=can_see_and_modify_salary ),
-        },
-        yml_users,
-    ),
-)
-
-```
-
-```bash
-# Logged as "Hector"
-curl -X POST 'http://localhost/myApp/users/_meta' -d { 'name' : "John" }
-# Will return this structure.
-# rights "read" and "modify" are set to false for the salary
-{
-      "name": "users",
-      "item": {
-        "type": "<class 'backo.item.Item'>",
-        "type_short": "Item",
-        "description": null,
-        "required": false,
-        "in": null,
-        "constraints": [],
-        "default": null,
-        "transform": null,
-        "exists": true,
-        "rights": {
-          "read": null,
-          "modify": null
-        },
-        "sub_scheme": {
-          "name": {
-            "type": "<class 'stricto.string.String'>",
-            "type_short": "String",
-            "description": null,
-            "required": false,
-            "in": null,
-            "constraints": [],
-            "default": null,
-            "transform": null,
-            "exists": true,
-            "rights": {
-              "read": true,
-              "modify": true
-            },
-            "regexp": []
-          },
-          "salary": {
-            "type": "<class 'stricto.string.Int'>",
-            "type_short": "Int",
-            "description": null,
-            "required": false,
-            "in": null,
-            "constraints": [],
-            "default": 0,
-            "transform": null,
-            "exists": true,
-            "rights": {
-              "read": false,
-              "modify": false
-            },
-            "regexp": []
-          }
-        }
-    }
-}
-
-
-
-```
-
-### OpenAPI route
-This route is used to generate the OpenAPI specification of the backoffice.
-
-For a local usage, you can take at look at [documento](https://github.com/backo-stricto/documento) to quickly serve the documentation using either Swagger, ReDoc, Rapidoc or ST
-calar.
-
-#### GET /\<my-app-name\>/_openapi
-
-Return the OpenAPI specification in JSON format.
-
-```bash
-curl -x GET http://localhost/myApp/_openapi
-```
-
-## Internal usage
-Typical use cases for users and related addresses.
-
-```python
-# Create an adress, save it in the DB and provide the object with a unique id.
-moon_address = backoffice.addrs.create({"name": "moon", "address": "far"})
-
-# Create a user with this address
-astro = backoffice.users.create({"name": "neil", "surname": "amstrong", "addr": moon_address._id})
-
-moon_address.users # -> return []
-moon_address.reload() # reload data from the DB so that crossed references are updated
-moon_address.users # -> return [ astro._id ]
-```
-
-### _id
-
-You dont't have to care about *_ids* in your item description. Backo will alter schema to add `_id` for each Item (see [stricto schemas](https://github.com/backo-stricto/stricto?tab=readme-ov-file#schemas) for details).
-
-### _meta
-
-the db_connector adds meta data to each item by [altering its schema](https://github.com/backo-stricto/stricto?tab=readme-ov-file#schemas).
-
-
-The provided *meta_data_handler* give this Dict() :
-
-```python
-Dict(
-    {
-        "ctime": Datetime(),
-        "mtime": Datetime(),
-        "created_by": Dict(
-            {"_id": String(), "login": String()}
-        ),
-        "modified_by": Dict(
-            {"_id": String(), "login": String()}
-        ),
-    },
-),
-```
-
-## Workflow and events
-
-Each Item has a specific workflow and triggers specific events.
-
-### workflow
-
-The defined states for each item are following:
-
-| State   | descripion                                                                  |
-| ------- | --------------------------------------------------------------------------- |
-| UNSET   | The Item result of a ```.new()``` function. It can't be saved in this state |
-| UNSAVED | The Item has been modified and must be saved                                |
-| SAVED   | The Item is saved in the DB and has not been changed since last save        |
-
-
-
-```mermaid
-stateDiagram
-    [*] --> UNSET : .new()
-
-    UNSET --> SAVED : .load()
-    UNSET --> UNSAVED : .set()
-    UNSAVED --> SAVED : .save()
-    SAVED --> UNSAVED : .set()
-    SAVED --> UNSET : .delete()
-    UNSAVED --> UNSET : .delete()
-
-```
-
-
-### Events
-The following events are triggered when the functions above are called:
-
-| function  | event before    | event after |
-| --------- | --------------- | ----------- |
-| .load()   |                 | "loaded"    |
-| .save()   | "before_save"   | "saved"     |
-| .delete() | "before_delete" |             |
-| .create() | None            | "created"   |
-
-#### Example
-Below is a simple use case on how to use these events:
-
-```python
-        def rip( event_name, root, me, **kwargs ):
-            """
-            event_name = "before_delete"
-            root = cat Item
-            me = cat Item too
-            """
-            # Do what you want
-
-        cat = Item( {
-                'name' : String()
-                'birth' : Datetime()
-            }
-            on=[ ( "before_delete", rip ) ]
-        )
-```
-
-## Transactions
-
-*Soon*
-
-
-## Logs
-
-The log system is based on [logging Python module](https://docs.python.org/3/library/logging.html)
-
-You must first design your logging system with handlers. Then you can write the logs outputs.
-
-### Example
-
-```python
-from backo import log_system, LogLevel
-
-# To write all file to stderr
-log_system.add_handler( log_system.set_streamhandler() )
-
-# To write in a file
-log_system.add_handler( log_system.set_filehandler("/var/log/mylog.log") )
-
-# Set the level 
-log_system.setLevel( LogLevel.INFO )
-
-# create your own sub logger with its specific logging level
-log = log_system.get_or_create_logger("custom")
-log.setLevel(LogLevel.DEBUG)
-
-log.debug("hey this is my first debug message")
-
-```
-
-### Advanced use
-
-You can select a specific ```logger``` and modify it by adding/removing handlers and changing its level.
-
-```python
-log = log_system.get_or_create_logger("custom")
-log.setLevel(logging.DEBUG)
-log.addHandler ( my_own_handler )
-# ...
-
-# To see
-log_system.infos()
-# print some available informations about log system (levels, handlers)
-
-```
-
-### stack()
-
-If you need, you can had the ```stack()``` into your message, to get a nice stack call:
-
-```python
-log = log_system.get_or_create_logger("custom")
-log.setLevel(logging.DEBUG)
-
-# somewhere in you code
-log.debug(f'this is a debug message with stack {stack()}')
-# ...
-```
-
-Will output something like :
-
-
-```bash
-DEBUG-custom- "/my_path/myfile.py", line 196 : this is a debug message with stack
-  / 
-  \ called by "/my_path/myfile.py", line 128, in sub_test_set_get_sample
-   \ called by "/my_pathtests/test_file.py", line 140, in test_set_get_sample
-    \ called by "/usr/lib/python3.12/unittest/case.py", line 589, in _callTestMethod
-     \ called by "/usr/lib/python3.12/unittest/case.py", line 634, in run
-      \ called by "/usr/lib/python3.12/unittest/case.py", line 690, in __call__
-       \ called by "/usr/lib/python3.12/unittest/suite.py", line 122, in run
-        \ called by "/usr/lib/python3.12/unittest/suite.py", line 84, in __call__
-         \ called by "/usr/lib/python3.12/unittest/suite.py", line 122, in run
-          \__
-```
-
-
-### current loggers
-
-Currently available loggers are :
-
-| logger      | description                            |
-| ----------- | -------------------------------------- |
-| backoffice  | The main Backoffice system             |
-| Item        | The database itself (CRUD operations ) |
-| ref         | Ref and RefsList objects               |
-| transaction | transactions and roolback              |
-| yml         | yaml database connector                |
-| mongo       | mongo database connector               |
-| select      | selections                             |
-| migration   | see [migration](#migration)            |
-
-
-
-## migration
-
-
-If you change an [Item](#item) of a [Collection](#collection), data currently stored in the database can be rejected by the model.
-You need to migrate them and there is a tool for that.
-
-### How it works
-
-You have to write a script importing your backoffice object call the ```.migrate()``` method of the backoffice, and provide a function to make change to the object.
-
-Below a migration function example:
-
-```python
-def transform_function( o: dict) -> dict:
-    """ Do what you want and return o"""
-    # Adding a new key
-    if 'new_key' not in o:
-        o['new_key'] = ...
-    # removing
-    del o['unwanted_key']
-    # ...
-    return o
-```
-
-
-By default, the strategy for migration is ```MigrationStrategy.DRY_RUN```. So you will broke nothing. ```MigrationStrategy.DRY_RUN``` will do all work except saving the object in the DB.
-
-> [!IMPORTANT]  
-> there is no check of *rights* and *current_user* during migration. metadatas (see [_meta](#_meta)) are not updated.
-
-
-
-### example
-
-Imagine a *books* collection. 
-You modify the book [Item](#item) to add a *note* field which is a float and is required. 
-If you do nothing, the ```load()``` of a old item in the DB will failed on the new field *note* (required). 
-This is an example for migrating data.
-
-
-```python
-from media_library import mybackoffice
-from backo import log_system, LogLevel, MigrationStrategy
-
-# Set migration level to debug
-log_migration = log_system.get_or_create_logger("migration")
-
-# ---------------------------------------------
-# Check if a data match the model
-# it raise an error at first _id 
-# ---------------------------------------------
-report = myapp.migrate("books", _id="my_book_id") # check a specific _Id
-# or
-report = myapp.migrate("books", _ids=["my_book_id1", "my_book_id2"]) # check a list of _Id
-# or
-report = myapp.migrate("books")  # check all ids
-
-# --------------------------------------------
-# Do a changement
-# example you must now have a note field with a float value
-# --------------------------------------------
-def update_with_note(o: dict) -> dict:
-    """
-    this the function for doing operation on objects before setting them into the Item
-    You can do what you want.
-    """
-    if "note" not in o:
-        o["note"] = 10.0
-    return o
-
-
-# Check if OK (dry_run is True by default)
-report = mybackoffice.migrate("books", update_with_note, _id="my_book_id")
-# or
-report = mybackoffice.migrate("books", update_with_note, _ids=["my_book_id1", "my_book_id2"])
-# or
-report = mybackoffice.migrate("books", update_with_note)  # All ids
-
-# do it for real
-report = mybackoffice.migrate("books", update_with_note, _id="my_book_id", dry_run=False)
-# or
-report = mybackoffice.migrate(
-    "books", update_with_note, _ids=["my_book_id1", "my_book_id2"], strategy=MigrationStrategy.EXECUTE
-)
-# or
-report = mybackoffice.migrate("books", update_with_note, strategy=MigrationStrategy.EXECUTE)  # All ids
-
-```
-
-### MigrationStrategy options
-
-| option | description |
-| - | - |
-| ```MigrationStrategy.DRY_RUN``` | Don't change anything, just display and report diffs | 
-| ```MigrationStrategy.EXECUTE``` | Do changements and save in DB if needed. report diffs | 
-| ```MigrationStrategy.FORCE``` | Do changements and rewrite data in DB. report diffs | 
-
-
-
-
-### report
-
-The migration returns a report structure :
-
-* ```report.nochanges._ids``` 
-  The list (array) of unchanged _ids
-* ```report.total```
-  The number of unchanged _id durion this migration
-* ```report.changes._ids```
-  The list (array)  of _ids which are changed during this migration
-* ```report.changes.total```
-  the number of changed _ids.
-* ```report.changes.diff```
-  The list (array) of diff for each _id. The format is [DeepDiff](https://pypi.org/project/deepdiff/)
-
+Don't hesitate to [contact us](https://github.com/backo-stricto/stricto/discussions) and [contribute](https://github.com/backo-stricto/stricto/blob/main/CONTRIBUTING.md)
 
 
 ## Tests & co

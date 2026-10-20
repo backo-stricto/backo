@@ -6,7 +6,6 @@
 References
 ==========
 
-
 .. automodule:: backo
    :show-inheritance: 
 
@@ -52,6 +51,15 @@ Ref & RefsList
 .. autoclass:: FillStrategy
    :members:
    :show-inheritance: 
+
+
+Meta data Handler
+-----------------
+
+.. autoclass:: GenericMetaDataHandler
+   :members:
+   :show-inheritance: 
+
 
 Files
 -----
