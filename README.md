@@ -255,12 +255,12 @@ backo is developped and maintained by [the engineers team](https://sed-nge.inria
 
 ## Disclaimer
 
-We want backo as :
+We want backo :
 
-* [FOSS](https://en.wikipedia.org/wiki/Free_and_open-source_software), event if some binding to non free databases ([mongoDB](https://www.mongodb.com)...)
-* under MIT Licence, 
-* without the minimum dependency from other packages. A light package.
-* __without vibe coding__ : You can use IA for helping you, but without embedded agent in your IDE. And your prompt must start with "Explain me how ...". **The IA must enhance your knowledge !**
+* to be and stay [FOSS](https://en.wikipedia.org/wiki/Free_and_open-source_software), event if some binding to non free databases ([mongoDB](https://www.mongodb.com)...)
+* to be under MIT Licence, 
+* to stay with minimum dependency from other packages. A light package.
+* to be made __without vibe coding__ : You can use IA for helping you, but without embedded agent in your IDE. Your prompt must start with "Explain me how ...". **The IA must enhance your knowledge **, not replace you.
 
 Don't hesitate to [contact us](https://github.com/backo-stricto/stricto/discussions) and [contribute](https://github.com/backo-stricto/stricto/blob/main/CONTRIBUTING.md)
 

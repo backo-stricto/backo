@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [0.3.8] 2026-09-29
   
+    * doc :
+      * Full new documentation and new README.md
+    * Fix
+      * Fix Malformed OpenAPI JSON output #28
+      * Fix OpenAPI route renaming #36 (breaking change)
+    * Internal :
+      * update to stricto 0.3.1
+  
+## [0.3.8] 2026-09-29
+  
     * Internal :
       * BREAKING CHANGE : use stricto 0.3.0
         * function signature of transform=, contraint=, contraints= has change to (object, value, old_value)
