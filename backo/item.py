@@ -11,7 +11,7 @@ from .error import BackoError
 from .db import DBHandler
 from .transaction import OperatorType
 from .log import log_system
-from .meta_data_handler import StandardMetaDataHandler, GenericMetaDataHandler
+from .meta import GenericMetaDataHandler, TimeMetaDataHandler
 from .loop_path import LoopPath
 from .status import StatusType
 
@@ -32,7 +32,7 @@ from stricto import (
 KPARSE_MODEL = {
     "meta_data_handler": {
         "type": GenericMetaDataHandler | None,
-        "default": StandardMetaDataHandler(),
+        "default": TimeMetaDataHandler(),  # StandardMetaDataHandler(),
     }
 }
 

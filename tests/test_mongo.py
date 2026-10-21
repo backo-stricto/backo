@@ -10,6 +10,7 @@ import time
 
 from backo import Item, Collection
 from backo.db import DBMongoConnector
+from backo.meta import TimeUserMetaDataHandler
 from backo import Backoffice, NotFoundError, DBError, current_user
 
 from backo import String, Bool, SFilter, Operator  # , Error as StrictoError
@@ -106,7 +107,8 @@ class TestMongo(unittest.TestCase):
             Collection(
                 "users",
                 Item(
-                    {"name": String(), "surname": String(), "male": Bool(default=True)}
+                    {"name": String(), "surname": String(), "male": Bool(default=True)},
+                    meta_data_handler=TimeUserMetaDataHandler(),
                 ),
                 self.db_users,
             )

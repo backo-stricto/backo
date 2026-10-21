@@ -7,48 +7,27 @@ Module providing the Meta_data_manipulation
 import sys
 
 from datetime import datetime
-from .current_user import current_user
+from ..current_user import current_user
+from .abstract_meta_handler import GenericMetaDataHandler
 
 # from .status import StatusType
 
 # used for developpement
 sys.path.insert(1, "../../stricto")
 
-from stricto import Dict, String, Datetime, validation_parameters
+from stricto import Dict, String, Datetime
 
 
-class GenericMetaDataHandler:  # pylint: disable=too-many-instance-attributes
+class TimeUserMetaDataHandler(GenericMetaDataHandler):
     """
-    A generic meta Data
+    A Meta data class handle _meta schema with
+
+    * ctime : The creation time of the Item
+    * mtime : The modification tome of the Item
+    * created_by : The current_user who create the Item
+    * modified_by : The current_user who create the Item
+
     """
-
-    def __init__(self):
-        """
-        Nothing to do
-        """
-
-    def update(self, o: Dict) -> None:
-        """
-        Modification of metadata when the object will be created
-        """
-
-    def append_schema(self, o: Dict) -> None:
-        """
-        Add to the schema
-        """
-
-
-class StandardMetaDataHandler(
-    GenericMetaDataHandler
-):  # pylint: disable=too-many-instance-attributes
-    """
-    A Meta data class handle for _meta schema
-    """
-
-    def __init__(self):
-        """
-        Nothing to do
-        """
 
     def update(self, o: Dict) -> None:
         """
@@ -78,7 +57,6 @@ class StandardMetaDataHandler(
         if permission_enabled is True:
             o.enable_permissions()
 
-    @validation_parameters
     def append_schema(self, o: Dict) -> None:
         """
         Add to the schema

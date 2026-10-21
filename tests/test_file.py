@@ -29,9 +29,9 @@ from backo import (
     FileSystemConnector,
     FileBlobConnector,
     BlobFile,
-    GenericMetaDataHandler,
 )
 from backo.db import DBYmlDirConnector
+from backo.meta import NoneMetaDataHandler
 
 TEST_PATH = os.path.join(tempfile.gettempdir(), "backo_file_tests")
 TEST_PATH2 = os.path.join(tempfile.gettempdir(), "backo_file_tests_2")
@@ -353,7 +353,7 @@ class TestFile(unittest.TestCase):
                 "surname": String(),
                 "f": file_type,
             },
-            meta_data_handler=GenericMetaDataHandler(),
+            meta_data_handler=NoneMetaDataHandler(),
         )
 
         client = self.build_backoffice(model)

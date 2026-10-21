@@ -35,7 +35,6 @@ from .file.file_connector import FileConnector
 from .file.file_system_connector import FileSystemConnector
 from .file.file_blob_connector import FileBlobConnector
 from .file.blob_file import BlobFile
-from .meta_data_handler import GenericMetaDataHandler, StandardMetaDataHandler
 from .status import StatusType
 from .action import Action
 from .migration import MigrationReport, MigrationStrategy

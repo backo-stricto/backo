@@ -7,11 +7,11 @@ from backo import (
     String,
     Collection,
     Item,
-    GenericMetaDataHandler,
     log_system,
     RefsList,
 )
 from backo.db import DBYmlDirConnector
+from backo.meta import NoneMetaDataHandler
 
 log = log_system.get_or_create_logger("users")
 
@@ -33,7 +33,7 @@ item = Item(
         "login": String(require=True, default=""),
         "vms": RefsList(coll="vms"),
     },
-    meta_data_handler=GenericMetaDataHandler(),
+    meta_data_handler=NoneMetaDataHandler(),
 )
 
 # ------------------------------------------------

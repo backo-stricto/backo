@@ -10,6 +10,7 @@ from datetime import datetime, timedelta
 from ipaddress import IPv4Address
 from backo import Item, Collection
 from backo.db import DBYmlDirConnector
+from backo.meta import TimeUserMetaDataHandler
 from backo import Backoffice, NotFoundError, BackoError, current_user
 from backo import String, Bool, Int, SRightError, Ipaddress
 
@@ -102,7 +103,8 @@ class TestCRUD(unittest.TestCase):
                         "surname": String(),
                         "ip": Ipaddress(),  # just to add an extended type
                         "male": Bool(default=True),
-                    }
+                    },
+                    meta_data_handler=TimeUserMetaDataHandler(),
                 ),
                 self.yml_users,
             )

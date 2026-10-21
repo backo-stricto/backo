@@ -6,12 +6,12 @@ from backo import (
     String,
     Collection,
     Item,
-    GenericMetaDataHandler,
     log_system,
     Ref,
     RefsList,
 )
 from backo.db import DBMongoConnector
+from backo.meta import NoneMetaDataHandler
 
 log = log_system.get_or_create_logger("user")
 
@@ -33,7 +33,7 @@ item = Item(
         "first_nationality": Ref(coll="countries"),
         "other_nationalities": RefsList(coll="countries"),
     },
-    meta_data_handler=GenericMetaDataHandler(),
+    meta_data_handler=NoneMetaDataHandler(),
 )
 
 # ------------------------------------------------

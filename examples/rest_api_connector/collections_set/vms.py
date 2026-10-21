@@ -6,10 +6,9 @@ from backo import (
     String,
     Collection,
     Item,
-    GenericMetaDataHandler,
     log_system,
 )
-
+from backo.meta import NoneMetaDataHandler
 from .vms_connector import VMsConnector
 
 log = log_system.get_or_create_logger("vms")
@@ -28,7 +27,7 @@ item = Item(
         "name": String(),
         "image": String(),
     },
-    meta_data_handler=GenericMetaDataHandler(),
+    meta_data_handler=NoneMetaDataHandler(),
 )
 
 

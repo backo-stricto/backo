@@ -266,16 +266,11 @@ user.name="rambo"
 print(user.name) # -> "RAMBO"
 ```
 
-
-
 (views)=
 ### Views 
 
 
 Soon
-
-(meta)=
-## Meta data
 
 
 ### _id
@@ -286,21 +281,53 @@ You dont't have to care about *_ids* in your item description. Backo will alter 
 ### metadata handler
 
 
-A {py:class}`Metadata handler <backo.GenericMetaDataHandler>` is an alteration of the Item to add some fields.
-The purpose is to store direcly in the ITam, in the DB some informations like the creation date, modification date, who has modified the object, or whatever you want.
+A {py:class}`Metadata handler <backo.meta.GenericMetaDataHandler>` is an alteration of the Item to add some fields.
+The purpose is to store direcly in the Item, in the DB some informations like the creation date, modification date, who has modified the object, or whatever you want.
 
 
-There is two MetadataHandler out of the box :
+There is three MetadataHandler out of the box :
 
 | meta data handler | Description |
 | -- | -- |
-| {py:class}`Empty metadata handler <backo.GenericMetaDataHandler>` | A metadata... with nothing ! |
-| {ref}`Standard metadata handler <StandardMetaDataHandler>` | A metadata... with create time, ctime, attache to ```_meta``` field |
+| {py:class}`Empty metadata handler <backo.meta.NoneMetaDataHandler>` | A metadata... with nothing ! |
+| {ref}`Time metadata handler <TimeMetaDataHandler>` | A metadata... with create time, modification time, attache to ```_meta``` field |
+| {ref}`Time and User metadata handler <TimeMetaDataHandler>` | A metadata... with ctime, mtime and users, attache to ```_meta``` field |
 
-(StandardMetaDataHandler)=
-#### StandardMetaDataHandler
 
-The provided *StandardMetaDataHandler* give this following Dict() :
+(TimeMetaDataHandler)=
+#### TimeMetaDataHandler
+
+The provided *TimeMetaDataHandler* give this following Dict() :
+
+```python
+Dict(
+    {
+        "ctime": Datetime(description="Creation time"),
+        "mtime": Datetime(description="Last modification time"),
+    },
+    can_modify=False,
+    description="Meta data information",
+)
+```
+
+This `dict` is attached to `$._meta` field. Every Item with this have this structure 
+
+
+```python
+{
+    "_id" : "1234",
+    "_meta" : {
+        "ctime" : '2026-10-21T15:23:13',
+        "mtime" : '2026-10-21T15:23:31'
+    },
+    ...
+}
+```
+
+(TimeUserMetaDataHandler)=
+#### TimeUserMetaDataHandler
+
+The provided *TimeUserMetaDataHandler* give this following Dict() :
 
 ```python
 Dict(
@@ -321,9 +348,33 @@ Dict(
 )
 ```
 
+This `dict` is attached to `$._meta` field. Every Item with this have this structure 
+
+
+```python
+{
+    "_id" : "1234",
+    "_meta" : {
+        "ctime" : '2026-10-21T15:23:13',
+        "created_by" : {
+            "_id" : '000',
+            "login": 'ANONYMOUS'      
+        },
+        "mtime" : '2026-10-21T15:23:31'
+        "modified_by" : {
+            "_id" : '666',
+            "login": 'el_diablo'      
+        },
+    }
+}
+```
+
+
 ```{tip}
 You can notice that everything is _read only_. Meta datas are modified by the server
 ```
+
+
 
 ## API Reference
 

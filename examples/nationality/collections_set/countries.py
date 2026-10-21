@@ -7,10 +7,9 @@ from backo import (
     String,
     Collection,
     Item,
-    GenericMetaDataHandler,
     log_system,
 )
-
+from backo.meta import NoneMetaDataHandler
 from .db_country_connector import MyDBRestfullConnector
 
 log = log_system.get_or_create_logger("countries")
@@ -32,7 +31,7 @@ item = Item(
         "cca3": String(),
         "flags": Dict({"png": String(), "svg": String(), "alt": String()}),
     },
-    meta_data_handler=GenericMetaDataHandler(),
+    meta_data_handler=NoneMetaDataHandler(),
 )
 
 
