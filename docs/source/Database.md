@@ -15,6 +15,7 @@ Backo comes with some available DBHandlers :
 * {std:ref}`DBMongoConnector` For store the collection a mongoDB database.
 * {std:ref}`DBRestFullConnector` To address a Database via a a restfull API
 * {std:ref}`DBsqlite3Connector` For store the collection a SQLite3 database.
+* {std:ref}`DBPostgresConnector` For store the collection a Postgres database.
 * {std:ref}`DBValkeyConnector` For store the collection a ValKey (Redis) memory database.
 
 
@@ -132,6 +133,33 @@ During a select, SFilter from backo are automaticaly translated in sqlite3 filte
 
 ```{seealso}
  {py:class}`DBSqlite3Connector <backo.db.DBSqlite3Connector>` for more details.
+```
+
+
+(DBPostgresConnector)=
+### DBPostgresConnector
+
+Postgress connector is available. You have to define tables, pragma according to the backo structure of the collection. For that
+the DBConnector can help you with the command {py:meth}`backo.db.DBHandler.check_structure`
+
+```python
+from backo.db import DBPostgresConnector
+
+connector = DBPostgresConnector("postgresql://test:test@localhost:5432/test_db")
+
+# You can check 
+( struct_valid , message ) = connector.check_structure()
+# struct_valid is False  if you have to alter / create tables. message return sql operations to do a strings
+
+# Make the tables compliant with backo (dangerous)
+connector.check_structure(True)
+
+```
+During a select, SFilter from backo are automaticaly translated in sqlite3 filter. So the select is direclty done by the database
+
+
+```{seealso}
+ {py:class}`DBPostgresConnector <backo.db.DBPostgresConnector>` for more details.
 ```
 
 

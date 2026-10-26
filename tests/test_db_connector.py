@@ -34,6 +34,7 @@ from backo.db import (
     DBYmlDirConnector,
     DBMongoConnector,
     DBSqlite3Connector,
+    DBPostgresConnector,
     DBYmlConnector,
     DBValkeyConnector,
     RenameTransformer,
@@ -71,6 +72,7 @@ YML_DIR_SITE = "/tmp/backo_tests_connector_site"
 SQLITE3_DB = "/tmp/backo_tests_connector_sqlite3.db"
 YML_FILE_DB = "/tmp/backo_yml_file_users.yml"
 YML_FILE_DB_SITE = "/tmp/backo_yml_file_sites.yml"
+POSTGRESS = "postgresql://test:test@localhost:5432/test_db"
 
 ALL_CONNECTOR_USERS = [
     ("Memory", DBMemoryConnector("Memory"), False),
@@ -85,6 +87,7 @@ ALL_CONNECTOR_USERS = [
     (YML_FILE_DB, DBYmlConnector(YML_FILE_DB, db_path=["home", "sub"]), False),
     ("users", DBMongoConnector("mongodb://localhost:27017/testMongo", "users"), True),
     ("users", DBSqlite3Connector(SQLITE3_DB, "users"), True),
+    ("users", DBPostgresConnector(POSTGRESS, "users"), True),
 ]
 ALL_CONNECTOR_SITES = [
     ("Memory", DBMemoryConnector("Memory"), False),
@@ -103,10 +106,11 @@ ALL_CONNECTOR_SITES = [
     ),
     ("sites", DBMongoConnector("mongodb://localhost:27017/testMongo", "sites"), True),
     ("sites", DBSqlite3Connector(SQLITE3_DB, "sites"), True),
+    ("sites", DBPostgresConnector(POSTGRESS, "sites"), True),
 ]
 
-CONNECTOR_USERS = ALL_CONNECTOR_USERS  # [7:8]
-CONNECTOR_SITES = ALL_CONNECTOR_SITES  # [7:8]
+CONNECTOR_USERS = ALL_CONNECTOR_USERS#[7:9]
+CONNECTOR_SITES = ALL_CONNECTOR_SITES#[7:9]
 
 NOW = datetime.now().replace(microsecond=0)
 
@@ -121,8 +125,8 @@ class TestDBConnector(unittest.TestCase):
         init this tests
         """
         # log = log_system.get_or_create_logger("DBSqlite3Connector")
+        # log_system.add_handler(log_system.set_streamhandler())
         # log.setLevel(LogLevel.DEBUG)
-        # log_system.infos()
 
         super().__init__(*args, **kwargs)
 
@@ -138,6 +142,7 @@ class TestDBConnector(unittest.TestCase):
 
         # check the structure
         rep, _mess = con.check_structure()
+
         self.assertEqual(rep, True)
 
         # Drop
@@ -148,7 +153,7 @@ class TestDBConnector(unittest.TestCase):
         test CRUD for every DBHandler
 
         """
-        _id = con.create({"name": "toto", "age": 22})
+        _id = con.create({"name": "toto", "age": 22, "nicknames": ["to", "ti"]})
         self.assertIsNotNone(_id)
 
         e = con.get_by_id(_id)
@@ -342,8 +347,8 @@ class TestDBConnector(unittest.TestCase):
         )
         backoffice.register_collection(coll_sites)
 
-        self.sub_test_init_connector(con_users, FULL_USER.get_schema())
         self.sub_test_init_connector(con_sites, FULL_SITE.get_schema())
+        self.sub_test_init_connector(con_users, FULL_USER.get_schema())
 
         current_user.standalone = True
 
@@ -461,7 +466,7 @@ class TestDBConnector(unittest.TestCase):
 
     def test_connector_backo(self):
         """
-        Do a CRUD on a sample COnnector
+        Do a CRUD on a sample Connector
         """
 
         for _con_user_name, con_user, _user_handle_sfilter in ALL_CONNECTOR_USERS:

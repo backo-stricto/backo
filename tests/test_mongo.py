@@ -39,6 +39,25 @@ class TestMongo(unittest.TestCase):
         current_user.reinit()
         return super().tearDown()
 
+    def test_passing_options(self):
+        """
+        test for passing options to MongoClient
+        """
+        with self.assertRaises(DBError) as e:
+            con = DBMongoConnector(
+                "mongodb://localhost:27017/testMongo", "Sites", unknownmongoparam=True
+            )
+            con.close()
+        self.assertEqual(
+            e.exception.to_string(),
+            'Mongo connection error at "mongodb://localhost:27017/testMongo"',
+        )
+
+        con = DBMongoConnector(
+            "mongodb://localhost:27017/testMongo", "Sites", connect=True
+        )
+        con.close()
+
     def test_errors_on_create_delete(self):
         """
         create

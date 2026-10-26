@@ -1,6 +1,7 @@
 *workspace
 __pycache__/
 *.pyc
+.vscode/
 docs/build/
 docs/_build/
 dist/

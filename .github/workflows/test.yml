@@ -21,10 +21,21 @@ jobs:
           MONGO_INITDB_DATABASE: testMongo
         ports:
           - 27017:27017
+
       valkey:
         image: valkey/valkey:latest
         ports:
           - "6379:6379"
+
+      postgres:
+        image: postgres:latest
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: test_db
+        ports:
+          - 5432:5432
+
     steps:
     - uses: actions/checkout@v3
     - name: Set up Python ${{ matrix.python-version }}
@@ -63,10 +74,21 @@ jobs:
           MONGO_INITDB_DATABASE: testMongo
         ports:
           - 27017:27017
+
       valkey:
         image: valkey/valkey:latest
         ports:
           - "6379:6379"
+
+      postgres:
+        image: postgres:latest
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: test_db
+        ports:
+          - 5432:5432
+  
     steps:
     - uses: actions/checkout@v3
     - name: Set up Python ${{ matrix.python-version }}

@@ -30,6 +30,9 @@ dependencies = [
 mongo = [
     "pymongo>=4.17.0",
 ]
+postgres = [
+    "psycopg>=3.3.6",
+]
 
 
 [dependency-groups]

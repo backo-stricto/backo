@@ -6,7 +6,7 @@ Attribut Filter
 from typing import Any, Callable
 from enum import Enum, auto
 
-from stricto import SFilter
+from stricto import SFilter, Operator
 from ...error import DBError
 from ...sort import Sort
 
@@ -81,6 +81,42 @@ class Filter:
             raise DBError("Filter in tuples not implemented (path={0})", path)
 
         raise DBError("Wrong path {0} (doesnt exists in model)", path)
+
+    def _check_operator_compatibility(  # pylint: disable=too-many-return-statements
+        self, backo_types: list[str], operator: Operator
+    ) -> bool:
+        """
+        Check if can do this operator on this type of type
+
+        :param backo_types: backo typrd
+        :type backo_types: list[str]
+        :param operator: the operator
+        :type operator: Operator
+        :return: True if possible
+        :rtype: bool
+        """
+        if operator in [Operator.GT, Operator.GTE, Operator.LT, Operator.LTE]:
+            if "Int" in backo_types:
+                return True
+            if "Float" in backo_types:
+                return True
+            if "Datetime" in backo_types:
+                return True
+            return False
+
+        if operator == Operator.REG:
+            if "String" in backo_types:
+                return True
+            return False
+
+        if operator in [Operator.CONTAINS, Operator.SIZE]:
+            if "List" in backo_types:
+                return True
+            return False
+
+        if "Dict" in backo_types:
+            return False
+        return True
 
     def build_db_filter(self, backo_filter: SFilter) -> tuple[Any, FilterReport]:
         """
