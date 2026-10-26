@@ -12,6 +12,9 @@ pip install backo
 # With mongo
 pip install backo[mongo]
 
+# With postgres
+pip install backo[postgres]
+
 ```
 
 ## backo_init

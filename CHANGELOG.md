@@ -5,7 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
-## [0.3.8] 2026-09-29
+## [0.4.0] 2026-10-26
+  
+    * Feature :
+      * Adding DBPostgresConnector
+      * Adding default TimeMetaDataHandler (may be a BREAKING CHANGE. In this case, use explicitely TimeUserMetaDataHandler )
+
+## [0.3.9] 2026-10-20
   
     * doc :
       * Full new documentation and new README.md
