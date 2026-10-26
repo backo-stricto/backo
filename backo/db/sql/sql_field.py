@@ -173,7 +173,7 @@ class SqlFieldDescription(ABC):
             if shema["required"] is True:
                 self._not_null = True
 
-    def fill_from_db_pragma( # pylint: disable=too-many-arguments, too-many-positional-arguments
+    def fill_from_db_pragma(  # pylint: disable=too-many-arguments, too-many-positional-arguments
         self,
         cid: int,
         db_path: str,

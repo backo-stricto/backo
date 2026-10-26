@@ -7,7 +7,6 @@ from ..sql.sql_field import SqlFieldDescription
 
 from ...error import DBError
 
-
 SQL_TYPE_MAPPER = {
     "String": "VARCHAR",
     "Int": "BIGINT",
@@ -121,4 +120,3 @@ class PostgresFieldDescription(SqlFieldDescription):
 
     def get_post_pragma(self, _table_name: str = None) -> str:
         return ""
-

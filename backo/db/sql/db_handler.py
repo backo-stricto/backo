@@ -4,13 +4,11 @@ DBHandler for SQL Connectors
 """
 
 from typing import Any
-import copy
-from abc import  abstractmethod
+from abc import abstractmethod
 
 from stricto import SFilter
 
 from ..generic.db_handler import DBHandler
-from ..generic.filter import FilterReport
 from ...error import NotFoundError, DBError
 
 from ..generic.transformer import Transformer
@@ -27,6 +25,7 @@ class DBSQLConnector(DBHandler):
     Generic SQL DB Connector
 
     """
+
     _db = None
     """ The DB connector """
 
@@ -43,7 +42,6 @@ class DBSQLConnector(DBHandler):
         self.type_transformers: dict[str, Transformer] = {}
 
         super().__init__(db_name, **kwargs)
-
 
     def generate_id(self, o: dict) -> str:  # pylint: disable=unused-argument
         """
@@ -67,16 +65,14 @@ class DBSQLConnector(DBHandler):
         :type model: dict
         """
 
-
     @abstractmethod
-    def _execute_update_structure( self, s: str) -> None:
+    def _execute_update_structure(self, s: str) -> None:
         """
         Execute the database modification
 
         :param s: All command for modification
         :type s: str
         """
-
 
     def check_structure(self, update_directly=False) -> tuple[bool, str]:
         """
@@ -113,16 +109,12 @@ class DBSQLConnector(DBHandler):
 
         return (not some_changements, message)
 
-
-    def _fetchall( self, select_str:str, values: tuple[ Any ] )-> list:
+    def _fetchall(self, select_str: str, values: tuple[Any]) -> list:
         log.debug(f"{select_str} with {values}")
-        return self._cursor.execute(select_str, values
-        ).fetchall()
+        return self._cursor.execute(select_str, values).fetchall()
 
     @abstractmethod
-    def _search_in_table(
-        self, table_name: str, id_name: str, _id: Any
-    ) -> list[dict]:
+    def _search_in_table(self, table_name: str, id_name: str, _id: Any) -> list[dict]:
         """
         search in table and fill a list of dict
 
@@ -135,8 +127,6 @@ class DBSQLConnector(DBHandler):
         :return: list of objects found
         :rtype: list[dict]
         """
-        pass
-
 
     def load(
         self, table_name: str, key_path: list[str], model: dict, loaded_object: dict
@@ -208,7 +198,6 @@ class DBSQLConnector(DBHandler):
     def get_by_id(self, _id: str) -> dict:
         """do a get"""
         return self.search(_id)
-
 
     @abstractmethod
     def _delete_in_table(
@@ -408,7 +397,6 @@ class DBSQLConnector(DBHandler):
 
         return str(_id_per_table[self._table_name])
 
-
     @abstractmethod
     def _insert_in_table(self, table_name: str, _id: int, keys_values: dict) -> None:
         """
@@ -536,8 +524,9 @@ class DBSQLConnector(DBHandler):
     ):
         pass
 
-
-    def _fill_response_with_item(self, response:SelectResponse , list_of_items:list,  cursor_desc)-> None:
+    def _fill_response_with_item(
+        self, response: SelectResponse, list_of_items: list, cursor_desc
+    ) -> None:
         """
         Fill the SelectResponse with the lod of items
 
@@ -550,7 +539,7 @@ class DBSQLConnector(DBHandler):
         """
         # None or empty
         if not list_of_items:
-            return response
+            return
 
         for item in list_of_items:
 

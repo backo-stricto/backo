@@ -291,7 +291,7 @@ There is three MetadataHandler out of the box :
 | -- | -- |
 | {py:class}`Empty metadata handler <backo.meta.NoneMetaDataHandler>` | A metadata... with nothing ! |
 | {ref}`Time metadata handler <TimeMetaDataHandler>` | A metadata... with create time, modification time, attache to ```_meta``` field |
-| {ref}`Time and User metadata handler <TimeMetaDataHandler>` | A metadata... with ctime, mtime and users, attache to ```_meta``` field |
+| {ref}`Time and User metadata handler <TimeUserMetaDataHandler>` | A metadata... with ctime, mtime and users, attache to ```_meta``` field |
 
 
 (TimeMetaDataHandler)=

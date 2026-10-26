@@ -7,7 +7,6 @@ from ..sql.sql_field import SqlFieldDescription
 
 from ...error import DBError
 
-
 SQL_TYPE_MAPPER = {
     "String": "TEXT",
     "Int": "INTEGER",
