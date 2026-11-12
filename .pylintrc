@@ -10,6 +10,9 @@ max-attributes=20
 max-branches=16
 max-args = 7
 max-positional-arguments = 7
+max-public-methods=30
+max-return=16
+max-branche=16
 
 [FORMAT]
 max-line-length=240

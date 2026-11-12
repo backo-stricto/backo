@@ -258,15 +258,15 @@ class Ref(String):  # pylint: disable=too-many-instance-attributes
             f"{root._collection.name}//{self.path_name()} for id={root._id} check consistancy"
         )
 
-    def get_selectors(self, index_or_slice, sel: Selector):
+    def get_by_selector(self, sel: Selector):
         """
-        rewrite get_selector to populate the sub-object and continue
+        rewrite get_by_selector to populate the sub-object and continue
 
         :meta private:
 
         """
-        # Cannot have index or slice on a Ref
-        if index_or_slice:
+        # A sub object behing a generic ? -> No
+        if sel is None:
             return None
 
         if sel.empty():
@@ -285,13 +285,8 @@ class Ref(String):  # pylint: disable=too-many-instance-attributes
                 f"{self.path_name()} : load {self.get_value()} in collection {self._collection} return an error ({e})"
             )
 
-        # The index_or_slice is actually ignored.
-        # (key, sub_index_or_slice) = sel.pop()
-
-        # continue the selection
-
-        # print(f'continue the select {sel} into {other.select("$.name")} ')
-        return other.get_selectors(None, sel)
+        print(f"Ref continue select {sel}")
+        return other.get_by_selector(sel)
 
     def get_view(self, view_name, final=True):  # pylint: disable=protected-access
         """

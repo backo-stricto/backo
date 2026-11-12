@@ -1208,7 +1208,7 @@ class Collection:
         obj = self.new_item()
         obj.set_value(c.item.get_value())
         obj.enable_permissions()
-        sub_object = obj.select(c.path)
+        sub_object = obj.select(c.path.get_value())
         if sub_object is None:
             raise PathNotFoundError(
                 'Path "{0}" not found in collection "{1}"', c.path, self.name
@@ -1282,7 +1282,7 @@ class Collection:
             for p in patch_list:
                 patch = Patch()
                 patch.set(p)
-                obj.patch(patch.op, patch.path, patch.value)
+                obj.patch(patch.op, patch.path.get_value(), patch.value.get_value())
 
             obj.save(transaction_id=t_id)
         except Exception as e:

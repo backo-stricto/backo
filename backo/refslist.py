@@ -188,50 +188,71 @@ class RefsList(List):
             f"{root._collection.name}//{self.path_name()} for id={root._id} check consistancy"
         )
 
-    def get_selectors(self, index_or_slice, sel: Selector):
+    def get_by_selector(self, sel: Selector):
         """
-        rewrite get_selector to populate the sub-object and continue
+        rewrite get_by_selector to populate the sub-object and continue
 
         :meta private:
 
         """
-
-        # No need to continue, return self or slice of lists
-        if sel.empty():
-            if index_or_slice is None:
-                return self
-            return List.get_selectors(self, index_or_slice, sel)
-
-        # Get all ids depending on index_or_slice
-        list_ids_or_id = List.get_selectors(self, index_or_slice, Selector(None))
-
-        if list_ids_or_id is None:
+        # A sub object behing a generic ? -> No
+        if sel is None:
             return None
+
+        if sel.empty():
+            return self
+
+        sel_item = sel.pop()
+        if sel_item.is_root():
+            return self.get_root().get_by_selector(sel)
+        if sel_item.is_me():
+            return self.get_by_selector(sel)
 
         # set the _coll_ref (in case of)
         self.set_collection_reference()
 
-        # Continue further with a list of ids
-        if isinstance(list_ids_or_id, (RefsList, list, List)):
+        print(f"Refslist sub items {sel_item} sub {sel} ")
+
+        if sel_item.index is not None:
+            try:
+                other_id = self._value[sel_item.index]
+            except IndexError:
+                return None
+            if other_id is None:
+                return None
+
+            other = self._coll_ref.new()
+            try:
+                other.load(other_id)
+            except Exception:  # pylint: disable=broad-exception-caught
+                return None
+            return other.get_by_selector(sel)
+
+        if sel_item.slice is not None:
+            other_ids = []
+            try:
+                other_ids = self._value[sel_item.slice]
+            except IndexError:
+                return None
+
+            print(f"Refslist sub items got slice {sel_item} = {other_ids} ")
+
             a = []
-            for other_id in list_ids_or_id:
+            for other_id in other_ids:
                 other = self._coll_ref.new()
                 try:
                     other.load(other_id)
                 except Exception:  # pylint: disable=broad-exception-caught
                     continue
-                result = other.get_selectors(None, sel.copy())
+                print(f"Refslist sub items load {other_id} = {other} -> {sel}")
+                result = other.get_by_selector(sel.copy())
+                print(f"Refslist sub items got  sub for {other_id} = {result} ")
+
                 if result is not None:
                     a.append(result)
             return a
 
-        # Continue further with a uniq id
-        other = self._coll_ref.new()
-        try:
-            other.load(list_ids_or_id)
-        except Exception:  # pylint: disable=broad-exception-caught
-            return None
-        return other.get_selectors(None, sel)
+        return None
 
     def get_reverse(self) -> ref.Ref | Self:
         """
