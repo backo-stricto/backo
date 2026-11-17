@@ -5,6 +5,7 @@ test for Flask and routes
 # pylint: disable=wrong-import-position, no-member, import-error, protected-access, wrong-import-order, duplicate-code, too-many-public-methods
 
 import unittest
+import os
 import json
 import uuid
 from flask import Flask
@@ -16,8 +17,9 @@ from backo.db import DBYmlDirConnector
 from backo import Backoffice, current_user, Action, Selection
 
 from backo import String, Bool, SFilter, Operator
+from .temp_root_dir import TEMP_ROOT_DIR
 
-YML_DIR = "/tmp/backo_tests_routes"
+YML_DIR = os.path.join(TEMP_ROOT_DIR, "tests_routes_yml")
 
 
 class TestRoutes(unittest.TestCase):

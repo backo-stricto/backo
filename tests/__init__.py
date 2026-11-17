@@ -6,6 +6,7 @@ import sys
 
 sys.path.insert(1, "../stricto")
 
+
 from .test_crud import TestCRUD
 
 # from .test_log import TestLog

@@ -20,19 +20,24 @@ from backo import (
     current_user,
 )
 from backo import String, Bool
+from .temp_root_dir import TEMP_ROOT_DIR
 
-YML_DIR = "/tmp/backo_tests_references"
+YML_DIR = os.path.join(TEMP_ROOT_DIR, "tests_references_yml")
+YML_DIR_USER = os.path.join(YML_DIR, "Users")
+YML_DIR_SITE = os.path.join(YML_DIR, "Sites")
+YML_DIR_HUMAN = os.path.join(YML_DIR, "Humans")
+YML_DIR_ANIMAL = os.path.join(YML_DIR, "Animals")
 
-yml_users = DBYmlDirConnector(os.path.join(YML_DIR, "Users"))
+yml_users = DBYmlDirConnector(YML_DIR_USER)
 yml_users.generate_id = lambda o: f"User_{o["name"]}_{o["surname"]}"
 # --- DB for sites
-yml_sites = DBYmlDirConnector(os.path.join(YML_DIR, "Sites"))
+yml_sites = DBYmlDirConnector(YML_DIR_SITE)
 yml_sites.generate_id = lambda o: f"Site_{o["name"]}"
 # --- DB for humans
-yml_humans = DBYmlDirConnector(os.path.join(YML_DIR, "Humans"))
+yml_humans = DBYmlDirConnector(YML_DIR_HUMAN)
 yml_humans.generate_id = lambda o: f"Human_{o["name"]}"
 # --- DB for animals
-yml_animals = DBYmlDirConnector(os.path.join(YML_DIR, "Animals"))
+yml_animals = DBYmlDirConnector(YML_DIR_ANIMAL)
 yml_animals.generate_id = lambda o: f"Animal_{o["desc"]}"
 
 
@@ -476,7 +481,7 @@ class TestReferences(unittest.TestCase):
             u.reload()
         self.assertEqual(
             e.exception.to_string(),
-            '_id "User_bebert_bebert" not found in "/tmp/backo_tests_references/Users"',
+            f'_id "User_bebert_bebert" not found in "{YML_DIR_USER}"',
         )
 
     def test_references_o2m_FFU(self):
@@ -536,7 +541,7 @@ class TestReferences(unittest.TestCase):
             u.reload()
         self.assertEqual(
             e.exception.to_string(),
-            '_id "User_bebert_bebert" not found in "/tmp/backo_tests_references/Users"',
+            f'_id "User_bebert_bebert" not found in "{YML_DIR_USER}"',
         )
 
     def test_references_o2m_FNU(self):
@@ -699,7 +704,7 @@ class TestReferences(unittest.TestCase):
             h1.reload()
         self.assertEqual(
             e.exception.to_string(),
-            '_id "Human_parker" not found in "/tmp/backo_tests_references/Humans"',
+            f'_id "Human_parker" not found in "{YML_DIR_HUMAN}"',
         )
 
     def test_references_m2m_FMND(self):
@@ -719,7 +724,7 @@ class TestReferences(unittest.TestCase):
             h1.reload()
         self.assertEqual(
             e.exception.to_string(),
-            '_id "Human_parker" not found in "/tmp/backo_tests_references/Humans"',
+            f'_id "Human_parker" not found in "{YML_DIR_HUMAN}"',
         )
 
     def sub_test_crud_o2o(self, backoffice: Backoffice):

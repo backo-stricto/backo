@@ -4,7 +4,7 @@ test for Flask and routes
 
 # pylint: disable=wrong-import-position, no-member, import-error, protected-access, wrong-import-order, duplicate-code, too-many-public-methods
 import multiprocessing
-import time
+import os
 from flask import Flask
 
 # get the resources folder in the tests folder
@@ -15,9 +15,11 @@ from backo import Backoffice, current_user
 
 from backo import String, Bool
 
+from .temp_root_dir import TEMP_ROOT_DIR
 from .test_routes import TestRoutes
 
-YML_DIR = "/tmp/backo_tests_routes_23"
+YML_DIR = os.path.join(TEMP_ROOT_DIR, "tests_routes_api_yml")
+
 yml_users2 = DBYmlDirConnector(YML_DIR)
 yml_users2.generate_id = lambda o: f"User_{o["name"]}_{o["surname"]}"
 
@@ -65,7 +67,6 @@ def start_backo2():
     """
     if not process_backo_2.is_alive():
         process_backo_2.start()
-        time.sleep(1)
 
 
 def stop_backo2():

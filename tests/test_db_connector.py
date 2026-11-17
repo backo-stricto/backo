@@ -5,6 +5,7 @@ test for DBConnectors
 # pylint: disable=too-many-statements, no-member, import-error, protected-access, wrong-import-order, duplicate-code
 
 import unittest
+import os
 from datetime import datetime, timedelta
 from backo import (
     NotFoundError,
@@ -41,6 +42,8 @@ from backo.db import (
     IgnoreTransformer,
 )
 
+from .temp_root_dir import TEMP_ROOT_DIR
+
 FULL_USER = Item(
     {
         "name": String(),
@@ -67,12 +70,13 @@ FULL_SITE = Item(
     }
 )
 
-YML_DIR = "/tmp/backo_tests_connector"
-YML_DIR_SITE = "/tmp/backo_tests_connector_site"
-SQLITE3_DB = "/tmp/backo_tests_connector_sqlite3.db"
-YML_FILE_DB = "/tmp/backo_yml_file_users.yml"
-YML_FILE_DB_SITE = "/tmp/backo_yml_file_sites.yml"
+YML_DIR = os.path.join(TEMP_ROOT_DIR, "tests_connector")
+YML_DIR_SITE = os.path.join(TEMP_ROOT_DIR, "tests_connector_site")
+SQLITE3_DB = os.path.join(TEMP_ROOT_DIR, "test_connector_sqlite3.db")
+YML_FILE_DB = os.path.join(TEMP_ROOT_DIR, "yml_file_users.yml")
+YML_FILE_DB_SITE = os.path.join(TEMP_ROOT_DIR, "yml_file_sites.yml")
 POSTGRESS = "postgresql://test:test@localhost:5432/test_db"
+
 
 ALL_CONNECTOR_USERS = [
     ("Memory", DBMemoryConnector("Memory"), False),

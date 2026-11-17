@@ -427,10 +427,14 @@ class DBExtenderConnector(DBHandler):
             must_reload = True
 
         if _origin_id and must_reload:
-            item1 = (
-                remote_o if remote_o else self._origin_db_handler.get_by_id(_origin_id)
-            )
-            item = item1 | o
+            item1 = remote_o
+            if not item1:
+                try:
+                    item1 = self._origin_db_handler.get_by_id(_origin_id)
+                    item = item1 | o
+
+                except Exception as e:  # pylint: disable=broad-exception-caught
+                    log.error(e)
 
             if item1 and self._replicate_origin and self._has_expired(expire):
                 item["_expire"] = self._get_expire_time()

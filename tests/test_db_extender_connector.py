@@ -5,6 +5,7 @@ test for DBConnectors
 # pylint: disable=too-many-statements, no-member, import-error, protected-access, wrong-import-order, duplicate-code
 
 import unittest
+import os
 
 # from datetime import datetime, timedelta
 from backo import (
@@ -31,6 +32,7 @@ from backo.db import (
     DBSqlite3Connector,
     DBPostgresConnector,
 )
+from .temp_root_dir import TEMP_ROOT_DIR
 
 FULL_USER = Item(
     {
@@ -46,11 +48,11 @@ FULL_USER = Item(
 )
 
 
-YML_DIR_REMOTE = "/tmp/backo_tests_mix_remote"
-YML_DIR_LOCAL = "/tmp/backo_tests_mix_local"
-SQLITE3_DB = "/tmp/backo_tests_connector_sqlite3.db"
-YML_FILE_REMOTE_DB = "/tmp/backo_yml_file_remote.yml"
-YML_FILE_LOCAL_DB = "/tmp/backo_yml_file_local.yml"
+YML_DIR_REMOTE = os.path.join(TEMP_ROOT_DIR, "tests_extend_ymldir_remote")
+YML_DIR_LOCAL = os.path.join(TEMP_ROOT_DIR, "tests_extend_ymldir_local")
+SQLITE3_DB = os.path.join(TEMP_ROOT_DIR, "tests_extend_sqlite3.db")
+YML_FILE_REMOTE_DB = os.path.join(TEMP_ROOT_DIR, "tests_extend_file_remote.yml")
+YML_FILE_LOCAL_DB = os.path.join(TEMP_ROOT_DIR, "tests_extend_file_local.yml")
 POSTGRESS = "postgresql://test:test@localhost:5432/test_db"
 
 ALL_REMOTE_CONNECTOR = [
@@ -81,8 +83,8 @@ ALL_LOCAL_CONNECTOR = [
     ("postgress", DBPostgresConnector(POSTGRESS, "local")),
 ]
 
-CONNECTOR_REMOTE = ALL_REMOTE_CONNECTOR[0:7]
-CONNECTOR_LOCAL = ALL_LOCAL_CONNECTOR[0:8]
+CONNECTOR_REMOTE = ALL_REMOTE_CONNECTOR  # [0:1]
+CONNECTOR_LOCAL = ALL_LOCAL_CONNECTOR  # [0:1]
 
 
 class TestDBExtenderConnector(unittest.TestCase):
@@ -122,6 +124,15 @@ class TestDBExtenderConnector(unittest.TestCase):
         # Drop
         con.drop()
 
+    def sub_close_connector(self, con: DBExtenderConnector):
+        """
+        close for every DBHandler
+
+        """
+        # Drop
+        con.drop()
+        con.close()
+
     def sub_test_create(self, con: DBExtenderConnector) -> str:
         """
         test creation
@@ -134,6 +145,27 @@ class TestDBExtenderConnector(unittest.TestCase):
         o = con.get_by_id(_id)
         self.assertEqual(o.get("name"), "toto")
         return _id, o
+
+    def sub_test_remote_dead(self, con: DBExtenderConnector) -> str:
+        """
+        test remote is Dead
+
+        """
+        _id = con.create(
+            {"name": "toto", "age": 22, "surname": "titi", "nicknames": ["to", "ti"]}
+        )
+        self.assertIsNotNone(_id)
+        o = con.get_by_id(_id)
+        self.assertEqual(o.get("name"), "toto")
+
+        local_obj = con._replicate_db_handler.get_by_id(_id)
+        # Delete the remote
+        self.assertIsNotNone(local_obj)
+        o_id = local_obj.get("_origin_id")
+        self.assertIsNotNone(o_id)
+        con._origin_db_handler.delete_by_id(o_id)
+
+        o = con.get_by_id(_id)
 
     def sub_test_update(self, con: DBExtenderConnector, _id: str) -> None:
         """
@@ -240,7 +272,9 @@ class TestDBExtenderConnector(unittest.TestCase):
         for remote in CONNECTOR_REMOTE:
             for local in CONNECTOR_LOCAL:
 
-                print(f"test with {remote[0]} -> {local[0]}")
+                print(
+                    f"extend (locals, no expire, sync false) test with {remote[0]} -> {local[0]}"
+                )
 
                 con = DBExtenderConnector(
                     "mix",
@@ -276,6 +310,7 @@ class TestDBExtenderConnector(unittest.TestCase):
                     )
                     self.sub_test_delete(con, _id)
                     self.sub_test_select(con)
+                    self.sub_close_connector(con)
 
     def test_create_local_nocopy_noexpire_update(self):
         """
@@ -285,7 +320,9 @@ class TestDBExtenderConnector(unittest.TestCase):
         for remote in CONNECTOR_REMOTE:
             for local in CONNECTOR_LOCAL:
 
-                print(f"test with {remote[0]} -> {local[0]}")
+                print(
+                    f"extend (locals, no replicate, no expire, sync true) test with {remote[0]} -> {local[0]}"
+                )
 
                 con = DBExtenderConnector(
                     "mix",
@@ -330,8 +367,10 @@ class TestDBExtenderConnector(unittest.TestCase):
                     )
 
                     self.sub_test_delete(con, _id)
+                    self.sub_test_remote_dead(con)
 
                     self.sub_test_select(con)
+                    self.sub_close_connector(con)
 
     def test_nolocal_copy_noexpire_update(self):
         """
@@ -340,7 +379,9 @@ class TestDBExtenderConnector(unittest.TestCase):
         for remote in CONNECTOR_REMOTE:
             for local in CONNECTOR_LOCAL:
 
-                print(f"test with {remote[0]} -> {local[0]}")
+                print(
+                    f"extend (no locals, replicate, no expire, sync true) test with {remote[0]} -> {local[0]}"
+                )
 
                 con = DBExtenderConnector(
                     "mix", remote[1], local[1], replicate_origin=True, sync_origin=True
@@ -395,6 +436,7 @@ class TestDBExtenderConnector(unittest.TestCase):
                     )
 
                     self.sub_test_select(con)
+                    self.sub_close_connector(con)
 
     def test_nolocal_copy_noexpire_noupdate(self):
         """
@@ -403,7 +445,9 @@ class TestDBExtenderConnector(unittest.TestCase):
         for remote in CONNECTOR_REMOTE:
             for local in CONNECTOR_LOCAL:
 
-                print(f"test with {remote[0]} -> {local[0]}")
+                print(
+                    f"extend (no locals, replicate, no expire, sync false) test with {remote[0]} -> {local[0]}"
+                )
 
                 con = DBExtenderConnector(
                     "mix", remote[1], local[1], replicate_origin=True, sync_origin=False
@@ -440,3 +484,4 @@ class TestDBExtenderConnector(unittest.TestCase):
                     self.assertIsNone(origin_id)
 
                     self.sub_test_select(con)
+                    self.sub_close_connector(con)
