@@ -109,7 +109,7 @@ ALL_CONNECTOR_SITES = [
     ("sites", DBPostgresConnector(POSTGRESS, "sites"), True),
 ]
 
-CONNECTOR_USERS = ALL_CONNECTOR_USERS  # [0:1]
+CONNECTOR_USERS = ALL_CONNECTOR_USERS  # [8:9]
 CONNECTOR_SITES = ALL_CONNECTOR_SITES  # [0:1]
 
 NOW = datetime.now().replace(microsecond=0)
@@ -130,12 +130,12 @@ class TestDBConnector(unittest.TestCase):
 
         super().__init__(*args, **kwargs)
 
-    def sub_test_init_connector(self, con: DBHandler, schema: dict):
+    def sub_test_init_connector(self, con: DBHandler, item_model: Item):
         """
         test Initialisation for every DBHandler
 
         """
-        con.set_model(schema)
+        con.set_model(item_model)
 
         # Built the structure
         con.check_structure(True)
@@ -220,7 +220,6 @@ class TestDBConnector(unittest.TestCase):
         :type handle_sfilter: bool
         """
         max_item = 50
-
         rep, _mess = con.check_structure()
         self.assertEqual(rep, True)
 
@@ -347,8 +346,8 @@ class TestDBConnector(unittest.TestCase):
         )
         backoffice.register_collection(coll_sites)
 
-        self.sub_test_init_connector(con_sites, FULL_SITE.get_schema())
-        self.sub_test_init_connector(con_users, FULL_USER.get_schema())
+        self.sub_test_init_connector(con_sites, FULL_SITE)
+        self.sub_test_init_connector(con_users, FULL_USER)
 
         current_user.standalone = True
 
@@ -439,7 +438,7 @@ class TestDBConnector(unittest.TestCase):
             print(f"Test test_connector_sample {type(con)}")
             con.connect()
             with self.subTest(con=con):
-                self.sub_test_init_connector(con, FULL_USER.get_schema())
+                self.sub_test_init_connector(con, FULL_USER)
                 self.sub_test_crud_connector(con, con_name)
                 self.sub_test_select_connector(con, con_name, handle_sfilter)
 
@@ -458,7 +457,7 @@ class TestDBConnector(unittest.TestCase):
             con.connect()
 
             with self.subTest(con=con):
-                self.sub_test_init_connector(con, FULL_USER.get_schema())
+                self.sub_test_init_connector(con, FULL_USER)
                 self.sub_test_crud_connector(con, con_name)
                 self.sub_test_select_connector(con, con_name, handle_sfilter)
 

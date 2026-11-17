@@ -203,7 +203,7 @@ class SQlFilter(Filter):
             return ((s, values), f_report)
 
         where_conditions, filter_report = self._sfilter_to_db_filter(
-            backo_filter, values
+            backo_filter.reduce(), values
         )
         return ((where_conditions, tuple(values)), filter_report)
 

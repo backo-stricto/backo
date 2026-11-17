@@ -48,7 +48,7 @@ class TimeMetaDataHandler(GenericMetaDataHandler):
         """
         Add to the schema
         """
-        o.add_to_model(
+        o.add_model(
             "_meta",
             Dict(
                 {

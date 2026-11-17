@@ -21,5 +21,5 @@ from .test_migrations import TestMigrations
 from .test_file import TestFile
 from .test_rest_api_connector import TestRestApiConnector
 from .test_db_connector import TestDBConnector
-from .test_db_connector_cache import TestDBConnectorCache
 from .test_openapi import TestOpenAPI
+from .test_db_extender_connector import TestDBExtenderConnector

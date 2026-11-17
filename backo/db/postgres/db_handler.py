@@ -322,6 +322,7 @@ class DBPostgresConnector(DBSQLConnector):
         if not list_of_items:
             raise NotFoundError('_id "{0}" not found in "{1}"', _id, self._name)
 
+        log.debug(f"got list_of_items[0] = {list_of_items}")
         o = self.load(self._table_name, [], self.model, list_of_items[0])
         return o
 
@@ -376,12 +377,18 @@ class DBPostgresConnector(DBSQLConnector):
         :rtype: int
         """
         log.debug(f"Create in table {table_name} {keys_values}")
-        r = tuple(map(tuple, zip(*keys_values)))
+        keys = []
+        values = []
+        for k in keys_values:
+            keys.append(k[0])
+            values.append(k[1])
+        vv = f"({repr(values[0])})" if len(values) == 1 else tuple(values)
+
         log.debug(
-            f"INSERT INTO {table_name} ({', '.join(r[0])}) VALUES {r[1]} RETURNING id"
+            f"INSERT INTO {table_name} ({', '.join(keys)}) VALUES {vv} RETURNING id"
         )
         self._cursor.execute(
-            f"INSERT INTO {table_name} ({', '.join(r[0])}) VALUES {r[1]} RETURNING id"
+            f"INSERT INTO {table_name} ({', '.join(keys)}) VALUES {vv} RETURNING id"
         )
         created_id = self._cursor.fetchone()[0]
         return str(created_id)

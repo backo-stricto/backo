@@ -18,6 +18,10 @@ Backo comes with some available DBHandlers :
 * {std:ref}`DBPostgresConnector` For store the collection a Postgres database.
 * {std:ref}`DBValkeyConnector` For store the collection a ValKey (Redis) memory database.
 
+And Combinatoion DBHandler :
+
+* {std:ref}`DBExtenderConnector` For extend the collection another DBHandler into a new one .
+
 
 ## Available Connectors
 
@@ -210,6 +214,63 @@ conector = DBValkeyConnector("Redis", "redis://localhost:6379/0")
 ```{warning}
 This DBHandler doesn't handle SFilter during selections. Accordingly, the filtering is done by backo itself.
 ```
+
+
+(DBExtenderConnector)=
+### DBExtenderConnector
+
+This connector is here when you connect a Collection to a remote DB ( A DB managed by another application ). And you want to extend the Item
+with some fields you cannot store into the DB.
+
+example:
+
+```python
+from backo.db import DBExtenderConnector, DBRestFullConnector, DBMongoConnector
+from backo import Item, ...
+
+
+country_item = Item({
+    {
+        "name": String(),
+        "cca2": String(),
+        "cca3": String(),
+        "flags": Dict({"png": String(), "svg": String(), "alt": String()}),
+        # fields you want to add
+        "specialities" : List( String() ),
+        "drive" : String( enum=[ "left", "right" ] )
+    },
+
+})
+
+mongo_db_connector = DBMongoConnector("mongodb://localhost:27017/testMongo", "MyColl")
+# Define che connector, with the origin, the replicat, and the list of local fields
+connector = DBExtenderConnector ( DBRestFullConnector(...), mongo_db_connector, [ "$.specialities", "$.drive" ] )
+
+countries = Collection(
+    "country",
+    country_item,
+    connector,
+)
+
+# Set some values
+fr = coutries.select_one( SFilter( "$.cca2", Operator.EQ, "FR" ))
+fr.specialities = [ "cheese", "strike" ] 
+fr.drive = "right" 
+fr.save()
+
+# make some combinated search across databases
+c:list[ Item ] = coutries.select( SFilter( None, Operator.AND, 
+            [
+             SFilter( "$.cca2", Operator.REG, r"^F" ),
+             SFilter( "$.drive", Operator.EQ, "right" ),
+            ]))
+
+print( len(c) )
+
+```
+
+
+
 
 
 (Transformer)=

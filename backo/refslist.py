@@ -211,8 +211,6 @@ class RefsList(List):
         # set the _coll_ref (in case of)
         self.set_collection_reference()
 
-        print(f"Refslist sub items {sel_item} sub {sel} ")
-
         if sel_item.index is not None:
             try:
                 other_id = self._value[sel_item.index]
@@ -235,8 +233,6 @@ class RefsList(List):
             except IndexError:
                 return None
 
-            print(f"Refslist sub items got slice {sel_item} = {other_ids} ")
-
             a = []
             for other_id in other_ids:
                 other = self._coll_ref.new()
@@ -244,9 +240,7 @@ class RefsList(List):
                     other.load(other_id)
                 except Exception:  # pylint: disable=broad-exception-caught
                     continue
-                print(f"Refslist sub items load {other_id} = {other} -> {sel}")
                 result = other.get_by_selector(sel.copy())
-                print(f"Refslist sub items got  sub for {other_id} = {result} ")
 
                 if result is not None:
                     a.append(result)

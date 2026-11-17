@@ -56,7 +56,18 @@ Ref & RefsList
 Meta data Handler
 -----------------
 
-.. autoclass:: GenericMetaDataHandler
+.. automodule:: backo.meta
+   :show-inheritance: 
+
+.. autoclass:: NoneMetaDataHandler
+   :members:
+   :show-inheritance:
+
+.. autoclass:: TimeMetaDataHandler
+   :members:
+   :show-inheritance:
+
+.. autoclass:: TimeUserMetaDataHandler
    :members:
    :show-inheritance: 
 
@@ -131,6 +142,11 @@ Database
 .. autoclass:: DBYmlDirConnector
    :members:
    :show-inheritance: 
+
+.. autoclass:: DBExtenderConnector
+   :members:
+   :show-inheritance: 
+
 
 Transformers
 ^^^^^^^^^^^^

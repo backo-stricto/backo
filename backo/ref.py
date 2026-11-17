@@ -285,7 +285,6 @@ class Ref(String):  # pylint: disable=too-many-instance-attributes
                 f"{self.path_name()} : load {self.get_value()} in collection {self._collection} return an error ({e})"
             )
 
-        print(f"Ref continue select {sel}")
         return other.get_by_selector(sel)
 
     def get_view(self, view_name, final=True):  # pylint: disable=protected-access

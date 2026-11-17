@@ -94,7 +94,7 @@ class TestRestApiConnector(TestRoutes):
             tls=False,
             prefix="backo2",
         )
-        db_handler.set_model(self.backo.users.model.get_schema())
+        db_handler.set_model(self.backo.users.model)
         self.backo.users.db_handler = db_handler
         self.backo.users.model.set_db_handler(db_handler)
 

@@ -128,7 +128,7 @@ class TestMigrations(unittest.TestCase):
             del o["age"]
             return o
 
-        self.backo.users.model.add_to_model("age", Int(require=True, default=0))
+        self.backo.users.model.add_model("age", Int(require=True, default=0))
 
         # with self.assertRaises(SConstraintError) as e:
         #     self.backo.migrate("users", _id="User_al0_al0")

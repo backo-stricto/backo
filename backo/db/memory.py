@@ -4,7 +4,7 @@ Memory DB Connector
 """
 
 import uuid
-import copy
+from copy import deepcopy
 from stricto import SFilter
 from .generic.db_handler import DBHandler
 from .generic.interface import SelectResponse
@@ -64,7 +64,7 @@ class DBMemoryConnector(DBHandler):
     def get_by_id(self, _id: str) -> dict:
         """Get by id"""
 
-        d = copy.deepcopy(self._datas.get(_id))
+        d = deepcopy(self._datas.get(_id))
         if not d:
             raise NotFoundError('_id "{0}" not found in "{1}"', _id, self._name)
 
@@ -89,7 +89,7 @@ class DBMemoryConnector(DBHandler):
         if _id not in self._datas:
             raise NotFoundError('_id "{0}" not found in "{1}"', _id, self._name)
 
-        d = copy.deepcopy(o)
+        d = deepcopy(o)
         d["_id"] = _id
 
         # Do all transformations on the object
@@ -134,10 +134,11 @@ class DBMemoryConnector(DBHandler):
             if page_size and idx >= (page_size + num_of_element_to_skip):
                 continue
 
+            dd = deepcopy(d)
             # Do all transformations on the object
-            self._transform_on_load(d)
+            self._transform_on_load(dd)
 
-            response.items.append(d)
+            response.items.append(dd)
 
         log.debug("Select return {response}")
 
@@ -146,13 +147,13 @@ class DBMemoryConnector(DBHandler):
     def create(self, o: dict) -> str:  # pylint: disable=unused-argument
         """create"""
         _id = self.generate_id(o)
-        d = copy.deepcopy(o)
+        d = deepcopy(o)
         d["_id"] = _id
 
         # Do all transformations on the object
         self._transform_on_create(d)
 
-        log.debug("Create {_id}")
+        log.debug(f"Create {_id}")
 
         self._datas[_id] = d
         return _id

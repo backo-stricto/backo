@@ -40,7 +40,7 @@ class BlobFile(File):
         File.__init__(self, **kwargs)
 
         # add the content to the model to store the file content
-        self.add_to_model("content", Bytes())
+        self.add_model("content", Bytes())
 
     def get_content(self) -> bytes | None:
         """Get the file content

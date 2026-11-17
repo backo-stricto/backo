@@ -164,7 +164,7 @@ class MyCurrentUser(CurrentUser):
       def __init__(self, obj: CurrentUser):
 
         CurrentUser.__init__(self, obj)
-        self.add_to_model( 'email' , String() )
+        self.add_model( 'email' , String() )
 
 
     """

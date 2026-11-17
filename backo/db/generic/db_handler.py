@@ -22,6 +22,8 @@ from ...sort import Sort
 
 from ...error import DBError, ExpiredError
 
+# from ...item import Item
+
 KPARSE_MODEL = {"restriction": Callable}
 
 
@@ -53,20 +55,20 @@ class DBHandler(ABC):  # pylint: disable=too-many-instance-attributes
 
         self.restriction_filter = options.get("restriction")
 
-    def set_model(self, model: dict) -> None:
+    def set_model(self, item_model) -> None:
         """
         Register the model (backo meta() into the connector)
 
         :param model: Item model
-        :type model: dict
+        :type model: Item
         """
-        self.model = model
+        self.model = item_model.get_schema()
         if self.filter:
-            self.filter.set_model(model)
+            self.filter.set_model(self.model)
 
         # Re-arange type transformer according to the model
         for transformer in self._temp_type_transformers:
-            self._reorder_type_transformers_per_key(transformer, [], model)
+            self._reorder_type_transformers_per_key(transformer, [], self.model)
         self._temp_type_transformers.clear()
 
     def _reorder_transformers_per_key(self, transformer: Transformer) -> None:

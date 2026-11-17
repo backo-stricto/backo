@@ -196,7 +196,7 @@ class TestCurrentUser(unittest.TestCase):
 
             def __init__(self, **kwargs):
                 CurrentUser.__init__(self, **kwargs)
-                self.add_to_model("email", String())
+                self.add_model("email", String())
 
             def dummy_function(self):
                 """

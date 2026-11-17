@@ -95,7 +95,7 @@ class Item(Dict):  # pylint: disable=too-many-instance-attributes
         EVENT_MANAGER.register_event(self, "change", self.on_change)
 
         # adding _id to the model
-        self.add_to_model("_id", String(can_modify=False))
+        self.add_model("_id", String(can_modify=False))
 
         # Setting meta schema
         if self.meta_data_handler:

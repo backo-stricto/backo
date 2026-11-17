@@ -20,3 +20,4 @@ from .restfull import DBRestFullConnector
 from .backo_redirect import DBBackoRedirectConnector
 from .valkeydb import DBValkeyConnector
 from .postgres import DBPostgresConnector
+from .extender import DBExtenderConnector

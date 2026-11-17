@@ -143,6 +143,9 @@ class MongoFilter(Filter):
             q[db_path_string] = {"$size": db_value}
             return (q, FilterReport.EXACT)
 
+        if sf._operator == Operator.TRUE:
+            return (None, FilterReport.EXACT)
+
         # Not implemented
         return (None, FilterReport.MORE)
 
@@ -157,7 +160,7 @@ class MongoFilter(Filter):
         """
         if not backo_filter:
             return ({}, FilterReport.EXACT)
-        return self._sfilter_to_mongo_query(backo_filter)
+        return self._sfilter_to_mongo_query(backo_filter.reduce())
 
     def _sort_to_mongo_sort(self, backo_sort: SortItem) -> tuple[str, int]:
 

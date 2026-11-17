@@ -363,13 +363,19 @@ class DBSqlite3Connector(DBSQLConnector):
         :rtype: int
         """
         log.debug(f"Create in table {table_name} {keys_values}")
-        r = tuple(map(tuple, zip(*keys_values)))
-        t = ("?",) * len(r[0])
-        log.debug(
-            f"INSERT INTO {table_name} {r[0]} VALUES ({', '.join(t) }) with {r[1]}"
-        )
+        keys = []
+        t = []
+        values = []
+        for k in keys_values:
+            keys.append(k[0])
+            t.append("?")
+            values.append(k[1])
+        kk = f"({', '.join(keys)})"
+        vv = tuple(values)
+
+        log.debug(f"INSERT INTO {table_name} {kk} VALUES ({', '.join(t) }) with {vv}")
         self._cursor.execute(
-            f"INSERT INTO {table_name} {r[0]} VALUES ({', '.join(t) })", r[1]
+            f"INSERT INTO {table_name} {kk} VALUES ({', '.join(t) })", vv
         )
         created_id = self._cursor.lastrowid
         return created_id

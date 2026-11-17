@@ -80,7 +80,7 @@ class PostgresFieldDescription(SqlFieldDescription):
 
     def get_create_pragma(self, _table_name: str = None) -> str:
         """
-        Return the CREATE sqlite3 command for a table
+        Return the CREATE postgres command for a table
 
         :return: the CREATE... command
         :rtype: str
@@ -94,13 +94,13 @@ class PostgresFieldDescription(SqlFieldDescription):
         if self._pk:
             f += " PRIMARY KEY DEFAULT gen_random_uuid()"
         if self._ref_table:
-            f += f",\r\nCONSTRAINT {self.db_path} FOREIGN KEY ({self.db_path}) REFERENCES {self._ref_table}({self._ref_field})"
+            f += f",\r\nCONSTRAINT {self.db_path} FOREIGN KEY ({self.db_path}) REFERENCES {self._ref_table}({self._ref_field}) ON DELETE CASCADE"
 
         return f
 
     def get_add_pragma(self, table_name: str = None) -> str:
         """
-        Return the ADD sqlite3 command for adding a key
+        Return the ADD postgres command for adding a key
 
         :return: the ADD... command
         :rtype: str
@@ -114,7 +114,7 @@ class PostgresFieldDescription(SqlFieldDescription):
             f += f" DEFAULT {self._dflt_value}"
         f += ";"
         if self._ref_table:
-            f += f"\r\nALTER TABLE {table_name} ADD CONSTRAINT {self.db_path} FOREIGN KEY ({self.db_path}) REFERENCES {self._ref_table}({self._ref_field})"
+            f += f"\r\nALTER TABLE {table_name} ADD CONSTRAINT {self.db_path} FOREIGN KEY ({self.db_path}) REFERENCES {self._ref_table}({self._ref_field}) ON DELETE CASCADE"
 
         return f
 
