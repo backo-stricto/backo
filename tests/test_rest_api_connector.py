@@ -11,6 +11,7 @@ from flask import Flask
 
 from backo import Item, Collection
 from backo.db import DBYmlDirConnector, DBBackoRedirectConnector
+from backo.meta import NoneMetaDataHandler
 from backo import Backoffice, current_user
 
 from backo import String, Bool
@@ -33,6 +34,7 @@ def launch_backoffice2():
     # ignore sessions for this campaign of tests.
     current_user.standalone = True
 
+    backo2 = Backoffice("backo2")
     users2_coll = Collection(
         "users2",
         Item(
@@ -42,11 +44,12 @@ def launch_backoffice2():
                 "male": Bool(
                     default=True,
                 ),
-            }
+            },
+            meta_data_handler=NoneMetaDataHandler(),
         ),
         yml_users2,
     )
-    backo2 = Backoffice("backo2")
+
     backo2.register_collection(users2_coll)
 
     backo2.users2.create({"name": "bebert", "surname": "bebert"})
@@ -99,13 +102,32 @@ class TestRestApiConnector(TestRoutes):
         self.backo.users.db_handler = db_handler
         self.backo.users.model.set_db_handler(db_handler)
 
-    def setUp(self):
+    def define_server(self):
+        connector = DBBackoRedirectConnector(
+            "users2",
+            host="localhost",
+            port=5050,
+            tls=False,
+            prefix="backo2",
+        )
+        self._define_backo(connector, NoneMetaDataHandler())
 
+    def setUp(self):
         current_user.standalone = True
+
+        yml_users2.drop()
+
+        _id = yml_users2.create({"name": "bebert", "surname": "bebert", "male": True})
+        self.assertEqual(_id, "User_bebert_bebert")
+
+        _id = yml_users2.create({"name": "bert1", "surname": "bert1", "male": True})
+        self.assertEqual(_id, "User_bert1_bert1")
+
+        _id = yml_users2.create({"name": "bert2", "surname": "bert2", "male": True})
+        self.assertEqual(_id, "User_bert2_bert2")
 
     @classmethod
     def setUpClass(cls):
-
         start_backo2()
 
     @classmethod

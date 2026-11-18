@@ -13,8 +13,9 @@ from flask import Flask
 # get the resources folder in the tests folder
 
 from backo import Item, Collection
-from backo.db import DBYmlDirConnector
+from backo.db import DBYmlDirConnector, DBHandler
 from backo import Backoffice, current_user, Action, Selection
+from backo.meta import GenericMetaDataHandler, TimeMetaDataHandler
 
 from backo import String, Bool, SFilter, Operator
 from .temp_root_dir import TEMP_ROOT_DIR
@@ -31,18 +32,22 @@ class TestRoutes(unittest.TestCase):
         """
         init this tests
         """
+
+        self.backo:Backoffice = None
+        self.users_coll:Collection = None
+        self.flask:Flask = None
+        self.ctx = None
+        self.client = None
+
         super().__init__(*arg, **kwargs)
 
         # ignore sessions for this campaign of tests.
         current_user.standalone = True
+        self.define_server()
 
-        # --- DB for user
-        my_db_connector = DBYmlDirConnector(YML_DIR + str(uuid.uuid4().int >> 64))
-        my_db_connector.generate_id = lambda o: f"User_{o["name"]}_{o["surname"]}"
-
-        self.yml_users = my_db_connector
-        # self.yml_users.generate_id = lambda o: f"User_{o["name"]}_{o["surname"]}"
-
+    def _define_backo(
+        self, con: DBHandler, metadata: GenericMetaDataHandler = TimeMetaDataHandler()
+    ):
         self.backo = Backoffice("myApp")
 
         self.users_coll = Collection(
@@ -54,9 +59,10 @@ class TestRoutes(unittest.TestCase):
                     "male": Bool(
                         default=True,
                     ),
-                }
+                },
+                meta_data_handler=metadata,
             ),
-            self.yml_users,
+            con,
         )
         self.users_coll.define_view("!surname_only", ["$.name"])
 
@@ -90,10 +96,19 @@ class TestRoutes(unittest.TestCase):
         self.ctx.push()
         self.client = self.flask.test_client()
 
+    def define_server(self):
+        """
+        Define the server
+        """
+        # --- DB for user
+        self.connector = DBYmlDirConnector(YML_DIR + str(uuid.uuid4().int >> 64))
+        self.connector.generate_id = lambda o: f"User_{o["name"]}_{o["surname"]}"
+        self._define_backo(self.connector)
+
     def setUp(self):
         current_user.standalone = True
 
-        self.yml_users.drop()
+        self.connector.drop()
 
         u = self.backo.users.create({"name": "bebert", "surname": "bebert"})
         self.assertEqual(u._id, "User_bebert_bebert")

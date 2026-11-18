@@ -44,7 +44,9 @@ KPARSE_DB_ACCESS = {
 
 
 class Item(Dict):  # pylint: disable=too-many-instance-attributes
-    """The description of the object of a collection
+    """T
+
+    he description of the object of a collection
 
     :param schema: its schema (see `Dict <https://stricto.readthedocs.io/en/latest/api_reference.html#stricto.Dict>`)
     :type schema: dict
@@ -77,7 +79,16 @@ class Item(Dict):  # pylint: disable=too-many-instance-attributes
     @validation_parameters
     def __init__(self, schema: dict, **kwargs):
         """
-        Constructor
+
+        :param schema: its schema (see `Dict <https://stricto.readthedocs.io/en/latest/api_reference.html#stricto.Dict>`)
+        :type schema: dict
+
+        :param kwargs: arguments as kwargs for the Item
+        :type kwargs: object
+
+        :keyword meta_data_handler: The metadatahandler (by default :py:class:`TimeMetaDataHandler`)
+        :type meta_data_handler: :py:class:`GenericMetaDataHandler`
+
         """
 
         options = Kparse(kwargs, KPARSE_MODEL)
