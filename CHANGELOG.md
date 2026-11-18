@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.4.1] 2026-11-18
+  
+    * Feature :
+      * Adding DBExtenderConnector
+
+    * internal :
+      * updating Ref and RefsList to get_by_selector()
+      * upgrade to stricto 0.3.2
+
+
 ## [0.4.0] 2026-10-26
   
     * Feature :
