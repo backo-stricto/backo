@@ -9,8 +9,15 @@ import copy
 from datetime import datetime
 from jsonpath import patch, findall
 
-from pymongo import MongoClient
-from bson.objectid import ObjectId
+try:
+    from pymongo import MongoClient
+except ImportError:
+    MongoClient = None
+
+try:
+    from bson.objectid import ObjectId
+except ImportError:
+    ObjectId = None
 
 from stricto import SFilter, Operator
 

@@ -103,6 +103,28 @@ can be called in two ways :
 3. link to the file are GET \<my-app-name\>/\<collection name\>/\<_id\>/\<path\>
 
 
+## libmagic or puremagic ?
+
+Backo needs to know mime types for files. It can use [puremagic](https://pypi.org/project/puremagic/) (by default) or [libmagic](https://pypi.org/project/python-libmagic/). The last one is more integrated but need `libmagic1` to be installed.
+
+```{warning}
+`libmagic` needs libmagic1 
+```
+
+```bash
+sudo apt-get install libmagic1
+```
+
+
+```bash
+# using puremagic
+pip install backo
+
+# With libmagic
+pip install "backo[libmagic]"
+
+```
+
 
 ## API Reference
 

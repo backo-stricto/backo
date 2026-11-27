@@ -9,7 +9,15 @@ import base64
 import binascii
 import sys
 import io
-import magic
+
+try:
+    import magic
+
+    MIME = magic.Magic(mime=True)
+except ImportError:
+    MIME = None
+
+import puremagic
 from werkzeug.datastructures import FileStorage
 
 # used for developpement
@@ -23,7 +31,33 @@ from ..log import log_system
 
 log = log_system.get_or_create_logger("file")
 
-MIME = magic.Magic(mime=True)
+
+def get_buffer_mime(b: Any) -> str:
+    """
+    return the buffer mime type
+
+    :param b: the buffer
+    :type b: Any
+    :return: the mime type
+    :rtype: str
+    """
+    if MIME:
+        return MIME.from_buffer(b)
+
+    try:
+        mime = puremagic.from_string(b, mime=True)
+    except puremagic.PureError:
+        try:
+            text = b.decode("utf-8")
+            for c in text:
+                if c.isprintable() or c in "\n\r\t":
+                    continue
+                return "application/octet-stream"
+            mime = "text/plain"
+        except UnicodeDecodeError:
+            mime = "application/octet-stream"
+    return mime
+
 
 FILE_MODEL = {
     "filename": String(),
@@ -66,7 +100,8 @@ def transform_to_filestorage(  # pylint: disable=unused-argument
         return FileStorage(
             stream=io.BytesIO(data),
             filename=None,
-            content_type=MIME.from_buffer(data),
+            # content_type=MIME.from_buffer(data),
+            content_type=get_buffer_mime(data),
             content_length=len(data),
         )
 
@@ -75,7 +110,8 @@ def transform_to_filestorage(  # pylint: disable=unused-argument
         return FileStorage(
             stream=io.BytesIO(b),
             filename=None,
-            content_type=MIME.from_buffer(b),
+            # content_type=MIME.from_buffer(b),
+            content_type=get_buffer_mime(b),
             content_length=len(b),
         )
 
@@ -83,7 +119,8 @@ def transform_to_filestorage(  # pylint: disable=unused-argument
         return FileStorage(
             stream=io.BytesIO(v),
             filename=None,
-            content_type=MIME.from_buffer(v),
+            # content_type=MIME.from_buffer(v),
+            content_type=get_buffer_mime(v),
             content_length=len(v),
         )
 

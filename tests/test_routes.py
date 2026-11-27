@@ -33,9 +33,9 @@ class TestRoutes(unittest.TestCase):
         init this tests
         """
 
-        self.backo:Backoffice = None
-        self.users_coll:Collection = None
-        self.flask:Flask = None
+        self.backo: Backoffice = None
+        self.users_coll: Collection = None
+        self.flask: Flask = None
         self.ctx = None
         self.client = None
 

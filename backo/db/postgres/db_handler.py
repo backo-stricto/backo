@@ -7,7 +7,11 @@ DBHandler for Postgres
 from typing import Any
 import copy
 
-import psycopg
+try:
+    import psycopg as psyco
+except ImportError:
+    psyco = None
+
 
 from stricto import SFilter
 
@@ -72,7 +76,7 @@ class DBPostgresConnector(DBSQLConnector):
         """
         try:
             if not self._db:
-                self._db = psycopg.connect(self._database_url, **self._db_kwargs)
+                self._db = psyco.connect(self._database_url, **self._db_kwargs)
                 self._cursor = self._db.cursor()
         except Exception as e:
             raise DBError(
