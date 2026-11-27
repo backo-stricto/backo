@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.4.2] 2026-11-18
+  
+    * Fix
+      * Fix libmagic1 dependency with puremagic or libmagic if exist
+      * Fix mongo and postgress dependency
+
 ## [0.4.1] 2026-11-18
   
     * Feature :
